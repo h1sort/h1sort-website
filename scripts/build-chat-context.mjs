@@ -19,7 +19,7 @@ const context = `# h1sort.com — site knowledge
 
 ## Contact
 - Email: carlos@h1sort.com
-- GitHub: github.com/haro-ca
+- GitHub: github.com/h1sort
 - LinkedIn: linkedin.com/in/h1sort
 - X: x.com/h1sort
 - Location: Mexico City, Mexico
@@ -30,7 +30,7 @@ theory-to-hands-on) from a single Postgres node to a full streaming pipeline:
 OLTP → CDC → Kafka → stream processing → real-time OLAP → API.
 Stack: PostgreSQL, CockroachDB, DuckDB, Apache Kafka, PySpark, Apache Flink,
 ClickHouse, FastAPI, Schema Registry, Grafana.
-Repo: github.com/haro-ca/real-time-data-processing-class
+Repo: github.com/h1sort/real-time-data-processing-class
 
 ## Curriculum Vitae (full)
 ${cv}

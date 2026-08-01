@@ -1,0 +1,1653 @@
+---
+import Base from '../layouts/Base.astro';
+
+const updated = '1 August 2026';
+const defaultAcuPerUser = 800;
+const defaultAcuRate = 2;
+const defaultUsers = 2000;
+
+const decisionModels = [
+  {
+    id: 'luna',
+    name: 'GPT-5.6 Luna XHigh',
+    short: 'Luna XHigh',
+    lane: 'Default',
+    status: 'Enable',
+    price: '$0.20 / $1.20',
+    frontierScore: 38.9,
+    frontierCost: 0.299,
+    note: 'The deployable daily profile. Current Devin docs list Extra High reasoning, and the CLI profile below uses xhigh.',
+  },
+  {
+    id: 'swe',
+    name: 'SWE-1.7',
+    short: 'SWE-1.7',
+    lane: 'Coding peer',
+    status: 'Enable for builders',
+    price: 'Free preview',
+    frontierScore: 42.33,
+    frontierCost: 1.9734,
+    note: 'A code-specialist peer for repository work. The zero-ACU preview expires 8 August, so its durable price is unknown.',
+  },
+  {
+    id: 'terra',
+    name: 'GPT-5.6 Terra Max',
+    short: 'Terra Max',
+    lane: 'Conditional',
+    status: 'Watch picker',
+    price: '$2.00 / $12.00',
+    frontierScore: 41.3,
+    frontierCost: 1.806,
+    note: 'The Max benchmark point is useful. The public Devin list currently stops at XHigh, which is dominated, so enable Max only when it becomes available in Devin.',
+  },
+  {
+    id: 'sol',
+    name: 'GPT-5.6 Sol High',
+    short: 'Sol High',
+    lane: 'Escalation',
+    status: 'Approval',
+    price: '$5.00 / $30.00',
+    frontierScore: 45.1,
+    frontierCost: 4.1,
+    note: 'Use when ambiguity, risk, or scientific depth makes another attempt more expensive than better reasoning.',
+  },
+  {
+    id: 'opus',
+    name: 'Claude Opus 5 Medium',
+    short: 'Opus Medium',
+    lane: 'Specialist',
+    status: 'AI and research',
+    price: '$5.00 / $25.00',
+    frontierScore: 53.4,
+    frontierCost: 4.3,
+    note: 'The strongest measured coding value in this set. Higher Opus efforts scored worse on FrontierCode 1.1 Main, so Medium is the policy point.',
+  },
+  {
+    id: 'fable',
+    name: 'Claude Fable 5 XHigh',
+    short: 'Fable XHigh',
+    lane: 'Frontier reserve',
+    status: 'AI and research approval',
+    price: '$10.00 / $50.00',
+    frontierScore: 53.5,
+    frontierCost: 13.0938,
+    note: 'Not a routine coding upgrade over Opus Medium. Reserve it for long-horizon research and workflows where an internal eval proves a material gain.',
+  },
+];
+
+const frontierPoints = [
+  { name: 'Luna XHigh', score: 38.9, cost: 0.299, state: 'allow' },
+  { name: 'Luna Max', score: 39.8, cost: 0.361, state: 'benchmark' },
+  { name: 'Terra XHigh', score: 38.7, cost: 1.296, state: 'dominated' },
+  { name: 'Terra Max', score: 41.3, cost: 1.806, state: 'benchmark' },
+  { name: 'SWE-1.7', score: 42.33, cost: 1.9734, state: 'allow' },
+  { name: 'Sol Medium', score: 39.9, cost: 3.1, state: 'dominated' },
+  { name: 'Sol High', score: 45.1, cost: 4.1, state: 'allow' },
+  { name: 'Opus Medium', score: 53.4, cost: 4.3, state: 'allow' },
+  { name: 'Fable XHigh', score: 53.5, cost: 13.0938, state: 'reserve' },
+];
+
+const chart = {
+  width: 1000,
+  height: 430,
+  left: 76,
+  right: 34,
+  top: 30,
+  bottom: 58,
+  minCost: 0.2,
+  maxCost: 30,
+};
+
+const pointPosition = (cost: number, score: number, minScore: number, maxScore: number) => {
+  const plotWidth = chart.width - chart.left - chart.right;
+  const plotHeight = chart.height - chart.top - chart.bottom;
+  const xRatio = (Math.log10(cost) - Math.log10(chart.minCost)) /
+    (Math.log10(chart.maxCost) - Math.log10(chart.minCost));
+  const yRatio = (score - minScore) / (maxScore - minScore);
+  return {
+    x: chart.left + xRatio * plotWidth,
+    y: chart.top + (1 - yRatio) * plotHeight,
+  };
+};
+
+const costTicks = [0.2, 0.5, 1, 2, 5, 10, 20, 30];
+const dominanceComparisons = [
+  {
+    winner: 'Luna XHigh',
+    compared: 'Terra XHigh',
+    title: 'Terra XHigh is dominated',
+    detail: 'Luna +0.2 pts · 4.3× cheaper',
+    kind: 'strict',
+  },
+  {
+    winner: 'Luna Max',
+    compared: 'Sol Medium',
+    title: 'Sol Medium is near-dominated',
+    detail: 'Luna Max −0.1 pts · 8.6× cheaper',
+    kind: 'near',
+  },
+];
+
+const cursorBenchPoints = [
+  { name: 'Luna XHigh', score: 57.7, cost: 0.23, state: 'allow' },
+  { name: 'Luna Max', score: 61.1, cost: 0.39, state: 'benchmark' },
+  { name: 'Terra XHigh', score: 59.2, cost: 1.15, state: 'dominated' },
+  { name: 'Terra Max', score: 64.9, cost: 2.31, state: 'benchmark' },
+  { name: 'Sol Medium', score: 60.0, cost: 1.95, state: 'dominated' },
+  { name: 'Sol High', score: 63.5, cost: 2.79, state: 'allow' },
+  { name: 'Opus Medium', score: 64.3, cost: 3.29, state: 'allow', labelDy: 22 },
+  { name: 'Sonnet Max', score: 61.5, cost: 6.45, state: 'dominated' },
+  { name: 'Fable XHigh', score: 68.4, cost: 11.73, state: 'reserve' },
+];
+
+const deepSwePoints = [
+  { name: 'Luna Max', score: 67, cost: 0.61, state: 'benchmark' },
+  { name: 'Terra Max', score: 70, cost: 3.96, state: 'benchmark' },
+  { name: 'Sol Max', score: 73, cost: 8.39, state: 'benchmark', labelDx: -10, labelDy: 22, labelAnchor: 'end' },
+  { name: 'Opus Max', score: 74, cost: 11.84, state: 'benchmark', labelDx: -10, labelDy: -11, labelAnchor: 'end' },
+  { name: 'Fable Max', score: 70, cost: 21.63, state: 'reserve' },
+  { name: 'Sonnet Max', score: 54, cost: 26.40, state: 'dominated' },
+];
+
+const benchmarkPlots = [
+  {
+    id: 'frontiercode',
+    label: 'FrontierCode 1.1',
+    source: 'https://cognition.com/frontiercode',
+    note: 'Mergeability on complete repository tasks. Effort-level policy points are shown, including benchmark-only Max configurations.',
+    yLabel: 'FrontierCode score',
+    minScore: 35,
+    maxScore: 55,
+    scoreTicks: [35, 40, 45, 50, 55],
+    points: frontierPoints,
+    comparisons: dominanceComparisons,
+  },
+  {
+    id: 'cursorbench',
+    label: 'CursorBench 3.2',
+    source: 'https://cursor.com/cursorbench',
+    note: 'Ambiguous, multi-file tasks from real Cursor sessions. Scores and average task costs use the live July 30 pricing update.',
+    yLabel: 'CursorBench score',
+    minScore: 55,
+    maxScore: 70,
+    scoreTicks: [55, 60, 65, 70],
+    points: cursorBenchPoints,
+    comparisons: [],
+  },
+  {
+    id: 'deepswe',
+    label: 'DeepSWE 1.1',
+    source: 'https://deepswe.datacurve.ai/',
+    note: 'Original long-horizon engineering tasks in one mini-swe-agent harness. Central estimates are plotted; confidence intervals remain important.',
+    yLabel: 'DeepSWE score',
+    minScore: 50,
+    maxScore: 80,
+    scoreTicks: [50, 55, 60, 65, 70, 75, 80],
+    points: deepSwePoints,
+    comparisons: [],
+  },
+];
+
+const dominatedChoices = [
+  {
+    choice: 'Every Luna tier below XHigh',
+    evidence: 'FrontierCode Main rises from 15.4 at Low to 38.9 at XHigh, while the XHigh benchmark task is still about $0.30.',
+    action: 'Disable the lower tiers. Their absolute savings do not justify the capability floor.',
+  },
+  {
+    choice: 'Terra XHigh',
+    evidence: '38.7 score at $1.30 per benchmark task versus Luna XHigh at 38.9 and $0.30.',
+    action: 'Disable. Reconsider only Terra Max, and only when it becomes available in Devin.',
+  },
+  {
+    choice: 'Sol Medium',
+    evidence: '39.9 score at $3.10 versus the FrontierCode Luna Max point at 39.8 and $0.36.',
+    action: 'Disable. Sol becomes useful at High, not Medium.',
+  },
+  {
+    choice: 'Opus 5 above Medium for routine coding',
+    evidence: 'On FrontierCode Main, Medium scores 53.4. High, XHigh, and Max score 48.0, 43.6, and 48.0 at higher cost.',
+    action: 'Pin Medium for this workload. Do not assume more test-time compute is monotonically better.',
+  },
+  {
+    choice: 'Fable for ordinary implementation',
+    evidence: 'Fable XHigh adds 0.1 FrontierCode point over Opus Medium at roughly three times the benchmark task cost.',
+    action: 'Deny by default. Require task-specific evidence for AI and research work.',
+  },
+];
+
+const roles = [
+  {
+    id: 'analyst',
+    role: 'Data Analyst / BI',
+    defaultModel: 'Luna XHigh',
+    selfServe: 'Luna XHigh',
+    approval: 'Terra Max when available in Devin',
+    deny: 'SWE-1.7 · Sol · Opus · Fable',
+    triggers: 'Escalate only for complex financial models, many-document reconciliation, or a failed acceptance test.',
+    workflows: [
+      'Luna: profile a dataset, draft SQL, explain a metric, and validate a dashboard query.',
+      'Terra Max: reconcile conflicting definitions across a large semantic layer and source documents.',
+    ],
+    guidance: {
+      tight: 'Luna only. Route exceptional financial analysis to a shared specialist queue.',
+      balanced: 'Luna by default. Permit a measured Terra Max exception when available in Devin.',
+      generous: 'Keep the same allowlist. More budget does not create a need for Fable.',
+    },
+  },
+  {
+    id: 'analytics-engineer',
+    role: 'Analytics Engineer',
+    defaultModel: 'Luna XHigh',
+    selfServe: 'Luna XHigh · SWE-1.7',
+    approval: 'Terra Max when available in Devin · Sol High',
+    deny: 'Opus · Fable',
+    triggers: 'Escalate for ambiguous metric contracts, warehouse-wide migrations, or repeated hidden-test failures.',
+    workflows: [
+      'Luna: implement a bounded dbt model, tests, documentation, and lineage checks.',
+      'SWE-1.7: investigate a brownfield repository change and produce a tested patch.',
+      'Sol High: plan a risky semantic-layer migration before Luna executes bounded pieces.',
+    ],
+    guidance: {
+      tight: 'Luna plus SWE-1.7 during the free preview. All architecture escalation is shared.',
+      balanced: 'Luna and SWE-1.7 self-serve. Sol High requires a migration or failed-eval trigger.',
+      generous: 'Add Terra Max when available in Devin. Keep Fable blocked unless the role changes materially.',
+    },
+  },
+  {
+    id: 'data-scientist',
+    role: 'Data Scientist',
+    defaultModel: 'Luna XHigh',
+    selfServe: 'Luna XHigh · Terra Max when available in Devin',
+    approval: 'Sol High',
+    deny: 'Fable · Opus by default',
+    triggers: 'Escalate for statistical design, subtle leakage, scientific reasoning, or consequential model interpretation.',
+    workflows: [
+      'Luna: write an analysis scaffold, EDA code, tests, and a reproducible notebook narrative.',
+      'Terra Max: challenge experimental assumptions and audit a long analytical context.',
+      'Sol High: resolve novel quantitative reasoning after an independent verification plan is defined.',
+    ],
+    guidance: {
+      tight: 'Luna for execution. Pool Sol access through a senior reviewer.',
+      balanced: 'Luna by default, Terra Max when available in Devin, and Sol High behind scientific-review triggers.',
+      generous: 'Keep Fable out unless internal research evals show a repeatable gain over Sol.',
+    },
+  },
+  {
+    id: 'data-engineer',
+    role: 'Data Engineer',
+    defaultModel: 'Luna XHigh',
+    selfServe: 'Luna XHigh · SWE-1.7',
+    approval: 'Terra Max when available in Devin · Sol High',
+    deny: 'Fable · Opus by default',
+    triggers: 'Escalate for distributed failure analysis, high-risk migrations, or a change spanning several systems.',
+    workflows: [
+      'Luna: add a connector, schema checks, data-quality tests, and operational documentation.',
+      'SWE-1.7: trace a bug through a large pipeline repository and prepare a reviewable patch.',
+      'Sol High: diagnose a cross-system failure, then hand bounded fixes back to Luna.',
+    ],
+    guidance: {
+      tight: 'Luna plus promotional SWE-1.7. Centralize incident escalation.',
+      balanced: 'Luna and SWE-1.7 self-serve. Sol High is incident or migration only.',
+      generous: 'Add Terra Max for long-context diagnosis when available in Devin. Keep Fable blocked.',
+    },
+  },
+  {
+    id: 'ml-engineer',
+    role: 'ML Engineer',
+    defaultModel: 'Luna XHigh',
+    selfServe: 'Luna XHigh · SWE-1.7 · Terra Max when available in Devin',
+    approval: 'Sol High · Opus Medium',
+    deny: 'Fable by default',
+    triggers: 'Escalate for training-system failures, kernel work, research replication, or hard evaluation design.',
+    workflows: [
+      'Luna: implement data loaders, evaluation scripts, integration tests, and experiment plumbing.',
+      'SWE-1.7: repair a complex ML codebase with repository-wide context.',
+      'Sol or Opus: diagnose training instability and produce competing hypotheses before execution.',
+    ],
+    guidance: {
+      tight: 'Luna and SWE-1.7. Pool Sol and Opus through an ML platform lead.',
+      balanced: 'Enable Terra Max when available in Devin. Approve Sol or Opus for failed experiments and research-grade work.',
+      generous: 'Permit Opus Medium to senior ML engineers. Fable still requires a benchmarked exception.',
+    },
+  },
+  {
+    id: 'ai-engineer',
+    role: 'AI Engineer',
+    defaultModel: 'Luna XHigh',
+    selfServe: 'Luna XHigh · SWE-1.7 · Terra Max when available in Devin · Opus Medium',
+    approval: 'Sol High · Fable XHigh',
+    deny: 'Lower Luna · Terra XHigh · Sol Medium',
+    triggers: 'Escalate for agent architecture, eval design, hard tool-use failures, novel research, or repeated model disagreement.',
+    workflows: [
+      'Luna: implement tools, prompts, schemas, eval cases, and bounded agent features.',
+      'Opus Medium: review the agent design, challenge failure modes, and solve difficult repository work.',
+      'Fable: attempt the genuinely unresolved research or long-horizon task, with a written success rubric and spend cap.',
+    ],
+    guidance: {
+      tight: 'Luna and SWE-1.7 self-serve. A small central frontier pool handles Opus and Fable.',
+      balanced: 'Add Opus Medium self-serve for senior AI engineers. Fable remains approval only.',
+      generous: 'Reserve up to 15% of role spend for Sol and Fable experiments tied to eval deltas.',
+    },
+  },
+  {
+    id: 'software-engineer',
+    role: 'Software Engineer',
+    defaultModel: 'Luna XHigh',
+    selfServe: 'Luna XHigh · SWE-1.7',
+    approval: 'Sol High · Opus Medium',
+    deny: 'Fable by default',
+    triggers: 'Escalate for architecture, a high-blast-radius change, or two failed bounded attempts.',
+    workflows: [
+      'Luna: implement scoped tickets, tests, refactors, and review feedback.',
+      'SWE-1.7: explore a large unfamiliar repository and fix a production-grade defect.',
+      'Opus Medium: handle the rare task where mergeability, not raw implementation speed, is the bottleneck.',
+    ],
+    guidance: {
+      tight: 'Luna plus SWE-1.7 while promotional. One frontier exception queue for the team.',
+      balanced: 'Luna and SWE-1.7 self-serve. Opus Medium after two failed attempts or for high-risk work.',
+      generous: 'Broaden Opus Medium to senior engineers, but keep Fable outside the normal picker.',
+    },
+  },
+  {
+    id: 'platform',
+    role: 'Platform / SRE',
+    defaultModel: 'Luna XHigh',
+    selfServe: 'Luna XHigh · SWE-1.7',
+    approval: 'Terra Max when available in Devin · Sol High',
+    deny: 'Opus · Fable by default',
+    triggers: 'Escalate for live incidents, security-sensitive review, or cross-service root-cause analysis.',
+    workflows: [
+      'Luna: write runbooks, automation, tests, and a bounded infrastructure change.',
+      'SWE-1.7: trace a failure across repository history and operational code.',
+      'Sol High: form an incident hypothesis tree, verify evidence, and plan the lowest-risk intervention.',
+    ],
+    guidance: {
+      tight: 'Luna and SWE-1.7. Keep one incident-only Sol entitlement.',
+      balanced: 'Sol High is available through the incident commander, not as a daily picker option.',
+      generous: 'Add Terra Max for large-context investigation when available in Devin. Keep frontier spend incident-bound.',
+    },
+  },
+  {
+    id: 'research-engineer',
+    role: 'Research Engineer',
+    defaultModel: 'Luna XHigh',
+    selfServe: 'Luna XHigh · SWE-1.7 · Terra Max when available in Devin · Opus Medium',
+    approval: 'Sol High · Fable XHigh',
+    deny: 'Lower efforts and dominated tiers',
+    triggers: 'Escalate for novel hypothesis generation, difficult replication, long-horizon synthesis, or frontier scientific work.',
+    workflows: [
+      'Luna: build experiment infrastructure, run ablations, and maintain reproducible artifacts.',
+      'Opus or Sol: critique the research plan and investigate hard failures from first principles.',
+      'Fable: pursue a bounded frontier question only after defining baselines, stopping rules, and independent review.',
+    ],
+    guidance: {
+      tight: 'Luna for execution. Centralize every frontier run and preserve traces for learning.',
+      balanced: 'Opus Medium self-serve for senior researchers. Sol and Fable require a research ticket.',
+      generous: 'Allocate up to 15% to frontier experiments, reviewed against a role-specific eval suite.',
+    },
+  },
+  {
+    id: 'tpm',
+    role: 'Technical Product Manager',
+    defaultModel: 'Luna XHigh',
+    selfServe: 'Luna XHigh',
+    approval: 'Terra Max when available in Devin',
+    deny: 'SWE-1.7 · Sol · Opus · Fable',
+    triggers: 'Escalate for very large technical context or a consequential decision memo that fails a review rubric.',
+    workflows: [
+      'Luna: synthesize customer evidence, draft specifications, compare tradeoffs, and create acceptance criteria.',
+      'Terra Max: reconcile a large set of technical documents before an architecture or roadmap decision.',
+    ],
+    guidance: {
+      tight: 'Luna only.',
+      balanced: 'Luna by default with a shared Terra Max exception when available in Devin.',
+      generous: 'Keep the same allowlist. Spend on better evidence and review, not a larger model picker.',
+    },
+  },
+];
+
+const benchmarkEvidence = [
+  {
+    family: 'End-to-end code',
+    benchmark: 'FrontierCode 1.1 Main',
+    signal: 'Mergeability: correctness, tests, scope, style, and repository fit.',
+    result: 'Luna Max 39.8 · Terra Max 41.3 · Sol Max 47.5 · SWE-1.7 42.3 · Opus Medium 53.4 · Fable XHigh 53.5',
+    use: 'Primary cost frontier for software, data, ML, and platform engineering.',
+    source: 'https://cognition.com/frontiercode',
+    sourceLabel: 'Live leaderboard',
+  },
+  {
+    family: 'Agentic coding',
+    benchmark: 'CursorBench 3.2',
+    signal: 'Real development tasks graded for functional correctness and code quality.',
+    result: 'Fable Max 70.5 at $17.32 · Opus Max 70.0 at $8.23 · Sol Max 67.2 at $5.69 · Sonnet Max 61.5 at $6.45 · Luna Max 61.1 at $0.39',
+    use: 'Shows where frontier models can earn their place while preserving Luna as the volume workhorse.',
+    source: 'https://cursor.com/cursorbench',
+    sourceLabel: 'CursorBench 3.2',
+  },
+  {
+    family: 'Professional agents',
+    benchmark: "Agents' Last Exam",
+    signal: 'Long-running, economically valuable workflows across 55 fields.',
+    result: 'Sol 52.7 · Terra 50.4 · Luna 50.3 · Fable 40.5 in the OpenAI launch table. The live harness leaderboard reports different absolute values.',
+    use: 'Broad support for Luna as a professional default, with harness sensitivity noted.',
+    source: 'https://agents-last-exam.org/leaderboard',
+    sourceLabel: 'UC Berkeley RDI',
+  },
+  {
+    family: 'Knowledge work',
+    benchmark: 'GDPval-AA v2',
+    signal: 'Expert-reviewed professional artifacts across occupations.',
+    result: 'Sol 1,747.8 Elo · Terra 1,593.0 · Luna 1,591.8 · Fable 1,759.6 · Opus 4.8 1,600.1',
+    use: 'Fable can add value at the frontier, but Luna and Terra are nearly tied for ordinary work.',
+    source: 'https://openai.com/index/gpt-5-6/',
+    sourceLabel: 'GPT-5.6 evaluation table',
+  },
+  {
+    family: 'Finance',
+    benchmark: 'Big Finance Bench',
+    signal: 'Multi-step financial research and analysis.',
+    result: 'Sol 53 · Terra 51 · Luna 36 · Opus 4.8 44',
+    use: 'Do not extrapolate Luna dominance to difficult finance. Use an escalation and verification workflow.',
+    source: 'https://openai.com/index/gpt-5-6/',
+    sourceLabel: 'GPT-5.6 evaluation table',
+  },
+  {
+    family: 'Coding composite',
+    benchmark: 'Artificial Analysis Coding Agent Index 1.1',
+    signal: 'Composite of implementation, terminal work, and codebase tasks.',
+    result: 'Sol 80.0 · Terra 77.4 · Fable 77.2 · Luna 74.6 · Opus 4.8 72.5',
+    use: 'Independent support for the GPT-5.6 price-performance curve.',
+    source: 'https://artificialanalysis.ai/',
+    sourceLabel: 'Artificial Analysis',
+  },
+  {
+    family: 'Repository coding',
+    benchmark: 'SWE-Bench Pro',
+    signal: 'Hard repository-level engineering tasks.',
+    result: 'Fable 80.0 · Sol 64.6 · Terra 63.4 · Luna 62.7 · Opus 4.8 69.2',
+    use: 'Counterevidence to a universal Luna policy. Some difficult engineering tasks reward Fable strongly.',
+    source: 'https://openai.com/index/gpt-5-6/',
+    sourceLabel: 'GPT-5.6 evaluation table',
+  },
+  {
+    family: 'Long-horizon code',
+    benchmark: 'DeepSWE 1.1',
+    signal: 'Original engineering tasks in real repositories.',
+    result: 'Opus 5 Max 74±4 · Sol Max 73±3 · Fable Max 70±4 · Terra Max 70±3 · Luna Max 67±4 · Sonnet 5 Max 54±4',
+    use: 'The shared mini-swe-agent harness supports Luna for volume work, but overlapping intervals caution against false precision in the hard tail.',
+    source: 'https://deepswe.datacurve.ai/',
+    sourceLabel: 'DeepSWE 1.1',
+  },
+  {
+    family: 'Terminal work',
+    benchmark: 'Terminal-Bench 2.1',
+    signal: 'Realistic multi-step command-line workflows.',
+    result: 'Sol 88.8 · Terra 87.4 · Luna 84.7 · Fable 83.1. SWE-1.7 reports 81.5 in Cognition\'s harness.',
+    use: 'Relevant to data engineering, ML engineering, software, and SRE.',
+    source: 'https://www.tbench.ai/',
+    sourceLabel: 'Terminal-Bench',
+  },
+  {
+    family: 'Multilingual code',
+    benchmark: 'SWE-Bench Multilingual',
+    signal: 'Issue resolution across languages and repositories.',
+    result: 'SWE-1.7 77.8 · GPT-5.5 76.8 · Opus 4.8 84.4 in the published SWE-1.7 comparison.',
+    use: 'Supports SWE-1.7 as a code-specialist peer, not a general knowledge worker.',
+    source: 'https://cognition.com/blog/swe-1-7',
+    sourceLabel: 'SWE-1.7 report',
+  },
+  {
+    family: 'Agentic search',
+    benchmark: 'BrowseComp',
+    signal: 'Finding difficult information through browsing and synthesis.',
+    result: 'Sol 90.4 · Terra 87.5 · Opus 4.8 85.9 · Fable 84.3 · Luna 83.3',
+    use: 'Relevant to analysts, product managers, AI engineers, and researchers.',
+    source: 'https://openai.com/index/gpt-5-6/',
+    sourceLabel: 'GPT-5.6 evaluation table',
+  },
+  {
+    family: 'Computer use',
+    benchmark: 'OSWorld 2.0',
+    signal: 'Operating real desktop applications and completing workflows.',
+    result: 'Sol 62.6 · Opus 4.8 54.8 · Terra 50.2 · Luna 45.6',
+    use: 'Use Sol only where computer use is central and the gain clears an internal eval.',
+    source: 'https://os-world.github.io/',
+    sourceLabel: 'OSWorld',
+  },
+  {
+    family: 'Tool use',
+    benchmark: 'AutomationBench',
+    signal: 'Multi-step automation through tools.',
+    result: 'Sol 18.1 · Fable 17.4 · Terra 15.2 · Luna 14.9 · Opus 4.8 15.5',
+    use: 'All models still fail often. Require deterministic checks instead of trusting the model tier.',
+    source: 'https://openai.com/index/gpt-5-6/',
+    sourceLabel: 'GPT-5.6 evaluation table',
+  },
+  {
+    family: 'Tool use',
+    benchmark: 'Toolathlon',
+    signal: 'Breadth and reliability across tool-driven tasks.',
+    result: 'Fable 61.7 · Opus 4.8 59.9 · Sol 58.0 · Luna 53.4 · Terra 53.1',
+    use: 'A warning that larger Anthropic models can retain an edge in complex tool orchestration.',
+    source: 'https://openai.com/index/gpt-5-6/',
+    sourceLabel: 'GPT-5.6 evaluation table',
+  },
+  {
+    family: 'Data science',
+    benchmark: 'GeneBench Pro',
+    signal: 'Long-horizon genomics and quantitative biology analysis.',
+    result: 'The full paper reports Sol Max 28.7 · Terra Max 23.3 · Luna Max 16.5 · Opus 4.8 16.0.',
+    use: 'Strong evidence for role-based escalation in scientific and statistical work.',
+    source: 'https://cdn.openai.com/pdf/21938268-21af-442f-af93-3b2249afb241/genebench-pro.pdf',
+    sourceLabel: 'GeneBench Pro paper',
+  },
+  {
+    family: 'Life science',
+    benchmark: 'LifeSciBench',
+    signal: 'Applied life-science research tasks.',
+    result: 'Sol 59.9 · Terra 56.0 · Opus 4.8 53.6 · Luna 51.2',
+    use: 'Supports Sol or Terra for research depth, subject to domain review.',
+    source: 'https://openai.com/index/gpt-5-6/',
+    sourceLabel: 'GPT-5.6 evaluation table',
+  },
+  {
+    family: 'Long context',
+    benchmark: 'MRCR 1M and GraphWalks 1M',
+    signal: 'Retrieval and graph reasoning over very large contexts.',
+    result: 'At 1M GraphWalks: Sol 77.1 · Terra 71.2 · Opus 4.8 68.1 · Luna 51.2. Luna also trails sharply on MRCR above 256K.',
+    use: 'Large context is a concrete escalation trigger, not a reason to expose every model.',
+    source: 'https://openai.com/index/gpt-5-6/',
+    sourceLabel: 'GPT-5.6 evaluation table',
+  },
+  {
+    family: 'Documents',
+    benchmark: 'gdp.pdf',
+    signal: 'Reasoning over complex visual PDF artifacts.',
+    result: 'Sol 30.7 · Fable 29.8 · Terra 24.7 · Luna 22.7 · Opus 4.8 22.5',
+    use: 'Relevant to analysts and technical product managers handling dense reports.',
+    source: 'https://openai.com/index/gpt-5-6/',
+    sourceLabel: 'GPT-5.6 evaluation table',
+  },
+  {
+    family: 'Multimodal',
+    benchmark: 'MMMU Pro with tools',
+    signal: 'Expert visual reasoning with tool access.',
+    result: 'Sol 84.6 · Terra 82.0 · Luna 79.5 · GPT-5.5 83.2',
+    use: 'Luna is often sufficient, but it is not the best choice for the hardest visual analysis.',
+    source: 'https://openai.com/index/gpt-5-6/',
+    sourceLabel: 'GPT-5.6 evaluation table',
+  },
+  {
+    family: 'External audit',
+    benchmark: 'METR Time Horizon 1.1',
+    signal: 'Autonomous software-task duration and evaluation integrity.',
+    result: 'METR declined to treat its Sol time-horizon estimates as robust because outcomes depended heavily on how detected evaluation exploits were scored.',
+    use: 'Critical caveat: benchmark scores are not a substitute for trace review, guardrails, and internal evals.',
+    source: 'https://metr.org/blog/2026-06-26-gpt-5-6-sol/',
+    sourceLabel: 'METR evaluation',
+  },
+];
+
+const adminSteps = [
+  {
+    n: '01',
+    title: 'Group by work, not seniority alone',
+    body: 'Map IdP groups to role families. Keep AI and research separate from BI, product, and general engineering because their justified frontier access differs.',
+  },
+  {
+    n: '02',
+    title: 'Filter by exact model',
+    body: 'Use Devin Models Configuration by model, not by provider. A provider-wide OpenAI filter would also expose lower Luna, Terra XHigh, and Sol Medium.',
+  },
+  {
+    n: '03',
+    title: 'Override the default',
+    body: 'Set GPT-5.6 Luna Extra High as the team default. Devin preselects the configured default whenever a user opens the product.',
+  },
+  {
+    n: '04',
+    title: 'Keep approval models out of the base group',
+    body: 'Grant frontier access through a small exception group or a time-bounded admin change. If the tenant cannot expire access, review membership weekly.',
+  },
+  {
+    n: '05',
+    title: 'Measure outcomes, not token volume',
+    body: 'Track model, spend, task class, first-pass acceptance, rework, latency, and human review. Revoke a model when its quality delta does not cover its cost delta.',
+  },
+];
+
+const userWorkflow = [
+  {
+    step: 'Frame',
+    body: 'State the artifact, constraints, acceptance tests, and stopping condition. One task per session.',
+  },
+  {
+    step: 'Run Luna',
+    body: 'Use Luna XHigh for the first bounded attempt. Ask it to verify the artifact, not merely explain what it would do.',
+  },
+  {
+    step: 'Inspect',
+    body: 'Run deterministic tests and review evidence. A failed outcome is a signal; model confidence is not.',
+  },
+  {
+    step: 'Escalate once',
+    body: 'Move only the unresolved ambiguity to the role-approved specialist. Preserve the original prompt, trace, and failure.',
+  },
+  {
+    step: 'Return to Luna',
+    body: 'Once the hard decision is resolved, hand bounded implementation and verification back to Luna.',
+  },
+];
+
+const budgetProfiles = {
+  tight: {
+    label: 'Tight',
+    description: 'Less than 400 ACUs per active user. Centralize specialist access and protect the Luna default.',
+    shares: { daily: 85, escalation: 10, reserve: 5 },
+  },
+  balanced: {
+    label: 'Balanced',
+    description: '400–799 ACUs per active user. Self-serve the role workhorses and require triggers for frontier models.',
+    shares: { daily: 75, escalation: 15, reserve: 10 },
+  },
+  generous: {
+    label: 'Generous',
+    description: '800 or more ACUs per active user. Expand specialist access, but preserve role boundaries and eval gates.',
+    shares: { daily: 65, escalation: 20, reserve: 15 },
+  },
+};
+
+const modelBandGuidance = {
+  luna: {
+    tight: 'Default for every role',
+    balanced: 'Default for every role',
+    generous: 'Default for every role',
+  },
+  swe: {
+    tight: 'Builders during promo',
+    balanced: 'Builders, then reprice',
+    generous: 'Builders, then reprice',
+  },
+  terra: {
+    tight: 'Shared exception when available',
+    balanced: 'Role allowlist when available',
+    generous: 'Role allowlist when available',
+  },
+  sol: {
+    tight: 'Central exception only',
+    balanced: 'Approval triggers',
+    generous: 'Senior role allowlist',
+  },
+  opus: {
+    tight: 'Central AI and code queue',
+    balanced: 'AI and research allowlist',
+    generous: 'Senior builder allowlist',
+  },
+  fable: {
+    tight: 'Exceptional research only',
+    balanced: 'AI and research approval',
+    generous: 'AI and research reserve',
+  },
+};
+
+const costComparisonModels = decisionModels.filter((model) => model.id !== 'swe');
+const lunaFrontierCost = decisionModels.find((model) => model.id === 'luna')?.frontierCost ?? 0.299;
+const policyData = {
+  budgetProfiles,
+  modelBandGuidance,
+  roleGuidance: Object.fromEntries(roles.map((role) => [role.id, role.guidance])),
+};
+---
+
+<Base
+  title="Devin Model Guide · h1sort"
+  description="An evidence-backed Devin Desktop model policy: role allowlists, escalation workflows, benchmark coverage, and a dynamic ACU budget planner."
+  path="/devin-model-guide"
+>
+  <main class="guide">
+    <header class="rule-top guide-rule">
+      <a class="brand link" href="/">
+        <svg class="brand-mark" viewBox="0 0 64 40" aria-hidden="true">
+          <rect x="2" y="26" width="10" height="12" rx="1.5"></rect>
+          <rect x="18" y="16" width="10" height="22" rx="1.5"></rect>
+          <rect x="34" y="8" width="10" height="30" rx="1.5"></rect>
+          <rect x="50" y="2" width="10" height="36" rx="1.5"></rect>
+        </svg>
+        <span class="strong">h1sort.com</span>
+      </a>
+      <span>Field note · {updated}</span>
+    </header>
+
+    <section class="hero section-shell">
+      <div class="hero-copy">
+        <span class="acid-label reveal d1">Devin model guide</span>
+        <h1 class="reveal d2">Buy the <span class="marker">outcome</span>, not the model.</h1>
+        <p class="hero-lede reveal d3">
+          A role-based policy for choosing OpenAI, Anthropic, and SWE workhorses in
+          Devin Desktop. Start with Luna at the highest deployable effort, then pay
+          for additional intelligence only when a measured workflow needs it.
+        </p>
+      </div>
+
+      <aside class="verdict reveal d4" aria-label="Policy verdict">
+        <span class="mono-label">Default policy</span>
+        <strong>Luna XHigh first.</strong>
+        <p>
+          Disable lower Luna, Terra XHigh, and Sol Medium. Add SWE-1.7 for builders.
+          Gate Sol High and Opus Medium. Keep Fable out of BI and ordinary engineering.
+        </p>
+        <a class="btn" href="#policy">See the allowlists <span class="arrow">↓</span></a>
+      </aside>
+    </section>
+
+    <nav class="jump-nav section-shell reveal d5" aria-label="Guide sections">
+      <a href="#budget">Budget</a>
+      <a href="#frontier">Cost frontier</a>
+      <a href="#policy">Roles</a>
+      <a href="#workflows">Workflows</a>
+      <a href="#evidence">Evidence</a>
+      <a href="#method">Method</a>
+    </nav>
+
+    <section id="budget" class="section-shell section-block">
+      <div class="section-heading reveal">
+        <span class="section-index">01</span>
+        <div>
+          <span class="mono-label">Dynamic policy</span>
+          <h2>Put a budget around the decision.</h2>
+          <p>
+            The starting contract is 800 monthly ACUs per active user at $2 per ACU.
+            Active users scale the organization ceiling, while the per-user allowance
+            determines the recommended access posture.
+          </p>
+        </div>
+      </div>
+
+      <div class="budget-panel reveal">
+        <div class="controls">
+          <label class="control" for="acu-budget">
+            <span>Monthly ACUs per active user</span>
+            <output id="acu-budget-output" for="acu-budget">{defaultAcuPerUser} ACUs</output>
+            <input id="acu-budget" type="range" min="100" max="5000" step="50" value={defaultAcuPerUser} />
+          </label>
+
+          <label class="control" for="acu-rate">
+            <span>Contract rate per ACU</span>
+            <span class="number-wrap"><span>$</span><input id="acu-rate" type="number" min="0.1" max="20" step="0.1" value={defaultAcuRate} /></span>
+          </label>
+
+          <label class="control" for="active-users">
+            <span>Monthly active users</span>
+            <span class="number-wrap"><input id="active-users" type="number" min="1" max="100000" step="100" value={defaultUsers} /><span>users</span></span>
+          </label>
+        </div>
+
+        <div class="budget-result" aria-live="polite">
+          <span class="mono-label">Current posture</span>
+          <strong id="budget-band">Generous</strong>
+          <p id="budget-description">{budgetProfiles.generous.description}</p>
+          <dl class="budget-stats">
+            <div>
+              <dt>Organization ACUs</dt>
+              <dd id="organization-acus">1,600,000</dd>
+            </div>
+            <div>
+              <dt>Monthly value</dt>
+              <dd id="budget-usd">$3,200,000</dd>
+            </div>
+            <div>
+              <dt>ACUs / active user</dt>
+              <dd id="acu-per-user">800</dd>
+            </div>
+            <div>
+              <dt>Daily lane</dt>
+              <dd id="daily-share">1,040,000 ACUs</dd>
+            </div>
+            <div>
+              <dt>Escalation + reserve</dt>
+              <dd id="specialist-share">560,000 ACUs</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      <div class="capacity-grid" aria-label="Relative benchmark task cost">
+        {costComparisonModels.map((model) => {
+          const relativeCost = model.frontierCost / lunaFrontierCost;
+          return <article class="capacity-card">
+            <span>{model.short}</span>
+            <strong>{relativeCost === 1 ? '1×' : `${relativeCost.toFixed(1)}×`} Luna</strong>
+            <small>${model.frontierCost.toFixed(2)} average per FrontierCode task</small>
+          </article>;
+        })}
+      </div>
+      <p class="caveat">
+        FrontierCode reports the average API cost of completing one task in its harness.
+        These ratios compare each selected model point with Luna XHigh. They are benchmark cost
+        ratios, not Devin capacity or invoice forecasts.
+      </p>
+    </section>
+
+    <section id="frontier" class="section-shell section-block">
+      <div class="section-heading reveal">
+        <span class="section-index">02</span>
+        <div>
+          <span class="mono-label">Interactive benchmark explorer</span>
+          <h2>Remove dominated choices first.</h2>
+          <p>
+            Switch the score on the y-axis while keeping average API cost per completed task
+            on the same logarithmic x-axis. Max benchmark points are not presented as Devin picker options.
+          </p>
+        </div>
+      </div>
+
+      <div class="benchmark-toolbar reveal">
+        <div class="benchmark-tabs" role="group" aria-label="Select benchmark">
+          {benchmarkPlots.map((plot, index) => (
+            <button
+              type="button"
+              data-benchmark-select={plot.id}
+              data-benchmark-source={plot.source}
+              data-benchmark-label={plot.label}
+              data-benchmark-note={plot.note}
+              aria-controls={`benchmark-chart-${plot.id}`}
+              aria-pressed={index === 0 ? 'true' : 'false'}
+            >
+              {plot.label}
+            </button>
+          ))}
+        </div>
+        <a id="benchmark-source" class="link" href={benchmarkPlots[0].source} target="_blank" rel="noopener noreferrer">
+          Open {benchmarkPlots[0].label} ↗
+        </a>
+      </div>
+      <p id="benchmark-note" class="benchmark-note" aria-live="polite">{benchmarkPlots[0].note}</p>
+
+      <figure class="frontier-figure reveal">
+        <div class="chart-scroll">
+          {benchmarkPlots.map((plot, index) => {
+            const pointMap = new Map(plot.points.map((point) => [point.name, point]));
+            return (
+              <svg
+                id={`benchmark-chart-${plot.id}`}
+                data-benchmark-chart={plot.id}
+                viewBox={`0 0 ${chart.width} ${chart.height}`}
+                role="img"
+                aria-labelledby={`benchmark-title-${plot.id} benchmark-desc-${plot.id}`}
+                hidden={index !== 0}
+              >
+                <title id={`benchmark-title-${plot.id}`}>{plot.label} score versus average API cost per completed task</title>
+                <desc id={`benchmark-desc-${plot.id}`}>A logarithmic cost and score scatter plot for {plot.label}, limited to OpenAI, Anthropic, and SWE models relevant to this policy.</desc>
+
+                {plot.scoreTicks.map((tick) => {
+                  const { y } = pointPosition(chart.minCost, tick, plot.minScore, plot.maxScore);
+                  return (
+                    <g>
+                      <line class="grid-line" x1={chart.left} x2={chart.width - chart.right} y1={y} y2={y}></line>
+                      <text class="axis-text" x={chart.left - 14} y={y + 4} text-anchor="end">{tick}%</text>
+                    </g>
+                  );
+                })}
+
+                {costTicks.map((tick) => {
+                  const { x } = pointPosition(tick, plot.minScore, plot.minScore, plot.maxScore);
+                  return (
+                    <g>
+                      <line class="grid-line" x1={x} x2={x} y1={chart.top} y2={chart.height - chart.bottom}></line>
+                      <text class="axis-text" x={x} y={chart.height - chart.bottom + 24} text-anchor="middle">${tick}</text>
+                    </g>
+                  );
+                })}
+
+                <text class="axis-label" x={(chart.left + chart.width - chart.right) / 2} y={chart.height - 10} text-anchor="middle">Average API cost per completed benchmark task, logarithmic scale</text>
+                <text class="axis-label" transform={`translate(18 ${(chart.top + chart.height - chart.bottom) / 2}) rotate(-90)`} text-anchor="middle">{plot.yLabel}</text>
+
+                {plot.comparisons.map((comparison) => {
+                  const winnerPoint = pointMap.get(comparison.winner);
+                  const comparedPoint = pointMap.get(comparison.compared);
+                  if (!winnerPoint || !comparedPoint) return null;
+
+                  const winner = pointPosition(winnerPoint.cost, winnerPoint.score, plot.minScore, plot.maxScore);
+                  const compared = pointPosition(comparedPoint.cost, comparedPoint.score, plot.minScore, plot.maxScore);
+                  const labelX = (winner.x + compared.x) / 2;
+                  const labelY = comparison.kind === 'strict'
+                    ? Math.max(winner.y, compared.y) + 31
+                    : Math.min(winner.y, compared.y) - 35;
+
+                  return (
+                    <g class={`dominance-comparison comparison-${comparison.kind}`}>
+                      <line class="comparison-guide" x1={winner.x} x2={winner.x} y1={winner.y} y2={chart.height - chart.bottom}></line>
+                      <line class="comparison-guide" x1={compared.x} x2={compared.x} y1={compared.y} y2={chart.height - chart.bottom}></line>
+                      <path class="comparison-elbow" d={`M ${winner.x} ${winner.y} H ${compared.x} V ${compared.y}`}></path>
+                      <text class="comparison-copy" x={labelX} y={labelY} text-anchor="middle">
+                        <tspan x={labelX}>{comparison.title}</tspan>
+                        <tspan class="comparison-detail" x={labelX} dy="14">{comparison.detail}</tspan>
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {plot.points.map((point) => {
+                  const { x, y } = pointPosition(point.cost, point.score, plot.minScore, plot.maxScore);
+                  const defaultAnchor = x > 760 ? 'end' : 'start';
+                  const anchor = 'labelAnchor' in point ? point.labelAnchor : defaultAnchor;
+                  const defaultLabelX = x > 760 ? x - 10 : x + 10;
+                  const labelX = 'labelDx' in point ? x + point.labelDx : defaultLabelX;
+                  const labelY = y + ('labelDy' in point ? point.labelDy : -11);
+                  return (
+                    <g class={`point point-${point.state}`}>
+                      <title>{point.name}: {point.score}% at ${point.cost.toFixed(2)} per {plot.label} task</title>
+                      <circle cx={x} cy={y} r="7"></circle>
+                      <text x={labelX} y={labelY} text-anchor={anchor}>{point.name}</text>
+                    </g>
+                  );
+                })}
+              </svg>
+            );
+          })}
+        </div>
+        <figcaption>
+          <span><i class="legend allow"></i> Deployable policy point</span>
+          <span><i class="legend benchmark"></i> Benchmark-only Max point</span>
+          <span><i class="legend dominated"></i> Dominated</span>
+          <span><i class="legend reserve"></i> Frontier reserve</span>
+          <span><i class="legend comparison"></i> Dominance comparison</span>
+        </figcaption>
+      </figure>
+      <p class="caveat">
+        Every view uses the same x-axis definition and $0.20–$30 scale. A model can move
+        horizontally because each benchmark harness generates different token usage and task cost.
+      </p>
+
+      <div class="model-grid">
+        {decisionModels.map((model) => (
+          <article class={`model-card model-${model.id}`}>
+            <div class="model-topline">
+              <span>{model.lane}</span>
+              <span class="model-band" data-model-guidance={model.id}>{modelBandGuidance[model.id as keyof typeof modelBandGuidance].generous}</span>
+            </div>
+            <h3>{model.name}</h3>
+            <dl>
+              <div><dt>Input / output</dt><dd>{model.price}</dd></div>
+              <div><dt>FC score / task</dt><dd>{model.frontierScore.toFixed(1)} / ${model.frontierCost.toFixed(2)}</dd></div>
+            </dl>
+            <p>{model.note}</p>
+          </article>
+        ))}
+      </div>
+
+      <div class="dominated-list">
+        {dominatedChoices.map((item) => (
+          <article>
+            <h3>{item.choice}</h3>
+            <p>{item.evidence}</p>
+            <strong>{item.action}</strong>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section id="policy" class="section-shell section-block">
+      <div class="section-heading reveal">
+        <span class="section-index">03</span>
+        <div>
+          <span class="mono-label">Role policy</span>
+          <h2>Small picker, explicit ladder.</h2>
+          <p>
+            Self-serve models belong in the base role group. Approval models stay out of that
+            group until the trigger is met. Denied models are not visible in the picker.
+          </p>
+        </div>
+      </div>
+
+      <div class="role-list">
+        {roles.map((role) => (
+          <details class="role-card" data-role={role.id}>
+            <summary>
+              <span class="role-name">{role.role}</span>
+              <span class="role-default"><small>Default</small>{role.defaultModel}</span>
+              <span class="details-toggle" aria-hidden="true">+</span>
+            </summary>
+            <div class="role-body">
+              <dl class="access-grid">
+                <div class="access-allow"><dt>Self-serve</dt><dd>{role.selfServe}</dd></div>
+                <div class="access-approval"><dt>Approval</dt><dd>{role.approval}</dd></div>
+                <div class="access-deny"><dt>Deny</dt><dd>{role.deny}</dd></div>
+              </dl>
+              <div class="role-trigger">
+                <span>Escalation trigger</span>
+                <p>{role.triggers}</p>
+              </div>
+              <ul class="workflow-list">
+                {role.workflows.map((workflow) => <li>{workflow}</li>)}
+              </ul>
+              <p class="role-budget">
+                <span>Budget-adjusted guidance</span>
+                <strong data-role-guidance={role.id}>{role.guidance.generous}</strong>
+              </p>
+            </div>
+          </details>
+        ))}
+      </div>
+    </section>
+
+    <section id="workflows" class="section-shell section-block two-column-section">
+      <div class="section-heading reveal">
+        <span class="section-index">04</span>
+        <div>
+          <span class="mono-label">Operating guide</span>
+          <h2>For admins and users.</h2>
+          <p>A model policy works only when access, escalation, and measurement reinforce each other.</p>
+        </div>
+      </div>
+
+      <div class="admin-guide">
+        <div class="subheading">
+          <span class="acid-label">Admin blueprint</span>
+          <a class="link" href="https://docs.devin.ai/desktop/guide-for-admins" target="_blank" rel="noopener noreferrer">Devin admin docs ↗</a>
+        </div>
+        <ol class="step-list">
+          {adminSteps.map((step) => (
+            <li>
+              <span>{step.n}</span>
+              <div><h3>{step.title}</h3><p>{step.body}</p></div>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div class="user-guide">
+        <div class="subheading">
+          <span class="acid-label">User loop</span>
+          <span class="mono-label">One escalation, then back down</span>
+        </div>
+        <ol class="workflow-track">
+          {userWorkflow.map((item, index) => (
+            <li>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <div><h3>{item.step}</h3><p>{item.body}</p></div>
+            </li>
+          ))}
+        </ol>
+
+        <div class="cli-card">
+          <div>
+            <span class="mono-label">Repeatable Luna profile</span>
+            <p>Use the exact deployable default for bounded research and implementation tasks.</p>
+          </div>
+          <pre><code>codex \
+  -m gpt-5.6-luna \
+  -c 'model_reasoning_effort="xhigh"' \
+  -c 'service_tier="fast"' \
+  exec --ephemeral --json \
+  '&lt;bounded task&gt;'</code></pre>
+        </div>
+      </div>
+
+      <div class="review-loop">
+        <span class="mono-label">Monthly policy review</span>
+        <div class="review-metrics">
+          <span>First-pass acceptance</span>
+          <span>Human rework minutes</span>
+          <span>Cost per accepted artifact</span>
+          <span>Escalation rate</span>
+          <span>Failed-test recovery</span>
+          <span>Policy exceptions</span>
+        </div>
+        <p>
+          Promote a model only after at least 30 representative tasks show a material outcome gain.
+          Retire it when the 95% interval includes no gain or when rework cancels the apparent benchmark advantage.
+        </p>
+      </div>
+    </section>
+
+    <section id="evidence" class="section-shell section-block">
+      <div class="section-heading reveal">
+        <span class="section-index">05</span>
+        <div>
+          <span class="mono-label">Evidence register</span>
+          <h2>Many signals, no magic average.</h2>
+          <p>
+            Scores are kept in their native units and tied to the work they measure.
+            A single blended intelligence score would hide the role-specific failures that matter.
+          </p>
+        </div>
+      </div>
+
+      <div class="evidence-table-wrap">
+        <table class="evidence-table">
+          <thead>
+            <tr>
+              <th>Work</th>
+              <th>Benchmark and signal</th>
+              <th>Current result</th>
+              <th>Policy use</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {benchmarkEvidence.map((item) => (
+              <tr>
+                <td>{item.family}</td>
+                <td>
+                  <a class="evidence-benchmark" href={item.source} target="_blank" rel="noopener noreferrer">
+                    <strong>{item.benchmark} ↗</strong>
+                    <span>{item.signal}</span>
+                  </a>
+                </td>
+                <td>{item.result}</td>
+                <td>{item.use}</td>
+                <td><a class="link" href={item.source} target="_blank" rel="noopener noreferrer">{item.sourceLabel} ↗</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="method" class="section-shell section-block method-section">
+      <div class="section-heading reveal">
+        <span class="section-index">06</span>
+        <div>
+          <span class="mono-label">Method and limitations</span>
+          <h2>What this guide can and cannot prove.</h2>
+        </div>
+      </div>
+
+      <div class="method-grid">
+        <article>
+          <h3>Decision rule</h3>
+          <p>
+            Remove strict cost-quality dominance, set a minimum capability floor, then choose
+            defaults and escalation points against role-specific evidence. Cost is evaluated per
+            accepted artifact, not per prompt.
+          </p>
+        </article>
+        <article>
+          <h3>Deployment versus benchmark</h3>
+          <p>
+            Devin lists GPT-5.6 through Extra High reasoning, while FrontierCode includes Max.
+            The policy deploys XHigh and labels Max as benchmark-only. If Max becomes selectable,
+            rerun the organization eval before changing the picker.
+          </p>
+        </article>
+        <article>
+          <h3>Harness sensitivity</h3>
+          <p>
+            A model score includes the agent harness, tools, context policy, effort, and stopping
+            rules. Provider tables and live leaderboards can report different absolute results.
+          </p>
+        </article>
+        <article>
+          <h3>Promotional prices</h3>
+          <p>
+            SWE-1.7 is free in Devin only through 8 August. Fable availability and pricing have
+            also changed rapidly. Recompute the frontier whenever a promotion ends.
+          </p>
+        </article>
+        <article>
+          <h3>Provider-reported evidence</h3>
+          <p>
+            Many current GPT-5.6 and Claude 5 results come from provider releases. FrontierCode,
+            Agents' Last Exam, Artificial Analysis, and METR add useful external checks, but no
+            public suite perfectly matches an organization.
+          </p>
+        </article>
+        <article>
+          <h3>Evaluation integrity</h3>
+          <p>
+            FrontierCode 1.1 zeros solution-bearing internet use. METR found Sol unusually hard
+            to measure because results changed with treatment of evaluation exploits. Keep traces,
+            hidden tests, and human review in the production loop.
+          </p>
+        </article>
+      </div>
+
+      <div class="source-strip">
+        <span>Snapshot sources</span>
+        <a href="https://docs.devin.ai/desktop/models" target="_blank" rel="noopener noreferrer">Devin models ↗</a>
+        <a href="https://docs.devin.ai/desktop/accounts/usage" target="_blank" rel="noopener noreferrer">ACU mechanics ↗</a>
+        <a href="https://openai.com/index/advancing-the-price-performance-frontier-with-gpt-5-6/" target="_blank" rel="noopener noreferrer">Luna price cut ↗</a>
+        <a href="https://cognition.com/data/frontiercode-leaderboard/data.json" target="_blank" rel="noopener noreferrer">FrontierCode data ↗</a>
+        <a href="https://www.anthropic.com/news/claude-fable-5-mythos-5" target="_blank" rel="noopener noreferrer">Fable 5 ↗</a>
+        <a href="https://cognition.com/blog/swe-1-7" target="_blank" rel="noopener noreferrer">SWE-1.7 ↗</a>
+      </div>
+      <p class="last-updated">Evidence and prices retrieved {updated}. Revalidate before adopting as policy.</p>
+    </section>
+
+    <footer class="guide-footer">
+      <span class="strong">Carlos Alberto Haro López</span>
+      <a class="link" href="/">← Back to landing</a>
+    </footer>
+  </main>
+
+  <script id="policy-data" type="application/json" set:html={JSON.stringify(policyData)}></script>
+  <script>
+    const budgetInput = document.querySelector<HTMLInputElement>('#acu-budget');
+    const rateInput = document.querySelector<HTMLInputElement>('#acu-rate');
+    const usersInput = document.querySelector<HTMLInputElement>('#active-users');
+    const policyNode = document.querySelector<HTMLScriptElement>('#policy-data');
+
+    if (budgetInput && rateInput && usersInput && policyNode?.textContent) {
+      const policy = JSON.parse(policyNode.textContent);
+      const currency = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0,
+      });
+      const integer = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+
+      const updatePolicy = () => {
+        const acuPerUser = Math.max(100, Number(budgetInput.value) || 100);
+        const rate = Math.max(0.1, Number(rateInput.value) || 0.1);
+        const users = Math.max(1, Number(usersInput.value) || 1);
+        const organizationAcus = acuPerUser * users;
+        const band = acuPerUser < 400 ? 'tight' : acuPerUser < 800 ? 'balanced' : 'generous';
+        const profile = policy.budgetProfiles[band];
+        const specialist = profile.shares.escalation + profile.shares.reserve;
+        const usd = organizationAcus * rate;
+
+        const setText = (selector: string, value: string) => {
+          const node = document.querySelector<HTMLElement>(selector);
+          if (node) node.textContent = value;
+        };
+
+        setText('#acu-budget-output', `${integer.format(acuPerUser)} ACUs`);
+        setText('#budget-band', profile.label);
+        setText('#budget-description', profile.description);
+        setText('#organization-acus', integer.format(organizationAcus));
+        setText('#budget-usd', currency.format(usd));
+        setText('#acu-per-user', integer.format(acuPerUser));
+        setText('#daily-share', `${integer.format(organizationAcus * profile.shares.daily / 100)} ACUs`);
+        setText('#specialist-share', `${integer.format(organizationAcus * specialist / 100)} ACUs`);
+
+        document.querySelectorAll<HTMLElement>('[data-model-guidance]').forEach((node) => {
+          const model = node.dataset.modelGuidance;
+          if (model) node.textContent = policy.modelBandGuidance[model][band];
+        });
+
+        document.querySelectorAll<HTMLElement>('[data-role-guidance]').forEach((node) => {
+          const role = node.dataset.roleGuidance;
+          if (role) node.textContent = policy.roleGuidance[role][band];
+        });
+      };
+
+      budgetInput.addEventListener('input', updatePolicy);
+      rateInput.addEventListener('input', updatePolicy);
+      usersInput.addEventListener('input', updatePolicy);
+      updatePolicy();
+    }
+
+    const benchmarkButtons = document.querySelectorAll<HTMLButtonElement>('[data-benchmark-select]');
+    const benchmarkCharts = document.querySelectorAll<SVGElement>('[data-benchmark-chart]');
+    const benchmarkSource = document.querySelector<HTMLAnchorElement>('#benchmark-source');
+    const benchmarkNote = document.querySelector<HTMLElement>('#benchmark-note');
+
+    benchmarkButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const selected = button.dataset.benchmarkSelect;
+        if (!selected) return;
+
+        benchmarkButtons.forEach((candidate) => {
+          candidate.setAttribute('aria-pressed', String(candidate === button));
+        });
+        benchmarkCharts.forEach((chartNode) => {
+          chartNode.toggleAttribute('hidden', chartNode.dataset.benchmarkChart !== selected);
+        });
+
+        const label = button.dataset.benchmarkLabel;
+        const source = button.dataset.benchmarkSource;
+        const note = button.dataset.benchmarkNote;
+        if (benchmarkSource && source) benchmarkSource.href = source;
+        if (benchmarkSource && label) benchmarkSource.textContent = `Open ${label} ↗`;
+        if (benchmarkNote && note) benchmarkNote.textContent = note;
+      });
+    });
+  </script>
+</Base>
+
+<style>
+  .guide {
+    position: relative;
+    min-height: 100svh;
+    padding: clamp(6.5rem, 12vh, 9rem) var(--page-padding) clamp(2rem, 5vh, 4rem);
+    background:
+      radial-gradient(circle at 96% 2%, var(--acid-soft) 0%, transparent 30%),
+      radial-gradient(circle at 2% 35%, rgba(200, 255, 62, 0.09) 0%, transparent 24%),
+      var(--bg);
+  }
+  .guide-rule { position: absolute; }
+  .brand { display: inline-flex; align-items: center; gap: 0.6em; }
+  .brand-mark { width: 1.6em; height: 1em; fill: var(--ink); }
+  .section-shell { width: min(1240px, 100%); margin-inline: auto; }
+  .section-block { padding-block: clamp(4.5rem, 10vw, 8rem); border-top: 1px solid var(--ink); }
+
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.62fr);
+    gap: clamp(2rem, 7vw, 7rem);
+    align-items: end;
+    min-height: min(720px, 72svh);
+    padding-bottom: clamp(3rem, 8vh, 6rem);
+  }
+  .hero h1 {
+    max-width: 11ch;
+    margin-top: clamp(1.2rem, 3vh, 2.2rem);
+    font-family: var(--font-serif);
+    font-size: clamp(3rem, 9.2vw, 8rem);
+    font-weight: 900;
+    font-variation-settings: "opsz" 144;
+    letter-spacing: -0.055em;
+    line-height: 0.86;
+  }
+  .hero-lede {
+    max-width: 65ch;
+    margin-top: clamp(1.5rem, 4vh, 2.6rem);
+    color: var(--muted);
+    font-size: var(--tagline-size);
+    line-height: 1.6;
+  }
+  .verdict {
+    border-top: 4px solid var(--ink);
+    background: var(--acid);
+    padding: clamp(1.3rem, 3vw, 2rem);
+  }
+  .verdict strong {
+    display: block;
+    margin-top: 1.2rem;
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+  }
+  .verdict p { margin: 1rem 0 1.4rem; line-height: 1.55; }
+  .verdict .btn { background: var(--bg); }
+
+  .jump-nav {
+    display: flex;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+  }
+  .jump-nav a {
+    flex: 1 1 150px;
+    padding: 1rem;
+    border-right: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: var(--label-size);
+    letter-spacing: 0.12em;
+    text-align: center;
+    text-transform: uppercase;
+    transition: background 0.25s var(--ease);
+  }
+  .jump-nav a:last-child { border-right: 0; }
+  .jump-nav a:hover { background: var(--acid); }
+
+  .section-heading {
+    display: grid;
+    grid-template-columns: minmax(40px, 0.14fr) minmax(0, 1fr);
+    gap: clamp(1rem, 4vw, 3rem);
+    margin-bottom: clamp(2rem, 5vw, 4rem);
+  }
+  .section-index {
+    font-family: var(--font-mono);
+    font-size: var(--label-size);
+    color: var(--acid-deep);
+    letter-spacing: 0.2em;
+  }
+  .section-heading h2 {
+    max-width: 18ch;
+    margin-top: 0.7rem;
+    font-family: var(--font-serif);
+    font-size: clamp(2.2rem, 6vw, 5.2rem);
+    font-weight: 900;
+    letter-spacing: -0.045em;
+    line-height: 0.95;
+  }
+  .section-heading p {
+    max-width: 68ch;
+    margin-top: 1.1rem;
+    color: var(--muted);
+    font-size: var(--body-size);
+    line-height: 1.6;
+  }
+
+  .budget-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+    border: 1px solid var(--ink);
+    background: rgba(236, 229, 215, 0.62);
+  }
+  .controls { display: grid; gap: 1.6rem; padding: clamp(1.5rem, 4vw, 3rem); }
+  .control { display: grid; grid-template-columns: 1fr auto; gap: 0.8rem 1rem; align-items: center; }
+  .control > span:first-child {
+    font-family: var(--font-mono);
+    font-size: var(--label-size);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .control output, .number-wrap {
+    font-family: var(--font-serif);
+    font-size: clamp(1.15rem, 2vw, 1.5rem);
+    font-weight: 700;
+  }
+  .control input[type='range'] { grid-column: 1 / -1; width: 100%; accent-color: var(--acid-deep); }
+  .number-wrap { display: flex; align-items: center; gap: 0.25rem; border-bottom: 1px solid var(--ink); }
+  .number-wrap input {
+    width: 5rem;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+  }
+  .budget-result { display: flex; flex-direction: column; justify-content: center; background: var(--ink); color: var(--bg); padding: clamp(1.5rem, 4vw, 3rem); }
+  .budget-result .mono-label { color: var(--acid); }
+  .budget-result > strong { margin-top: 0.8rem; font-family: var(--font-serif); font-size: clamp(2.5rem, 5vw, 4.6rem); line-height: 1; }
+  .budget-result > p { margin-top: 1rem; color: var(--bg-warm); line-height: 1.55; }
+  .budget-stats { display: grid; grid-template-columns: repeat(2, 1fr); margin-top: 1.8rem; border-top: 1px solid rgba(241, 236, 225, 0.24); }
+  .budget-stats div { padding: 0.9rem 0.7rem 0.2rem 0; }
+  .budget-stats dt { color: var(--muted-soft); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .budget-stats dd { margin-top: 0.25rem; font-weight: 600; }
+
+  .capacity-grid { display: grid; grid-template-columns: repeat(5, 1fr); margin-top: 1.2rem; border: 1px solid var(--rule); }
+  .capacity-card { min-width: 0; padding: 1rem; border-right: 1px solid var(--rule); }
+  .capacity-card:last-child { border-right: 0; }
+  .capacity-card span, .capacity-card small { display: block; font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .capacity-card strong { display: block; margin: 0.5rem 0 0.25rem; font-family: var(--font-serif); font-size: clamp(1.5rem, 3vw, 2.6rem); }
+  .capacity-card small { color: var(--muted); line-height: 1.35; }
+  .caveat { margin-top: 0.8rem; color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+
+  .benchmark-toolbar { display: flex; justify-content: space-between; gap: 1rem; align-items: stretch; border: 1px solid var(--ink); background: var(--bg); }
+  .benchmark-tabs { display: flex; flex-wrap: wrap; }
+  .benchmark-tabs button {
+    border: 0;
+    border-right: 1px solid var(--rule);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    padding: 0.9rem 1.1rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .benchmark-tabs button[aria-pressed='true'] { background: var(--acid); font-weight: 600; }
+  .benchmark-tabs button:hover { background: var(--acid); }
+  #benchmark-source { align-self: center; margin-right: 1rem; white-space: nowrap; font-size: 0.76rem; }
+  .benchmark-note { min-height: 2.5rem; padding: 0.75rem 1rem; border-inline: 1px solid var(--ink); color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+  .frontier-figure { border: 1px solid var(--ink); background: var(--card); }
+  .chart-scroll { overflow-x: auto; }
+  .chart-scroll svg { min-width: 840px; color: var(--ink); }
+  .chart-scroll svg[hidden] { display: none; }
+  .grid-line { stroke: var(--rule); stroke-width: 1; }
+  .axis-text, .axis-label, .point text { fill: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+  .axis-label { font-size: 12px; letter-spacing: 0.05em; }
+  .comparison-guide, .comparison-elbow { fill: none; stroke: var(--acid-deep); stroke-width: 1.5; }
+  .comparison-guide { opacity: 0.55; }
+  .comparison-elbow { stroke-width: 2.2; }
+  .comparison-near .comparison-guide, .comparison-near .comparison-elbow { stroke: var(--ink); stroke-dasharray: 6 5; opacity: 0.48; }
+  .comparison-copy {
+    fill: var(--acid-deep);
+    stroke: var(--card);
+    stroke-width: 5px;
+    paint-order: stroke fill;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .comparison-near .comparison-copy { fill: var(--ink); }
+  .comparison-detail { font-weight: 400; }
+  .point circle { stroke: var(--ink); stroke-width: 2; }
+  .point-allow circle { fill: var(--acid-deep); }
+  .point-benchmark circle { fill: var(--bg); stroke: var(--acid-deep); }
+  .point-dominated circle { fill: var(--muted-soft); stroke-dasharray: 3 2; opacity: 0.72; }
+  .point-reserve circle { fill: var(--ink); }
+  .point-reserve text { fill: var(--ink); font-weight: 600; }
+  .frontier-figure figcaption { display: flex; flex-wrap: wrap; gap: 0.8rem 1.4rem; padding: 0.9rem 1.2rem; border-top: 1px solid var(--rule); font-family: var(--font-mono); font-size: 0.66rem; text-transform: uppercase; }
+  .frontier-figure figcaption span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .legend { width: 0.65rem; height: 0.65rem; border: 1px solid var(--ink); border-radius: 50%; }
+  .legend.allow { background: var(--acid-deep); }
+  .legend.benchmark { background: var(--bg); border-color: var(--acid-deep); }
+  .legend.dominated { background: var(--muted-soft); border-style: dashed; }
+  .legend.reserve { background: var(--ink); }
+  .legend.comparison { width: 0.9rem; height: 2px; border: 0; border-radius: 0; background: var(--acid-deep); }
+
+  .model-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 1.5rem; background: var(--ink); border: 1px solid var(--ink); }
+  .model-card { display: flex; flex-direction: column; min-height: 260px; padding: clamp(1.2rem, 2.5vw, 1.8rem); background: var(--bg); }
+  .model-topline { display: flex; justify-content: space-between; gap: 1rem; font-family: var(--font-mono); font-size: 0.63rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .model-band { color: var(--acid-deep); text-align: right; }
+  .model-card h3 { margin: 1.8rem 0 1rem; font-family: var(--font-serif); font-size: clamp(1.5rem, 3vw, 2.3rem); line-height: 1; }
+  .model-card dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; padding-block: 0.8rem; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .model-card dt { color: var(--muted); font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase; }
+  .model-card dd { margin-top: 0.25rem; font-size: 0.82rem; font-weight: 600; }
+  .model-card p { margin-top: 1rem; color: var(--muted); font-size: 0.86rem; line-height: 1.5; }
+  .model-luna { box-shadow: inset 0 5px 0 var(--acid); }
+  .model-fable { box-shadow: inset 0 5px 0 var(--ink); }
+
+  .dominated-list { display: grid; grid-template-columns: repeat(5, 1fr); margin-top: 3rem; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+  .dominated-list article { padding: 1.2rem; border-right: 1px solid var(--rule); }
+  .dominated-list article:last-child { border-right: 0; }
+  .dominated-list h3 { font-family: var(--font-serif); font-size: 1.2rem; line-height: 1.1; }
+  .dominated-list p { margin: 0.7rem 0; color: var(--muted); font-size: 0.8rem; line-height: 1.45; }
+  .dominated-list strong { font-size: 0.8rem; line-height: 1.4; }
+
+  .role-list { border-top: 1px solid var(--ink); }
+  .role-card { border-bottom: 1px solid var(--ink); }
+  .role-card summary { display: grid; grid-template-columns: 1fr minmax(180px, 0.45fr) 2rem; gap: 1rem; align-items: center; padding: 1.2rem 0; cursor: pointer; list-style: none; }
+  .role-card summary::-webkit-details-marker { display: none; }
+  .role-name { font-family: var(--font-serif); font-size: clamp(1.4rem, 3vw, 2.5rem); font-weight: 700; }
+  .role-default { display: grid; color: var(--acid-deep); font-family: var(--font-mono); font-size: 0.8rem; text-transform: uppercase; }
+  .role-default small { color: var(--muted); font-size: 0.6rem; letter-spacing: 0.12em; }
+  .details-toggle { font-family: var(--font-serif); font-size: 2rem; transition: transform 0.25s var(--ease); }
+  .role-card[open] .details-toggle { transform: rotate(45deg); }
+  .role-body { padding: 0 0 2rem 14%; }
+  .access-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--rule); }
+  .access-grid div { padding: 1rem; border-right: 1px solid var(--rule); }
+  .access-grid div:last-child { border-right: 0; }
+  .access-grid dt, .role-trigger span, .role-budget span { font-family: var(--font-mono); font-size: 0.63rem; letter-spacing: 0.12em; text-transform: uppercase; }
+  .access-grid dd { margin-top: 0.45rem; font-weight: 600; line-height: 1.4; }
+  .access-allow { box-shadow: inset 0 4px 0 var(--acid-deep); }
+  .access-approval { box-shadow: inset 0 4px 0 var(--muted-soft); }
+  .access-deny { color: var(--muted); }
+  .role-trigger { display: grid; grid-template-columns: 160px 1fr; gap: 1rem; margin-top: 1.2rem; padding: 1rem; background: var(--bg-warm); }
+  .role-trigger p { line-height: 1.5; }
+  .workflow-list { display: grid; gap: 0.65rem; margin-top: 1.2rem; padding-left: 1.2rem; }
+  .workflow-list li { padding-left: 0.3rem; color: var(--muted); line-height: 1.5; }
+  .workflow-list li::marker { color: var(--acid-deep); }
+  .role-budget { display: grid; grid-template-columns: 160px 1fr; gap: 1rem; margin-top: 1.2rem; padding-top: 1.2rem; border-top: 1px solid var(--rule); }
+  .role-budget strong { line-height: 1.45; }
+
+  .two-column-section { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(2rem, 5vw, 5rem); }
+  .two-column-section > .section-heading, .two-column-section > .review-loop { grid-column: 1 / -1; }
+  .subheading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.4rem; }
+  .subheading .link { font-size: 0.78rem; }
+  .step-list, .workflow-track { list-style: none; border-top: 1px solid var(--ink); }
+  .step-list li, .workflow-track li { display: grid; grid-template-columns: 2.5rem 1fr; gap: 1rem; padding: 1.1rem 0; border-bottom: 1px solid var(--rule); }
+  .step-list li > span, .workflow-track li > span { color: var(--acid-deep); font-family: var(--font-mono); font-size: 0.72rem; }
+  .step-list h3, .workflow-track h3 { font-family: var(--font-serif); font-size: 1.3rem; }
+  .step-list p, .workflow-track p { margin-top: 0.35rem; color: var(--muted); line-height: 1.5; }
+  .cli-card { margin-top: 2rem; border: 1px solid var(--ink); }
+  .cli-card > div { padding: 1rem; }
+  .cli-card p { margin-top: 0.5rem; color: var(--muted); font-size: 0.86rem; }
+  .cli-card pre { overflow-x: auto; padding: 1.2rem; background: var(--ink); color: var(--acid); font-family: var(--font-mono); font-size: clamp(0.68rem, 1vw, 0.82rem); line-height: 1.65; }
+  .review-loop { display: grid; grid-template-columns: 0.4fr 1fr; gap: 1.5rem 3rem; margin-top: 1rem; padding: clamp(1.5rem, 4vw, 3rem); background: var(--acid); }
+  .review-metrics { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .review-metrics span { border: 1px solid var(--ink); padding: 0.45rem 0.65rem; font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; }
+  .review-loop p { grid-column: 2; max-width: 70ch; line-height: 1.55; }
+
+  .evidence-table-wrap { overflow-x: auto; border: 1px solid var(--ink); }
+  .evidence-table { width: 100%; min-width: 1100px; border-collapse: collapse; font-size: 0.78rem; }
+  .evidence-table th { background: var(--ink); color: var(--bg); font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em; text-align: left; text-transform: uppercase; }
+  .evidence-table th, .evidence-table td { padding: 0.9rem; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); vertical-align: top; line-height: 1.45; }
+  .evidence-table tr:last-child td { border-bottom: 0; }
+  .evidence-table th:last-child, .evidence-table td:last-child { border-right: 0; }
+  .evidence-table td:first-child { font-family: var(--font-mono); font-size: 0.66rem; text-transform: uppercase; }
+  .evidence-benchmark { display: block; }
+  .evidence-table td:nth-child(2) strong, .evidence-table td:nth-child(2) span { display: block; }
+  .evidence-table td:nth-child(2) strong { text-decoration: underline; text-decoration-color: var(--acid-deep); text-underline-offset: 3px; }
+  .evidence-table td:nth-child(2) span { margin-top: 0.25rem; color: var(--muted); }
+  .evidence-benchmark:hover strong { background: var(--acid); }
+
+  .method-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--ink); border: 1px solid var(--ink); }
+  .method-grid article { padding: clamp(1.2rem, 3vw, 2rem); background: var(--bg); }
+  .method-grid h3 { font-family: var(--font-serif); font-size: 1.5rem; }
+  .method-grid p { margin-top: 0.7rem; color: var(--muted); line-height: 1.55; }
+  .source-strip { display: flex; flex-wrap: wrap; gap: 0.7rem 1.2rem; align-items: center; margin-top: 2rem; padding-block: 1rem; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; }
+  .source-strip span { color: var(--muted); }
+  .source-strip a { text-decoration: underline; text-decoration-color: var(--acid-deep); text-underline-offset: 3px; }
+  .last-updated { margin-top: 0.8rem; color: var(--muted); font-size: 0.75rem; }
+
+  .guide-footer { display: flex; justify-content: space-between; gap: 1rem; width: min(1240px, 100%); margin: 0 auto; padding-top: 1.2rem; border-top: 1px solid var(--ink); font-family: var(--font-mono); font-size: var(--label-size); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  @media (max-width: 980px) {
+    .hero { grid-template-columns: 1fr; min-height: auto; }
+    .verdict { max-width: 620px; }
+    .capacity-grid { grid-template-columns: repeat(3, 1fr); }
+    .capacity-card { border-bottom: 1px solid var(--rule); }
+    .model-grid { grid-template-columns: repeat(2, 1fr); }
+    .dominated-list { grid-template-columns: repeat(2, 1fr); }
+    .dominated-list article { border-bottom: 1px solid var(--rule); }
+    .method-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 720px) {
+    .guide { padding-top: 7.5rem; }
+    .guide-rule { align-items: flex-start; }
+    .guide-rule > span { max-width: 15ch; text-align: right; line-height: 1.4; }
+    .hero h1 { font-size: clamp(3.5rem, 19vw, 6rem); }
+    .budget-panel, .two-column-section { grid-template-columns: 1fr; }
+    .benchmark-toolbar { flex-direction: column; gap: 0; }
+    .benchmark-tabs button { flex: 1 1 33%; }
+    #benchmark-source { align-self: flex-start; margin: 0; padding: 0.9rem 1.1rem; }
+    .capacity-grid { grid-template-columns: repeat(2, 1fr); }
+    .model-grid, .method-grid { grid-template-columns: 1fr; }
+    .dominated-list { grid-template-columns: 1fr; }
+    .dominated-list article { border-right: 0; }
+    .role-card summary { grid-template-columns: 1fr 2rem; }
+    .role-default { grid-column: 1; grid-row: 2; }
+    .details-toggle { grid-column: 2; grid-row: 1 / 3; }
+    .role-body { padding-left: 0; }
+    .access-grid { grid-template-columns: 1fr; }
+    .access-grid div { border-right: 0; border-bottom: 1px solid var(--rule); }
+    .access-grid div:last-child { border-bottom: 0; }
+    .role-trigger, .role-budget { grid-template-columns: 1fr; gap: 0.4rem; }
+    .two-column-section > .section-heading, .two-column-section > .review-loop { grid-column: auto; }
+    .review-loop { grid-template-columns: 1fr; }
+    .review-loop p { grid-column: auto; }
+    .guide-footer { flex-direction: column; }
+  }
+
+  @media (max-width: 480px) {
+    .section-heading { grid-template-columns: 1fr; }
+    .section-index { display: none; }
+    .control { grid-template-columns: 1fr; }
+    .control input[type='range'] { grid-column: auto; }
+    .capacity-grid { grid-template-columns: 1fr; }
+    .capacity-card { border-right: 0; }
+    .budget-stats { grid-template-columns: 1fr; }
+    .subheading { align-items: flex-start; flex-direction: column; }
+  }
+</style>
