@@ -140,4 +140,4 @@ Custom domains `h1sort.com` and `www.h1sort.com` are attached to the Worker (Set
 ## License
 
 © Carlos Alberto Haro López. All rights reserved.
-Contact: [carlos@h1sort.com](mailto:carlos@h1sort.com) · [github.com/haro-ca](https://github.com/haro-ca)
+Contact: [carlos@h1sort.com](mailto:carlos@h1sort.com) · [github.com/h1sort](https://github.com/h1sort)

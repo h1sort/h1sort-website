@@ -2,7 +2,7 @@
 
 ## AI Engineer & Technical Product Manager
 
-[carlos@h1sort.com](mailto:carlos@h1sort.com) · [h1sort.com](https://h1sort.com) · [github.com/haro-ca](https://github.com/haro-ca) · [linkedin.com/in/h1sort](https://www.linkedin.com/in/h1sort) · [x.com/h1sort](https://x.com/h1sort) · Mexico City, MX
+[carlos@h1sort.com](mailto:carlos@h1sort.com) · [h1sort.com](https://h1sort.com) · [github.com/h1sort](https://github.com/h1sort) · [linkedin.com/in/h1sort](https://www.linkedin.com/in/h1sort) · [x.com/h1sort](https://x.com/h1sort) · Mexico City, MX
 
 8+ years of experience designing and implementing end-to-end data & AI solutions across AWS, Azure, and GCP. **Adept at bridging technical execution and business strategy to drive innovative and scalable data solutions, for sales and for execution.**
 
@@ -68,7 +68,7 @@ Software Engineer, Development Bank (2020–21) · Data Scientist, Central Tax A
 
 ## Teaching
 
-**Real-Time Data Processing**: a 12-lesson hands-on course, from a single Postgres node to a full streaming pipeline (OLTP → CDC → Kafka → stream processing → real-time OLAP → API). [github.com/haro-ca/real-time-data-processing-class](https://github.com/haro-ca/real-time-data-processing-class)
+**Real-Time Data Processing**: a 12-lesson hands-on course, from a single Postgres node to a full streaming pipeline (OLTP → CDC → Kafka → stream processing → real-time OLAP → API). [github.com/h1sort/real-time-data-processing-class](https://github.com/h1sort/real-time-data-processing-class)
 
 ## Technical stack
 
