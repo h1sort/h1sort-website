@@ -1,0 +1,952 @@
+---
+import Base from '../layouts/Base.astro';
+import arena from '../data/arena-text-models.json';
+
+const updated = new Date(arena.fetchedAt).toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
+
+const chineseOrgs = [
+  'DeepSeek',
+  'Alibaba',
+  'Z.ai',
+  'Moonshot',
+  'MiniMax',
+  'Tencent',
+  'Xiaomi',
+  'Baidu',
+  'StepFun',
+  'Bytedance',
+  'Ant Group',
+  'Meituan',
+];
+
+const providerFamilies = [
+  { id: 'openai', label: 'OpenAI', orgs: ['OpenAI'] },
+  { id: 'anthropic', label: 'Anthropic', orgs: ['Anthropic'] },
+  { id: 'cognition', label: 'Cognition', orgs: ['Cognition'] },
+  { id: 'chinese', label: 'Chinese labs', orgs: chineseOrgs },
+];
+
+const focusOrgs = providerFamilies.flatMap((family) => family.orgs);
+
+const arenaMetrics = [
+  { slug: 'overall', label: 'Arena Overall' },
+  { slug: 'hard-prompts', label: 'Hard Prompts' },
+  { slug: 'coding', label: 'Coding' },
+  { slug: 'math', label: 'Math' },
+  { slug: 'expert', label: 'Expert' },
+  { slug: 'instruction-following', label: 'Instruction Following' },
+  { slug: 'multi-turn', label: 'Multi-Turn' },
+  { slug: 'longer-query', label: 'Longer Query' },
+  { slug: 'creative-writing', label: 'Creative Writing' },
+  { slug: 'industry-software-and-it-services', label: 'Software & IT Services' },
+  { slug: 'industry-business-and-management-and-financial-operations', label: 'Business & Financial Ops' },
+  { slug: 'industry-mathematical', label: 'Mathematical Work' },
+  { slug: 'industry-legal-and-government', label: 'Legal & Government' },
+  { slug: 'industry-medicine-and-healthcare', label: 'Medicine & Healthcare' },
+  { slug: 'industry-life-and-physical-and-social-science', label: 'Science' },
+  { slug: 'industry-writing-and-literature-and-language', label: 'Writing & Language' },
+];
+
+const arenaMetricSlugs = arenaMetrics.map((metric) => metric.slug);
+
+const evaluationRatings: Record<string, Map<string, number>> = {};
+for (const slug of arenaMetricSlugs) {
+  const evaluation = (arena.evaluations as Record<string, { scores: { modelKey: string; rating: number }[] }>)[slug];
+  evaluationRatings[slug] = new Map(evaluation.scores.map((score) => [score.modelKey, Math.round(score.rating)]));
+}
+
+const models = arena.models
+  .filter(
+    (model) =>
+      focusOrgs.includes(model.modelOrganization ?? '') &&
+      model.blendedPricePerMillion !== null &&
+      Number.isFinite(model.rating),
+  )
+  .map((model) => {
+    const scores: Record<string, number> = {};
+    for (const slug of arenaMetricSlugs) {
+      const rating = evaluationRatings[slug].get(model.modelKey);
+      if (rating !== undefined) scores[slug] = rating;
+    }
+    return {
+      name: model.modelDisplayName,
+      org: model.modelOrganization,
+      license: model.license ?? null,
+      price: Math.round(model.blendedPricePerMillion! * 100) / 100,
+      scores,
+    };
+  });
+
+const benchOrg = (name: string) => {
+  if (/swe/i.test(name)) return 'Cognition';
+  if (/opus|fable|sonnet/i.test(name)) return 'Anthropic';
+  return 'OpenAI';
+};
+
+const withOrg = (points: { name: string; score: number; cost: number }[]) =>
+  points.map((point) => ({ ...point, org: benchOrg(point.name) }));
+
+const benches = [
+  {
+    slug: 'frontiercode',
+    label: 'FrontierCode 1.1',
+    source: 'https://cognition.com/frontiercode',
+    note: 'Mergeability on complete repository tasks. Cost is the average API spend per completed task in the FrontierCode harness.',
+    points: withOrg([
+      { name: 'GPT-5.6 Luna XHigh', score: 38.9, cost: 0.299 },
+      { name: 'GPT-5.6 Luna Max', score: 39.8, cost: 0.361 },
+      { name: 'GPT-5.6 Terra XHigh', score: 38.7, cost: 1.296 },
+      { name: 'GPT-5.6 Terra Max', score: 41.3, cost: 1.806 },
+      { name: 'SWE-1.7', score: 42.33, cost: 1.9734 },
+      { name: 'GPT-5.6 Sol Medium', score: 39.9, cost: 3.1 },
+      { name: 'GPT-5.6 Sol High', score: 45.1, cost: 4.1 },
+      { name: 'Claude Opus 5 Medium', score: 53.4, cost: 4.3 },
+      { name: 'Claude Fable 5 XHigh', score: 53.5, cost: 13.0938 },
+    ]),
+  },
+  {
+    slug: 'cursorbench',
+    label: 'CursorBench 3.2',
+    source: 'https://cursor.com/cursorbench',
+    note: 'Ambiguous, multi-file tasks from real Cursor sessions. Cost is the average task cost with the July 30 pricing update.',
+    points: withOrg([
+      { name: 'GPT-5.6 Luna XHigh', score: 57.7, cost: 0.23 },
+      { name: 'GPT-5.6 Luna Max', score: 61.1, cost: 0.39 },
+      { name: 'GPT-5.6 Terra XHigh', score: 59.2, cost: 1.15 },
+      { name: 'GPT-5.6 Terra Max', score: 64.9, cost: 2.31 },
+      { name: 'GPT-5.6 Sol Medium', score: 60.0, cost: 1.95 },
+      { name: 'GPT-5.6 Sol High', score: 63.5, cost: 2.79 },
+      { name: 'Claude Opus 5 Medium', score: 64.3, cost: 3.29 },
+      { name: 'Claude Sonnet 5 Max', score: 61.5, cost: 6.45 },
+      { name: 'Claude Fable 5 XHigh', score: 68.4, cost: 11.73 },
+    ]),
+  },
+  {
+    slug: 'deepswe',
+    label: 'DeepSWE 1.1',
+    source: 'https://deepswe.datacurve.ai/',
+    note: 'Original long-horizon engineering tasks in one mini-swe-agent harness. Central estimates only; confidence intervals overlap.',
+    points: withOrg([
+      { name: 'GPT-5.6 Luna Max', score: 67, cost: 0.61 },
+      { name: 'GPT-5.6 Terra Max', score: 70, cost: 3.96 },
+      { name: 'GPT-5.6 Sol Max', score: 73, cost: 8.39 },
+      { name: 'Claude Opus 5 Max', score: 74, cost: 11.84 },
+      { name: 'Claude Fable 5 Max', score: 70, cost: 21.63 },
+      { name: 'Claude Sonnet 5 Max', score: 54, cost: 26.4 },
+    ]),
+  },
+];
+
+const roles = [
+  {
+    id: 'generalist',
+    label: 'Generalist / Operations',
+    metric: 'overall',
+    note: 'Drafting, summarizing, and internal Q&A rarely need the ceiling. Activate the value pick as the default and keep one frontier step above it for exceptions.',
+  },
+  {
+    id: 'software',
+    label: 'Software Engineer',
+    metric: 'coding',
+    note: 'Most tickets are bounded. Default to the value pick on the Coding frontier and reserve the ceiling for architecture or repeated failures.',
+  },
+  {
+    id: 'agents',
+    label: 'AI Engineer / Agentic coding',
+    metric: 'frontiercode',
+    note: 'Agentic harness cost per completed task is the honest unit here, not token price. Pick from the FrontierCode frontier and verify with an internal eval before paying for the ceiling.',
+  },
+  {
+    id: 'data',
+    label: 'Data & Analytics',
+    metric: 'math',
+    note: 'SQL, metrics, and quantitative checks track the Math frontier well. The value pick covers daily work; escalate only for consequential statistical design.',
+  },
+  {
+    id: 'research',
+    label: 'Research / Science',
+    metric: 'expert',
+    note: 'Expert-judged prompts reward depth. This is one of the few roles where a ceiling model can earn its price, but still route routine work to the value pick.',
+  },
+  {
+    id: 'finance',
+    label: 'Finance & Business Ops',
+    metric: 'industry-business-and-management-and-financial-operations',
+    note: 'Reconciliation and reporting are volume work: keep the basket cheap. Gate a single frontier step above the value pick behind approval.',
+  },
+  {
+    id: 'legal',
+    label: 'Legal & Compliance',
+    metric: 'industry-legal-and-government',
+    note: 'Accuracy beats flair. Prefer the value pick plus human review; a frontier ceiling model does not replace verification of citations.',
+  },
+  {
+    id: 'health',
+    label: 'Medicine & Healthcare',
+    metric: 'industry-medicine-and-healthcare',
+    note: 'Use the healthcare frontier for drafting and literature work under clinical review. Budget savings should never remove the human check.',
+  },
+  {
+    id: 'writing',
+    label: 'Content & Marketing',
+    metric: 'creative-writing',
+    note: 'Creative preference is cheap to sample. Run the value pick by default and A/B a frontier model only on flagship copy.',
+  },
+  {
+    id: 'support',
+    label: 'Customer Support',
+    metric: 'multi-turn',
+    note: 'High volume, low tolerance for cost. The cheapest frontier models on Multi-Turn usually win; the ceiling almost never pays back here.',
+  },
+];
+
+const payload = {
+  models,
+  arenaMetrics,
+  benches: benches.map(({ slug, label, note, points }) => ({ slug, label, note, points })),
+  families: providerFamilies,
+  roles: roles.map(({ id, metric, note }) => ({ id, metric, note })),
+};
+
+const payloadJson = JSON.stringify(payload).replace(/</g, '\\u003c');
+
+const methodNotes = [
+  {
+    title: 'Arena data',
+    body: `Text leaderboard snapshot from arena.ai, fetched ${updated}, with ${arena.leaderboard.totalVotes.toLocaleString('en-US')} total votes. Price is the blended list price per 1M tokens at a 3:1 output ratio: (input + 3 x output) / 4.`,
+  },
+  {
+    title: 'Elo, not accuracy',
+    body: 'Arena ratings are pairwise preference Elo. Gaps under roughly 20 points sit inside confidence intervals, so treat adjacent frontier models as interchangeable and pick the cheaper one.',
+  },
+  {
+    title: 'Agentic benches',
+    body: 'FrontierCode, CursorBench, and DeepSWE report the average API cost of completing one task in their own harness. That is the honest unit for agents: a cheap token price with high token burn can lose to an expensive model that finishes early.',
+  },
+  {
+    title: 'Refresh',
+    body: 'Regenerate the dataset with node scripts/fetch-arena-text-models.mjs --with-evaluations. The page rebuilds from src/data/arena-text-models.json at build time.',
+  },
+];
+---
+
+<Base
+  title="Model Guide · h1sort"
+  description="An interactive Pareto frontier for organization model policy: pick the providers you allow, a role, a metric, and a budget ceiling, and get the basket of models that maximizes intelligence per dollar."
+  path="/model-guide"
+>
+  <main class="guide">
+    <header class="rule-top guide-rule">
+      <a class="brand link" href="/">
+        <svg class="brand-mark" viewBox="0 0 64 40" aria-hidden="true">
+          <rect x="2" y="26" width="10" height="12" rx="1.5"></rect>
+          <rect x="18" y="16" width="10" height="22" rx="1.5"></rect>
+          <rect x="34" y="8" width="10" height="30" rx="1.5"></rect>
+          <rect x="50" y="2" width="10" height="36" rx="1.5"></rect>
+        </svg>
+        <span class="strong">h1sort.com</span>
+      </a>
+      <span>Field note · {updated}</span>
+    </header>
+
+    <section class="hero section-shell">
+      <div class="hero-copy">
+        <span class="acid-label reveal d1">Model guide</span>
+        <h1 class="reveal d2">Buy the <span class="marker">frontier</span>, not the hype.</h1>
+        <p class="hero-lede reveal d3">
+          A selector for organization admins. Choose the providers your company allows,
+          the role you are provisioning, and a budget ceiling. Every model above the
+          Pareto frontier costs more than a smarter or equally smart alternative,
+          so the frontier is the allowlist.
+        </p>
+      </div>
+
+      <aside class="verdict reveal d4" aria-label="How to use">
+        <span class="mono-label">The rule</span>
+        <strong>Maximize intelligence per dollar.</strong>
+        <p>
+          Activate only frontier models under your ceiling. Set the value pick as the
+          role default, keep one step above it behind approval, and deny the rest.
+        </p>
+        <a class="btn" href="#selector">Build the basket <span class="arrow">↓</span></a>
+      </aside>
+    </section>
+
+    <section id="selector" class="section-shell section-block">
+      <div class="section-heading reveal">
+        <span class="section-index">01</span>
+        <div>
+          <span class="mono-label">Selector</span>
+          <h2>Providers, role, metric, ceiling.</h2>
+          <p>
+            Arena metrics use blended list price per 1M tokens. The agentic benches use
+            measured cost per completed task, which is the honest unit for agents.
+          </p>
+        </div>
+      </div>
+
+      <div class="controls-panel reveal">
+        <div class="control-row">
+          <label class="select-control">
+            <span class="mono-label">Role</span>
+            <select id="role-select">
+              <option value="">Custom selection</option>
+              {roles.map((role) => <option value={role.id}>{role.label}</option>)}
+            </select>
+          </label>
+          <label class="select-control">
+            <span class="mono-label">Metric</span>
+            <select id="metric-select">
+              <optgroup label="Arena, head-to-head preference">
+                {arenaMetrics.map((metric) => <option value={metric.slug}>{metric.label}</option>)}
+              </optgroup>
+              <optgroup label="Agentic benches, cost per task">
+                {benches.map((bench) => <option value={bench.slug}>{bench.label}</option>)}
+              </optgroup>
+            </select>
+          </label>
+          <div class="select-control budget-control">
+            <span class="mono-label">Budget ceiling <output id="budget-output">$5.00</output></span>
+            <input id="budget-range" type="range" min="0" max="200" step="1" value="120" aria-label="Budget ceiling" />
+          </div>
+        </div>
+
+        <div class="provider-row" role="group" aria-label="Allowed providers">
+          <span class="mono-label">Allowed</span>
+          <div class="provider-chips">
+            {providerFamilies.map((family) => (
+              <button type="button" class="chip" data-family={family.id} aria-pressed="true">
+                {family.label}
+              </button>
+            ))}
+          </div>
+          <div class="provider-chips lab-chips" id="lab-chips" role="group" aria-label="Chinese labs">
+            {chineseOrgs.map((org) => (
+              <button type="button" class="chip chip-small" data-org={org} aria-pressed="true">
+                {org}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p id="metric-note" class="metric-note" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="frontier" class="section-shell section-block">
+      <div class="section-heading reveal">
+        <span class="section-index">02</span>
+        <div>
+          <span class="mono-label">Pareto frontier</span>
+          <h2>The frontier is the allowlist.</h2>
+          <p>
+            Cheap sits right, expensive sits left. Anything below the line is dominated:
+            another allowed model is at least as smart for less money.
+          </p>
+        </div>
+      </div>
+
+      <div class="frontier-layout reveal">
+        <figure class="frontier-figure">
+          <div class="chart-scroll">
+            <div id="frontier-chart" role="img" aria-label="Pareto frontier of model score versus price"></div>
+          </div>
+          <figcaption>
+            <span><i class="legend frontier"></i> Pareto frontier</span>
+            <span><i class="legend candidate"></i> Allowed, dominated</span>
+            <span><i class="legend capped"></i> Above ceiling</span>
+          </figcaption>
+        </figure>
+
+        <aside class="basket" aria-live="polite">
+          <div class="basket-head">
+            <span class="mono-label">The basket</span>
+            <span id="basket-count" class="basket-count"></span>
+          </div>
+          <p id="role-note" class="role-note"></p>
+          <ol id="basket-list" class="basket-list"></ol>
+          <p id="basket-empty" class="basket-empty" hidden>
+            No models match. Allow more providers or raise the ceiling.
+          </p>
+        </aside>
+      </div>
+      <p class="caveat">
+        Adjacent frontier models within about 20 Elo are statistically interchangeable:
+        activate the cheaper one. The value pick marks where paying more stops buying
+        meaningful intelligence for the selected metric.
+      </p>
+    </section>
+
+    <section id="method" class="section-shell section-block">
+      <div class="section-heading reveal">
+        <span class="section-index">03</span>
+        <div>
+          <span class="mono-label">Method</span>
+          <h2>Read the fine print.</h2>
+        </div>
+      </div>
+      <div class="method-grid">
+        {methodNotes.map((note) => (
+          <article class="method-card reveal">
+            <h3>{note.title}</h3>
+            <p>{note.body}</p>
+          </article>
+        ))}
+      </div>
+      <p class="caveat">
+        Sources: <a class="link" href="https://arena.ai/leaderboard/text" target="_blank" rel="noopener noreferrer">arena.ai</a> ·
+        {benches.map((bench, index) => (
+          <>
+            <a class="link" href={bench.source} target="_blank" rel="noopener noreferrer">{bench.label}</a>
+            {index < benches.length - 1 ? ' · ' : ''}
+          </>
+        ))}
+      </p>
+    </section>
+
+    <footer class="rule-bottom guide-rule">
+      <span><a class="link" href="/">h1sort.com</a></span>
+      <span>Data · {updated}</span>
+    </footer>
+  </main>
+
+  <script type="application/json" id="mg-data" set:html={payloadJson} />
+
+  <script>
+    type ArenaModel = {
+      name: string;
+      org: string;
+      license: string | null;
+      price: number;
+      scores: Record<string, number>;
+    };
+    type BenchPoint = { name: string; org: string; score: number; cost: number };
+    type Payload = {
+      models: ArenaModel[];
+      arenaMetrics: { slug: string; label: string }[];
+      benches: { slug: string; label: string; note: string; points: BenchPoint[] }[];
+      families: { id: string; label: string; orgs: string[] }[];
+      roles: { id: string; metric: string; note: string }[];
+    };
+
+    const data: Payload = JSON.parse(document.getElementById('mg-data')!.textContent!);
+    const benchSlugs = new Set(data.benches.map((bench) => bench.slug));
+
+    const roleSelect = document.getElementById('role-select') as HTMLSelectElement;
+    const metricSelect = document.getElementById('metric-select') as HTMLSelectElement;
+    const budgetRange = document.getElementById('budget-range') as HTMLInputElement;
+    const budgetOutput = document.getElementById('budget-output')!;
+    const metricNote = document.getElementById('metric-note')!;
+    const roleNote = document.getElementById('role-note')!;
+    const chartHost = document.getElementById('frontier-chart')!;
+    const basketList = document.getElementById('basket-list')!;
+    const basketCount = document.getElementById('basket-count')!;
+    const basketEmpty = document.getElementById('basket-empty') as HTMLElement;
+    const familyChips = [...document.querySelectorAll<HTMLButtonElement>('.chip[data-family]')];
+    const labChips = [...document.querySelectorAll<HTMLButtonElement>('.chip[data-org]')];
+    const labChipsRow = document.getElementById('lab-chips')!;
+
+    const allowedOrgs = new Set(data.families.flatMap((family) => family.orgs));
+    let metric = 'overall';
+    let capFraction = Number(budgetRange.value) / Number(budgetRange.max);
+
+    const isBench = () => benchSlugs.has(metric);
+
+    type Point = { name: string; org: string; license: string | null; price: number; score: number };
+
+    function candidatePoints(): Point[] {
+      if (isBench()) {
+        const bench = data.benches.find((entry) => entry.slug === metric)!;
+        return bench.points
+          .filter((point) => allowedOrgs.has(point.org))
+          .map((point) => ({ name: point.name, org: point.org, license: null, price: point.cost, score: point.score }));
+      }
+      return data.models
+        .filter((model) => allowedOrgs.has(model.org) && model.scores[metric] !== undefined)
+        .map((model) => ({ name: model.name, org: model.org, license: model.license, price: model.price, score: model.scores[metric] }));
+    }
+
+    function capDomain(points: Point[]) {
+      if (!points.length) return { min: 0.1, max: 100 };
+      const prices = points.map((point) => point.price);
+      return { min: Math.min(...prices), max: Math.max(...prices) };
+    }
+
+    function capPrice(points: Point[]) {
+      if (capFraction >= 1) return Infinity;
+      const { min, max } = capDomain(points);
+      return min * Math.pow((max * 1.0001) / min, capFraction);
+    }
+
+    function paretoFrontier(points: Point[]) {
+      return points.filter(
+        (point) =>
+          !points.some(
+            (other) =>
+              other !== point &&
+              other.price <= point.price &&
+              other.score >= point.score &&
+              (other.price < point.price || other.score > point.score),
+          ),
+      );
+    }
+
+    function valuePick(frontier: Point[]) {
+      if (!frontier.length) return null;
+      const sorted = [...frontier].sort((a, b) => a.price - b.price);
+      const threshold = isBench() ? 3 : 15;
+      let pick = sorted[0];
+      for (let i = 1; i < sorted.length; i += 1) {
+        const gain = sorted[i].score - pick.score;
+        const doublings = Math.log2(sorted[i].price / Math.max(pick.price, 0.0001));
+        if (doublings <= 0 || gain / doublings >= threshold) pick = sorted[i];
+        else break;
+      }
+      return pick;
+    }
+
+    const priceLabel = (value: number) =>
+      value >= 100 ? `$${Math.round(value)}` : value >= 10 ? `$${value.toFixed(0)}` : value >= 1 ? `$${value.toFixed(2).replace(/\.?0+$/, '')}` : `$${value.toFixed(2)}`;
+
+    const escapeHtml = (value: string) =>
+      value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    function niceTicks(min: number, max: number, target = 5) {
+      const span = max - min || 1;
+      const rawStep = span / target;
+      const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+      const step = [1, 2, 5, 10].map((mult) => mult * magnitude).find((candidate) => span / candidate <= target) ?? 10 * magnitude;
+      const ticks: number[] = [];
+      for (let tick = Math.ceil(min / step) * step; tick <= max + 1e-9; tick += step) ticks.push(Math.round(tick * 100) / 100);
+      return ticks;
+    }
+
+    const PRICE_TICKS = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200];
+
+    function render() {
+      const points = candidatePoints();
+      const cap = capPrice(points);
+      const inBudget = points.filter((point) => point.price <= cap);
+      const frontier = paretoFrontier(inBudget).sort((a, b) => a.price - b.price);
+      const pick = valuePick(frontier);
+      const ceiling = frontier.length ? frontier[frontier.length - 1] : null;
+
+      budgetOutput.textContent = cap === Infinity ? 'No cap' : `${priceLabel(cap)}${isBench() ? ' / task' : ' / 1M'}`;
+
+      renderChart(points, frontier, cap, pick);
+      renderBasket(points, frontier, pick, ceiling);
+    }
+
+    function renderChart(points: Point[], frontier: Point[], cap: number, pick: Point | null) {
+      const width = 1000;
+      const height = 460;
+      const left = 70;
+      const right = 30;
+      const top = 26;
+      const bottom = 62;
+      const plotW = width - left - right;
+      const plotH = height - top - bottom;
+
+      if (!points.length) {
+        chartHost.innerHTML = '<p class="chart-empty">No providers allowed. Toggle at least one family above.</p>';
+        return;
+      }
+
+      const domain = capDomain(points);
+      const minP = domain.min * 0.85;
+      const maxP = domain.max * 1.2;
+      const scores = points.map((point) => point.score);
+      const spanPad = Math.max((Math.max(...scores) - Math.min(...scores)) * 0.07, isBench() ? 2 : 12);
+      const minS = Math.min(...scores) - spanPad;
+      const maxS = Math.max(...scores) + spanPad;
+
+      const x = (price: number) => left + ((Math.log10(maxP) - Math.log10(price)) / (Math.log10(maxP) - Math.log10(minP))) * plotW;
+      const y = (score: number) => top + (1 - (score - minS) / (maxS - minS)) * plotH;
+
+      const parts: string[] = [];
+
+      for (const tick of niceTicks(minS, maxS)) {
+        parts.push(`<line class="grid-line" x1="${left}" x2="${width - right}" y1="${y(tick)}" y2="${y(tick)}"></line>`);
+        parts.push(`<text class="axis-text" x="${left - 12}" y="${y(tick) + 4}" text-anchor="end">${tick}${isBench() ? '%' : ''}</text>`);
+      }
+      for (const tick of PRICE_TICKS.filter((value) => value >= minP && value <= maxP)) {
+        parts.push(`<line class="grid-line" x1="${x(tick)}" x2="${x(tick)}" y1="${top}" y2="${height - bottom}"></line>`);
+        parts.push(`<text class="axis-text" x="${x(tick)}" y="${height - bottom + 22}" text-anchor="middle">${priceLabel(tick)}</text>`);
+      }
+
+      const xAxisLabel = isBench()
+        ? 'Average API cost per completed task, logarithmic, cheap on the right'
+        : 'Blended price per 1M tokens at 3:1, logarithmic, cheap on the right';
+      const yAxisLabel = isBench() ? 'Benchmark score' : 'Arena score';
+      parts.push(`<text class="axis-label" x="${left + plotW / 2}" y="${height - 12}" text-anchor="middle">${xAxisLabel}</text>`);
+      parts.push(`<text class="axis-label" transform="translate(16 ${top + plotH / 2}) rotate(-90)" text-anchor="middle">${yAxisLabel}</text>`);
+
+      if (cap !== Infinity && cap <= maxP) {
+        const capX = x(Math.max(cap, minP));
+        parts.push(`<line class="cap-line" x1="${capX}" x2="${capX}" y1="${top}" y2="${height - bottom}"></line>`);
+        parts.push(`<text class="cap-text" x="${capX + 6}" y="${top + 12}">ceiling ${priceLabel(cap)}</text>`);
+      }
+
+      if (frontier.length > 1) {
+        const path = frontier
+          .slice()
+          .sort((a, b) => b.price - a.price)
+          .map((point, index) => `${index === 0 ? 'M' : 'L'} ${x(point.price).toFixed(1)} ${y(point.score).toFixed(1)}`)
+          .join(' ');
+        parts.push(`<path class="frontier-path" d="${path}"></path>`);
+      }
+
+      const frontierSet = new Set(frontier);
+      for (const point of points) {
+        if (frontierSet.has(point)) continue;
+        const above = point.price > cap;
+        parts.push(
+          `<g class="pt ${above ? 'pt-capped' : 'pt-candidate'}"><title>${escapeHtml(point.name)} (${escapeHtml(point.org)}): ${point.score}${isBench() ? '%' : ''} at ${priceLabel(point.price)}</title>` +
+            `<rect x="${x(point.price) - 4}" y="${y(point.score) - 4}" width="8" height="8"></rect></g>`,
+        );
+      }
+
+      const ordered = frontier.slice().sort((a, b) => b.price - a.price);
+      ordered.forEach((point, index) => {
+        const px = x(point.price);
+        const py = y(point.score);
+        const isPick = point === pick;
+        const labelY = py - (index % 2 === 0 ? 14 : 30);
+        const anchor = px > width - 160 ? 'end' : px < left + 90 ? 'start' : 'middle';
+        parts.push(
+          `<g class="pt pt-frontier${isPick ? ' pt-pick' : ''}"><title>${escapeHtml(point.name)} (${escapeHtml(point.org)}): ${point.score}${isBench() ? '%' : ''} at ${priceLabel(point.price)}</title>` +
+            `<rect x="${px - 6}" y="${py - 6}" width="12" height="12"></rect>` +
+            `<text x="${px}" y="${labelY}" text-anchor="${anchor}">${escapeHtml(point.name)}${isPick ? ' ●' : ''}</text></g>`,
+        );
+      });
+
+      chartHost.innerHTML = `<svg viewBox="0 0 ${width} ${height}">${parts.join('')}</svg>`;
+    }
+
+    function renderBasket(points: Point[], frontier: Point[], pick: Point | null, ceiling: Point | null) {
+      const items = frontier.slice().sort((a, b) => b.score - a.score);
+      basketCount.textContent = points.length ? `${points.length} allowed · ${items.length} on frontier` : '';
+      basketEmpty.hidden = items.length > 0;
+      basketList.innerHTML = items
+        .map((point) => {
+          const tags: string[] = [];
+          if (point === pick) tags.push('<span class="tag tag-pick">Value pick</span>');
+          else if (point === ceiling) tags.push('<span class="tag">Ceiling</span>');
+          const meta = [point.org, point.license].filter(Boolean).join(' · ');
+          return (
+            `<li${point === pick ? ' class="is-pick"' : ''}>` +
+            `<div class="basket-line"><strong>${escapeHtml(point.name)}</strong>${tags.join('')}</div>` +
+            `<div class="basket-meta"><span>${escapeHtml(meta)}</span><span>${point.score}${isBench() ? '%' : ''} · ${priceLabel(point.price)}${isBench() ? '/task' : '/M'}</span></div>` +
+            `</li>`
+          );
+        })
+        .join('');
+    }
+
+    function updateMetricNote() {
+      const bench = data.benches.find((entry) => entry.slug === metric);
+      metricNote.textContent = bench
+        ? `${bench.note} Coverage is limited to curated OpenAI, Anthropic, and Cognition points.`
+        : 'Head-to-head preference Elo from arena.ai for the selected category, plotted against blended list price.';
+    }
+
+    function syncChips() {
+      const chineseFamily = data.families.find((family) => family.id === 'chinese')!;
+      for (const chip of familyChips) {
+        const family = data.families.find((entry) => entry.id === chip.dataset.family)!;
+        const active = family.orgs.some((org) => allowedOrgs.has(org));
+        chip.setAttribute('aria-pressed', String(active));
+      }
+      labChipsRow.hidden = !chineseFamily.orgs.some((org) => allowedOrgs.has(org));
+      for (const chip of labChips) chip.setAttribute('aria-pressed', String(allowedOrgs.has(chip.dataset.org!)));
+    }
+
+    familyChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const family = data.families.find((entry) => entry.id === chip.dataset.family)!;
+        const active = family.orgs.some((org) => allowedOrgs.has(org));
+        for (const org of family.orgs) {
+          if (active) allowedOrgs.delete(org);
+          else allowedOrgs.add(org);
+        }
+        syncChips();
+        render();
+      });
+    });
+
+    labChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const org = chip.dataset.org!;
+        if (allowedOrgs.has(org)) allowedOrgs.delete(org);
+        else allowedOrgs.add(org);
+        syncChips();
+        render();
+      });
+    });
+
+    metricSelect.addEventListener('change', () => {
+      metric = metricSelect.value;
+      roleSelect.value = '';
+      roleNote.textContent = '';
+      updateMetricNote();
+      render();
+    });
+
+    roleSelect.addEventListener('change', () => {
+      const role = data.roles.find((entry) => entry.id === roleSelect.value);
+      if (role) {
+        metric = role.metric;
+        metricSelect.value = role.metric;
+        roleNote.textContent = role.note;
+      } else {
+        roleNote.textContent = '';
+      }
+      updateMetricNote();
+      render();
+    });
+
+    budgetRange.addEventListener('input', () => {
+      capFraction = Number(budgetRange.value) / Number(budgetRange.max);
+      render();
+    });
+
+    syncChips();
+    updateMetricNote();
+    render();
+  </script>
+</Base>
+
+<style>
+  .guide {
+    position: relative;
+    min-height: 100svh;
+    padding: clamp(6.5rem, 12vh, 9rem) var(--page-padding) clamp(5rem, 9vh, 7rem);
+    background:
+      radial-gradient(circle at 96% 2%, var(--acid-soft) 0%, transparent 30%),
+      radial-gradient(circle at 2% 35%, rgba(200, 255, 62, 0.09) 0%, transparent 24%),
+      var(--bg);
+  }
+  .guide-rule { position: absolute; }
+  .brand { display: inline-flex; align-items: center; gap: 0.6em; }
+  .brand-mark { width: 1.6em; height: 1em; fill: var(--ink); }
+  .section-shell { width: min(1240px, 100%); margin-inline: auto; }
+  .section-block { padding-block: clamp(4rem, 9vw, 7rem); border-top: 1px solid var(--ink); }
+
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.62fr);
+    gap: clamp(2rem, 7vw, 7rem);
+    align-items: end;
+    min-height: min(680px, 70svh);
+    padding-bottom: clamp(3rem, 8vh, 6rem);
+  }
+  .hero h1 {
+    max-width: 11ch;
+    margin-top: clamp(1.2rem, 3vh, 2.2rem);
+    font-family: var(--font-serif);
+    font-size: clamp(3rem, 9.2vw, 8rem);
+    font-weight: 900;
+    font-variation-settings: "opsz" 144;
+    letter-spacing: -0.055em;
+    line-height: 0.86;
+  }
+  .hero-lede {
+    max-width: 65ch;
+    margin-top: clamp(1.5rem, 4vh, 2.6rem);
+    color: var(--muted);
+    font-size: var(--tagline-size);
+    line-height: 1.6;
+  }
+  .verdict {
+    border-top: 4px solid var(--ink);
+    background: var(--acid);
+    padding: clamp(1.3rem, 3vw, 2rem);
+  }
+  .verdict strong {
+    display: block;
+    margin-top: 1.2rem;
+    font-family: var(--font-serif);
+    font-size: clamp(1.8rem, 3.4vw, 2.9rem);
+    letter-spacing: -0.04em;
+    line-height: 0.98;
+  }
+  .verdict p { margin: 1rem 0 1.4rem; line-height: 1.55; }
+  .verdict .btn { background: var(--bg); }
+
+  .section-heading {
+    display: grid;
+    grid-template-columns: minmax(40px, 0.14fr) minmax(0, 1fr);
+    gap: clamp(1rem, 4vw, 3rem);
+    margin-bottom: clamp(2rem, 5vw, 4rem);
+  }
+  .section-index {
+    font-family: var(--font-mono);
+    font-size: var(--label-size);
+    color: var(--acid-deep);
+    letter-spacing: 0.2em;
+  }
+  .section-heading h2 {
+    max-width: 18ch;
+    margin-top: 0.7rem;
+    font-family: var(--font-serif);
+    font-size: clamp(2.2rem, 6vw, 5.2rem);
+    font-weight: 900;
+    letter-spacing: -0.045em;
+    line-height: 0.95;
+  }
+  .section-heading p {
+    max-width: 68ch;
+    margin-top: 1.1rem;
+    color: var(--muted);
+    font-size: var(--body-size);
+    line-height: 1.6;
+  }
+
+  .controls-panel { border: 1px solid var(--ink); background: rgba(236, 229, 215, 0.62); }
+  .control-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 1px solid var(--rule);
+  }
+  .select-control {
+    display: grid;
+    gap: 0.7rem;
+    padding: clamp(1.1rem, 2.5vw, 1.7rem);
+    border-right: 1px solid var(--rule);
+  }
+  .select-control:last-child { border-right: 0; }
+  .select-control select {
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--ink);
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+  .budget-control input[type='range'] { width: 100%; accent-color: var(--acid-deep); }
+  .budget-control output { color: var(--ink); font-weight: 600; letter-spacing: 0.05em; }
+
+  .provider-row {
+    display: grid;
+    gap: 0.8rem;
+    padding: clamp(1.1rem, 2.5vw, 1.7rem);
+  }
+  .provider-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .chip {
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    padding: 0.55rem 0.95rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: background 0.25s var(--ease), opacity 0.25s var(--ease);
+  }
+  .chip[aria-pressed='true'] { background: var(--acid); font-weight: 600; }
+  .chip[aria-pressed='false'] { opacity: 0.45; }
+  .chip:hover { background: var(--acid); opacity: 1; }
+  .chip-small { padding: 0.35rem 0.6rem; font-size: 0.62rem; border-color: var(--rule); }
+  .metric-note {
+    padding: 0 clamp(1.1rem, 2.5vw, 1.7rem) clamp(1.1rem, 2.5vw, 1.7rem);
+    color: var(--muted);
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .frontier-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.7fr);
+    gap: clamp(1rem, 2.5vw, 2rem);
+    align-items: stretch;
+  }
+  .frontier-figure { border: 1px solid var(--ink); background: var(--card); margin: 0; }
+  .chart-scroll { overflow-x: auto; }
+  #frontier-chart { min-width: 720px; }
+  #frontier-chart :global(svg) { width: 100%; height: auto; color: var(--ink); }
+  #frontier-chart :global(.chart-empty) { padding: 3rem 1.5rem; color: var(--muted); font-family: var(--font-mono); font-size: 0.8rem; }
+  #frontier-chart :global(.grid-line) { stroke: var(--rule); stroke-width: 1; }
+  #frontier-chart :global(.axis-text),
+  #frontier-chart :global(.axis-label) { fill: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+  #frontier-chart :global(.axis-label) { font-size: 12px; letter-spacing: 0.05em; }
+  #frontier-chart :global(.cap-line) { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 6 5; opacity: 0.6; }
+  #frontier-chart :global(.cap-text) { fill: var(--ink); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em; }
+  #frontier-chart :global(.frontier-path) { fill: none; stroke: var(--acid-deep); stroke-width: 2.5; }
+  #frontier-chart :global(.pt rect) { stroke: var(--ink); stroke-width: 1; }
+  #frontier-chart :global(.pt-candidate rect) { fill: var(--muted-soft); opacity: 0.75; }
+  #frontier-chart :global(.pt-capped rect) { fill: transparent; stroke: var(--muted-soft); opacity: 0.45; }
+  #frontier-chart :global(.pt-frontier rect) { fill: var(--acid); stroke-width: 2; }
+  #frontier-chart :global(.pt-pick rect) { fill: var(--ink); stroke: var(--acid-deep); }
+  #frontier-chart :global(.pt-frontier text) {
+    fill: var(--ink);
+    stroke: var(--card);
+    stroke-width: 4px;
+    paint-order: stroke fill;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+  }
+  .frontier-figure figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    padding: 0.8rem 1rem;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .legend { display: inline-block; width: 0.7em; height: 0.7em; margin-right: 0.45em; border: 1px solid var(--ink); }
+  .legend.frontier { background: var(--acid); }
+  .legend.candidate { background: var(--muted-soft); }
+  .legend.capped { background: transparent; border-color: var(--muted-soft); }
+
+  .basket { display: flex; flex-direction: column; border: 1px solid var(--ink); background: var(--ink); color: var(--bg); padding: clamp(1.2rem, 2.5vw, 1.8rem); }
+  .basket-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+  .basket .mono-label { color: var(--acid); }
+  .basket-count { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-soft); }
+  .role-note { margin-top: 0.9rem; color: var(--bg-warm); font-size: 0.85rem; line-height: 1.55; }
+  .role-note:empty { display: none; }
+  .basket-list { margin-top: 1.1rem; list-style: none; counter-reset: basket; overflow-y: auto; max-height: 430px; }
+  .basket-list li { padding: 0.75rem 0; border-top: 1px solid rgba(241, 236, 225, 0.18); counter-increment: basket; }
+  .basket-list li.is-pick { background: rgba(200, 255, 62, 0.08); margin-inline: -0.6rem; padding-inline: 0.6rem; }
+  .basket-line { display: flex; align-items: center; gap: 0.6rem; }
+  .basket-line::before { content: counter(basket, decimal-leading-zero); font-family: var(--font-mono); font-size: 0.62rem; color: var(--muted-soft); }
+  .basket-line strong { font-size: 0.92rem; font-weight: 600; overflow-wrap: anywhere; }
+  .tag {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid rgba(241, 236, 225, 0.4);
+    padding: 0.15rem 0.4rem;
+    white-space: nowrap;
+  }
+  .tag-pick { background: var(--acid); border-color: var(--acid); color: var(--ink); font-weight: 600; }
+  .basket-meta { display: flex; justify-content: space-between; gap: 1rem; margin-top: 0.3rem; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.04em; color: var(--muted-soft); }
+  .basket-empty { margin-top: 1.2rem; color: var(--muted-soft); font-size: 0.85rem; line-height: 1.5; }
+
+  .caveat { margin-top: 1rem; color: var(--muted); font-size: 0.8rem; line-height: 1.5; max-width: 80ch; }
+
+  .method-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); border: 1px solid var(--rule); }
+  .method-card { padding: clamp(1.2rem, 2.5vw, 1.8rem); border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .method-card h3 { font-family: var(--font-serif); font-size: clamp(1.15rem, 2vw, 1.5rem); letter-spacing: -0.02em; }
+  .method-card p { margin-top: 0.7rem; color: var(--muted); font-size: 0.86rem; line-height: 1.6; }
+
+  @media (max-width: 960px) {
+    .hero { grid-template-columns: 1fr; align-items: start; min-height: 0; }
+    .control-row { grid-template-columns: 1fr; }
+    .select-control { border-right: 0; border-bottom: 1px solid var(--rule); }
+    .select-control:last-child { border-bottom: 0; }
+    .frontier-layout { grid-template-columns: 1fr; }
+    .basket-list { max-height: none; }
+  }
+</style>
