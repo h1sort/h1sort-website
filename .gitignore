@@ -48,3 +48,6 @@ h1sort.png
 
 # Generated at build time from src/data/cv.md (see scripts/build-chat-context.mjs)
 worker/site-context.ts
+
+# Locally refreshed Arena model catalog
+src/data/arena-text-models.json

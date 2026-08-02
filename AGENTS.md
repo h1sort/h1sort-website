@@ -9,9 +9,11 @@ The personal website for **Carlos Alberto Haro** at **h1sort.com** — an Astro 
 ## Commands
 
 ```bash
-npm run dev      # dev server (http://localhost:4321)
-npm run build    # prebuild: src/data/cv.md -> public/cv.pdf, then static build -> dist/  (MUST pass; 8 pages + sitemap)
-npm run preview  # preview the production build
+npm run dev                  # dev server (http://localhost:4321)
+npm run fetch:arena-models   # refresh the full text leaderboard model catalog
+npm run fetch:arena-models:all # refresh the catalog plus every discovered text evaluation
+npm run build                # prebuild: src/data/cv.md -> public/cv.pdf, then static build -> dist/  (MUST pass; 8 pages + sitemap)
+npm run preview              # preview the production build
 ```
 
 Always run `npm run build` after changes to verify the site still generates.
@@ -38,6 +40,15 @@ Always run `npm run build` after changes to verify the site still generates.
 - `src/styles/global.css` — design tokens (`:root`) + shared utilities.
 - `src/components/AskWidget.astro` — "Ask Assistant" pill fixed top-center that opens a right lateral chat panel (rendered by Base on every page). Talks to `/api/chat`, handled by `worker/index.ts` — a Cloudflare Worker route that streams Claude Haiku (`claude-haiku-4-5`) answers. Grounding context is generated into `worker/site-context.ts` (gitignored) from `src/data/cv.md` by `scripts/build-chat-context.mjs` (prebuild). The `ANTHROPIC_API_KEY` secret lives on the Worker / `.dev.vars` locally — NEVER in client code or the repo. Test with `npm run build && npx wrangler dev` (the Astro dev server does **not** serve `/api/chat`).
 - **Conversations are logged to D1** (database `h1sort-chat`, binding `DB` in `wrangler.jsonc`). The widget sends a per-tab `conversationId` (sessionStorage UUID); the worker tees the SSE stream and persists each user/assistant turn via `ctx.waitUntil`, fail-open (a D1 error never breaks the chat; no `conversationId` = no logging). Schema lives in `migrations/` — apply with `npx wrangler d1 migrations apply h1sort-chat --local` (dev) and `--remote` (prod).
+
+## Arena text model catalog
+
+- `scripts/fetch-arena-text-models.mjs` fetches the public HTML at `https://arena.ai/leaderboard/text/pareto` and extracts the server-rendered Next.js Flight payload. It does not call Arena's private API or request `/_next/` assets.
+- `npm run fetch:arena-models` refreshes the full overall catalog. `npm run fetch:arena-models:all` also fetches every evaluation category discovered on the page. For a smaller targeted refresh, use `node scripts/fetch-arena-text-models.mjs --categories=math,coding`.
+- The output is `src/data/arena-text-models.json`, which is intentionally gitignored and must not be committed. Refresh it locally before developing the planned model-selection page.
+- The catalog preserves model metadata and includes `availableEvaluations`, per-category `evaluations`, and `pareto.modelKeys`. Evaluation scores are joined to models by `modelKey`.
+- Pareto uses Arena's blended price formula: `(input price + 3 * output price) / 4`. Models without positive input and output prices are excluded from the calculated frontier.
+- Keep requests limited to the public leaderboard pages and respect Arena's robots rules and Terms of Use before republishing data.
 
 ## Assistant conversation analytics
 
