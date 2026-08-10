@@ -49,7 +49,7 @@ const nav = [
 
       <aside class="viz reveal d3" aria-label="Ambient clustering animation">
         <div class="viz-head">
-          <span class="viz-live"><span class="dot"></span>Clustering</span>
+          <span class="viz-live">Clustering...</span>
           <span class="viz-n" id="vizN">n = 128</span>
         </div>
         <canvas id="vizCanvas" class="viz-canvas"></canvas>
@@ -87,15 +87,28 @@ const nav = [
 
 <script>
   // ============================================================
-  // Ambient k-means clustering visualization
-  // Points are generated as blobs, then Lloyd's algorithm runs:
-  // centroids glide between iterations, spokes re-wire as points
-  // change hands, and convex hulls draw once it converges.
+  // Ambient clustering visualization
+  // Cycles through k-means, a Gaussian mixture (EM) and DBSCAN over
+  // the same generated blobs. Each algorithm emits a sequence of
+  // frames; the renderer interpolates between them and draws the
+  // outline style that algorithm asks for.
   // ============================================================
 
   type Pt = { x: number; y: number };
-  type Iter = { cents: Pt[]; assign: number[]; inertia: number };
-  type Shape = 'circle' | 'square' | 'triangle' | 'diamond' | 'plus';
+  // cov is [xx, xy, yy] per cluster; cents null means the algorithm has no
+  // centroid to show (DBSCAN), which also suppresses the spokes.
+  type Frame = { cents: Pt[] | null; covs: number[][] | null; assign: number[]; metric: number };
+  // run() returns its own parameter label, so a value the algorithm derives
+  // internally (DBSCAN's eps) isn't recomputed just to caption the panel.
+  type Run = { frames: Frame[]; param: string };
+  type Algo = {
+    name: string;
+    outline: 'hull' | 'ellipse';
+    stepMs: number;
+    format: (v: number) => string;
+    run: (pts: Pt[], k: number, w: number, h: number) => Run;
+  };
+  type Shape = 'circle' | 'square' | 'triangle' | 'diamond' | 'cross';
 
   const canvas = document.getElementById('vizCanvas') as HTMLCanvasElement | null;
 
@@ -143,6 +156,28 @@ const nav = [
     return pts;
   }
 
+  // k-means++ seeding: each new seed is drawn with probability proportional to
+  // its squared distance from the nearest existing seed. Plain random seeding
+  // regularly settles into a bad local optimum: one cluster straddling two
+  // blobs with its centroid in the empty gap, or a stranded EM component with
+  // no points. The settled state is what's on screen longest, and it's what
+  // reduced-motion visitors see permanently, so it has to be right.
+  function seedPlusPlus(pts: Pt[], k: number): Pt[] {
+    const seeds: Pt[] = [{ ...pts[Math.floor(Math.random() * pts.length)] }];
+    while (seeds.length < k) {
+      const d = pts.map((p) => Math.min(...seeds.map((s) => dist2(p, s))));
+      const total = d.reduce((a, b) => a + b, 0);
+      let r = Math.random() * total;
+      let pick = d.length - 1;
+      for (let i = 0; i < d.length; i++) {
+        r -= d[i];
+        if (r <= 0) { pick = i; break; }
+      }
+      seeds.push({ ...pts[pick] });
+    }
+    return seeds;
+  }
+
   function nearest(p: Pt, cents: Pt[]): number {
     let bi = 0;
     let bd = Infinity;
@@ -153,20 +188,22 @@ const nav = [
     return bi;
   }
 
-  // Lloyd's algorithm, recording every iteration so playback can interpolate
-  function lloyd(pts: Pt[], k: number): Iter[] {
-    const pool = pts.slice();
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
-    let cents: Pt[] = pool.slice(0, k).map((p) => ({ x: p.x, y: p.y }));
-    const iters: Iter[] = [];
+  // --- 1. Lloyd's algorithm ---
+  function kmeans(pts: Pt[], k: number): Frame[] {
+    let cents = seedPlusPlus(pts, k);
+    const frames: Frame[] = [];
+    // Report inertia as a fraction of the total variance about the global mean,
+    // not of the first iteration's. A ratio against iteration 0 depends on how
+    // lucky the seeding was, so a *perfect* clustering from a good seed scored
+    // worse than a mediocre one from a bad seed.
+    const gx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+    const gy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+    const total = pts.reduce((s, p) => s + dist2(p, { x: gx, y: gy }), 0) || 1;
 
     for (let step = 0; step < 7; step++) {
       const assign = pts.map((p) => nearest(p, cents));
       const inertia = pts.reduce((s, p, i) => s + dist2(p, cents[assign[i]]), 0);
-      iters.push({ cents: cents.map((c) => ({ ...c })), assign, inertia });
+      frames.push({ cents: cents.map((c) => ({ ...c })), covs: null, assign, metric: inertia / total });
 
       const next = cents.map((c, ci) => {
         let sx = 0, sy = 0, count = 0;
@@ -178,12 +215,167 @@ const nav = [
       const moved = next.reduce((s, c, i) => s + Math.hypot(c.x - cents[i].x, c.y - cents[i].y), 0);
       cents = next;
       // Stop as soon as the centroids have *visually* settled. Running to true
-      // numerical convergence burns several iterations on sub-pixel moves and
-      // starves the converged state, which is the part worth looking at.
-      if (moved < 1.5 && iters.length >= 2) break;
+      // numerical convergence burns iterations on sub-pixel moves and starves
+      // the converged state, which is the part worth looking at.
+      if (moved < 1.5 && frames.length >= 2) break;
     }
-    return iters;
+    return frames;
   }
+
+  // --- 2. Gaussian mixture, fitted by EM ---
+  function gmm(pts: Pt[], k: number, w: number, h: number): Frame[] {
+    const means = seedPlusPlus(pts, k);
+    const s0 = (Math.min(w, h) * 0.1) ** 2;
+    const ridge = (Math.min(w, h) * 0.02) ** 2; // keeps covariances invertible
+    let covs = Array.from({ length: k }, () => [s0, 0, s0]);
+    let weights = new Array(k).fill(1 / k);
+    const frames: Frame[] = [];
+    const n = pts.length;
+
+    for (let step = 0; step < 9; step++) {
+      // E step
+      const resp: number[][] = [];
+      let logL = 0;
+      for (let i = 0; i < n; i++) {
+        const row = new Array(k);
+        let sum = 0;
+        for (let c = 0; c < k; c++) {
+          const [a, b, d] = covs[c];
+          const det = Math.max(a * d - b * b, 1e-6);
+          const dx = pts[i].x - means[c].x;
+          const dy = pts[i].y - means[c].y;
+          const quad = (d * dx * dx - 2 * b * dx * dy + a * dy * dy) / det;
+          const p = weights[c] * Math.exp(-0.5 * quad) / (2 * Math.PI * Math.sqrt(det));
+          row[c] = p;
+          sum += p;
+        }
+        sum = Math.max(sum, 1e-300);
+        logL += Math.log(sum);
+        for (let c = 0; c < k; c++) row[c] /= sum;
+        resp.push(row);
+      }
+
+      const assign = resp.map((row) => row.indexOf(Math.max(...row)));
+      frames.push({
+        cents: means.map((m) => ({ ...m })),
+        covs: covs.map((c) => c.slice()),
+        assign,
+        metric: logL / n,
+      });
+
+      // M step
+      let moved = 0;
+      for (let c = 0; c < k; c++) {
+        let nk = 0, mx = 0, my = 0;
+        for (let i = 0; i < n; i++) { nk += resp[i][c]; mx += resp[i][c] * pts[i].x; my += resp[i][c] * pts[i].y; }
+        if (nk < 1e-6) continue;
+        const mean = { x: mx / nk, y: my / nk };
+        moved += Math.hypot(mean.x - means[c].x, mean.y - means[c].y);
+        means[c] = mean;
+        let sxx = 0, sxy = 0, syy = 0;
+        for (let i = 0; i < n; i++) {
+          const dx = pts[i].x - means[c].x;
+          const dy = pts[i].y - means[c].y;
+          sxx += resp[i][c] * dx * dx;
+          sxy += resp[i][c] * dx * dy;
+          syy += resp[i][c] * dy * dy;
+        }
+        covs[c] = [sxx / nk + ridge, sxy / nk, syy / nk + ridge];
+        weights[c] = nk / n;
+      }
+      // Same reasoning as k-means: stop once the means have visually settled.
+      if (moved < 1.5 && frames.length >= 2) break;
+    }
+    return frames;
+  }
+
+  // --- 3. DBSCAN, animated as the clusters grow outward ---
+  function autoEps(pts: Pt[], minPts: number): number {
+    const ds = pts.map((p) => {
+      const d = pts.map((q) => Math.hypot(p.x - q.x, p.y - q.y)).sort((a, b) => a - b);
+      return d[Math.min(minPts, d.length - 1)];
+    }).sort((a, b) => a - b);
+    return ds[Math.floor(ds.length * 0.8)] * 1.15;
+  }
+
+  function dbscan(pts: Pt[], eps: number, minPts: number): Frame[] {
+    const n = pts.length;
+    const labels = new Array(n).fill(-1); // -1 = noise / not yet reached
+    const visited = new Array(n).fill(false);
+    const frames: Frame[] = [];
+    const eps2 = eps * eps;
+    const neighbours = (i: number) => {
+      const out: number[] = [];
+      for (let j = 0; j < n; j++) if (j !== i && dist2(pts[i], pts[j]) <= eps2) out.push(j);
+      return out;
+    };
+    const snap = () =>
+      frames.push({
+        cents: null,
+        covs: null,
+        assign: labels.slice(),
+        metric: labels.reduce((s: number, l: number) => s + (l < 0 ? 1 : 0), 0),
+      });
+
+    snap();
+    let cid = 0;
+    let since = 0;
+    for (let i = 0; i < n; i++) {
+      if (visited[i]) continue;
+      visited[i] = true;
+      const nb = neighbours(i);
+      if (nb.length + 1 < minPts) continue;
+      labels[i] = cid;
+      const queue = nb.slice();
+      const queued = new Set(queue);
+      for (let qi = 0; qi < queue.length; qi++) {
+        const j = queue[qi];
+        if (!visited[j]) {
+          visited[j] = true;
+          const nb2 = neighbours(j);
+          if (nb2.length + 1 >= minPts) {
+            for (const x of nb2) if (!queued.has(x)) { queued.add(x); queue.push(x); }
+          }
+        }
+        if (labels[j] < 0) {
+          labels[j] = cid;
+          if (++since >= 6) { since = 0; snap(); }
+        }
+      }
+      cid++;
+      snap();
+    }
+    snap();
+    return frames;
+  }
+
+  const ALGOS: Algo[] = [
+    {
+      name: 'k-means',
+      outline: 'hull',
+      stepMs: 780,
+      format: (v) => `inertia ${v.toFixed(2)}`,
+      run: (pts, k) => ({ frames: kmeans(pts, k), param: `k = ${k}` }),
+    },
+    {
+      name: 'gaussian mixture',
+      outline: 'ellipse',
+      stepMs: 700,
+      format: (v) => `logL ${v.toFixed(2)}`,
+      run: (pts, k, w, h) => ({ frames: gmm(pts, k, w, h), param: `k = ${k}` }),
+    },
+    {
+      name: 'dbscan',
+      outline: 'hull',
+      stepMs: 130,
+      format: (v) => `noise ${Math.round(v)}`,
+      run: (pts) => {
+        const minPts = 4;
+        const eps = autoEps(pts, minPts);
+        return { frames: dbscan(pts, eps, minPts), param: `eps = ${Math.round(eps)}` };
+      },
+    },
+  ];
 
   // Monotone-chain convex hull
   function hull(ps: Pt[]): Pt[] {
@@ -217,32 +409,49 @@ const nav = [
     const algoEl = document.getElementById('vizAlgo');
     const metricEl = document.getElementById('vizMetric');
 
-    // Phase durations (ms). One full cycle then a fresh dataset.
-    const SEED = 700, ITER = 780, HULL = 950, HOLD = 2400, FADE = 700;
+    // Phase durations (ms). Per-iteration time comes from the algorithm.
+    const SEED = 700, OUTLINE = 950, HOLD = 2400, FADE = 700;
 
-    // Clusters are told apart by value *and* shape, so the two-hue
+    // Clusters are told apart by value *and* mark shape, so the two-hue
     // editorial palette survives without inventing new brand colors.
     let palette: { color: string; shape: Shape }[] = [];
-    const inkRGB = '22, 20, 15'; // --ink, for the translucent spokes and hulls
+    let acid = '#c8ff3e';
+    let ink = '#16140f';
+    const inkRGB = '22, 20, 15'; // --ink, for the translucent spokes and outlines
 
     function readPalette() {
+      acid = css('--acid') || acid;
+      ink = css('--ink') || ink;
       palette = [
-        { color: css('--ink') || '#16140f', shape: 'circle' },
+        { color: ink, shape: 'circle' },
         { color: css('--acid-deep') || '#a8e01f', shape: 'square' },
         { color: css('--muted') || '#6f6a5e', shape: 'triangle' },
         { color: css('--muted-soft') || '#9a9385', shape: 'diamond' },
-        { color: css('--ink-soft') || '#2a261d', shape: 'plus' },
+        { color: css('--ink-soft') || '#2a261d', shape: 'cross' },
       ];
     }
 
     let pts: Pt[] = [];
-    let iters: Iter[] = [];
-    let k = 4;
+    let frames: Frame[] = [];
+    let algo: Algo = ALGOS[0];
+    let algoIndex = 0;
     let started = 0;
     let raf = 0;
     let running = false;
 
     function shape(kind: Shape, x: number, y: number, r: number) {
+      if (kind === 'cross') {
+        // An x, drawn as a plus rotated a quarter turn
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.PI / 4);
+        ctx.beginPath();
+        ctx.rect(-r * 1.25, -r * 0.34, r * 2.5, r * 0.68);
+        ctx.rect(-r * 0.34, -r * 1.25, r * 0.68, r * 2.5);
+        ctx.fill();
+        ctx.restore();
+        return;
+      }
       ctx.beginPath();
       if (kind === 'circle') {
         ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -253,24 +462,30 @@ const nav = [
         ctx.lineTo(x + r, y + r * 0.75);
         ctx.lineTo(x - r, y + r * 0.75);
         ctx.closePath();
-      } else if (kind === 'diamond') {
+      } else {
         ctx.moveTo(x, y - r * 1.2);
         ctx.lineTo(x + r * 1.2, y);
         ctx.lineTo(x, y + r * 1.2);
         ctx.lineTo(x - r * 1.2, y);
         ctx.closePath();
-      } else {
-        ctx.rect(x - r * 1.2, y - r * 0.34, r * 2.4, r * 0.68);
-        ctx.rect(x - r * 0.34, y - r * 1.2, r * 0.68, r * 2.4);
       }
       ctx.fill();
+    }
+
+    function drawNoise(x: number, y: number, r: number, alpha: number) {
+      ctx.globalAlpha = alpha * 0.55;
+      ctx.strokeStyle = `rgba(${inkRGB}, 0.55)`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.8, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
     function drawCentroid(c: Pt, alpha: number) {
       const r = 5.5;
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = css('--acid') || '#c8ff3e';
-      ctx.strokeStyle = css('--ink') || '#16140f';
+      ctx.fillStyle = acid;
+      ctx.strokeStyle = ink;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
@@ -287,17 +502,36 @@ const nav = [
       ctx.globalAlpha = 1;
     }
 
-    function drawHulls(assign: number[], cents: Pt[], t: number) {
+    // Both outline styles draw on with the same dash-offset sweep
+    function strokeDashed(path: () => void, len: number, t: number) {
+      ctx.setLineDash([len, len]);
+      ctx.lineDashOffset = len * (1 - t);
+      ctx.beginPath();
+      path();
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
+    }
+
+    function drawHulls(assign: number[], t: number) {
+      const groups = new Map<number, Pt[]>();
+      for (let i = 0; i < pts.length; i++) {
+        const a = assign[i];
+        if (a < 0) continue;
+        if (!groups.has(a)) groups.set(a, []);
+        groups.get(a)!.push(pts[i]);
+      }
       ctx.lineWidth = 1;
       ctx.strokeStyle = `rgba(${inkRGB}, 0.35)`;
-      for (let ci = 0; ci < cents.length; ci++) {
-        const mem = pts.filter((_, i) => assign[i] === ci);
+      for (const mem of groups.values()) {
         if (mem.length < 3) continue;
         const h = hull(mem);
-        // Push each vertex out from the centroid so the outline clears the marks
+        const cx = mem.reduce((s, p) => s + p.x, 0) / mem.length;
+        const cy = mem.reduce((s, p) => s + p.y, 0) / mem.length;
+        // Push each vertex out from the centre so the outline clears the marks
         const pad = h.map((p) => {
-          const dx = p.x - cents[ci].x;
-          const dy = p.y - cents[ci].y;
+          const dx = p.x - cx;
+          const dy = p.y - cy;
           const len = Math.hypot(dx, dy) || 1;
           return { x: p.x + (dx / len) * 7, y: p.y + (dy / len) * 7 };
         });
@@ -307,79 +541,106 @@ const nav = [
           const b = pad[(i + 1) % pad.length];
           per += Math.hypot(b.x - a.x, b.y - a.y);
         }
-        ctx.setLineDash([per, per]);
-        ctx.lineDashOffset = per * (1 - t);
-        ctx.beginPath();
-        ctx.moveTo(pad[0].x, pad[0].y);
-        for (let i = 1; i < pad.length; i++) ctx.lineTo(pad[i].x, pad[i].y);
-        ctx.closePath();
-        ctx.stroke();
+        strokeDashed(() => {
+          ctx.moveTo(pad[0].x, pad[0].y);
+          for (let i = 1; i < pad.length; i++) ctx.lineTo(pad[i].x, pad[i].y);
+          ctx.closePath();
+        }, per, t);
       }
-      ctx.setLineDash([]);
-      ctx.lineDashOffset = 0;
+    }
+
+    // 2-sigma ellipse from each component's covariance
+    function drawEllipses(cents: Pt[], covs: number[][], t: number) {
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = `rgba(${inkRGB}, 0.35)`;
+      for (let i = 0; i < cents.length; i++) {
+        const [a, b, d] = covs[i];
+        const tr = a + d;
+        const diff = Math.sqrt(Math.max((a - d) ** 2 + 4 * b * b, 0));
+        const l1 = Math.max((tr + diff) / 2, 1e-6);
+        const l2 = Math.max((tr - diff) / 2, 1e-6);
+        const angle = 0.5 * Math.atan2(2 * b, a - d);
+        const rx = 2 * Math.sqrt(l1);
+        const ry = 2 * Math.sqrt(l2);
+        // Ramanujan's approximation, good enough for a dash length
+        const per = Math.PI * (3 * (rx + ry) - Math.sqrt((3 * rx + ry) * (rx + 3 * ry)));
+        strokeDashed(() => ctx.ellipse(cents[i].x, cents[i].y, rx, ry, angle, 0, Math.PI * 2), per, t);
+      }
     }
 
     function render(elapsed: number) {
       const w = canvas!.clientWidth;
       const h = canvas!.clientHeight;
       ctx.clearRect(0, 0, w, h);
-      if (!iters.length) return true;
+      if (!frames.length) return true;
 
-      const last = iters.length - 1;
-      const iterEnd = SEED + iters.length * ITER;
-      const hullEnd = iterEnd + HULL;
-      const holdEnd = hullEnd + HOLD;
+      const last = frames.length - 1;
+      const step = algo.stepMs;
+      const iterEnd = SEED + frames.length * step;
+      const outlineEnd = iterEnd + OUTLINE;
+      const holdEnd = outlineEnd + HOLD;
       const cycleEnd = holdEnd + FADE;
 
-      // Resolve the current phase into: which iteration, how far through it,
-      // how far the hulls have drawn, and a global fade for the hand-off.
-      let idx = 0, t = 0, hullT = 0, seedT = 1, fade = 1;
+      // Resolve the current phase into: which frame, how far through it, how
+      // far the outlines have drawn, and a global fade for the hand-off.
+      let idx = 0, t = 0, outT = 0, seedT = 1, fade = 1;
       if (elapsed < SEED) {
         seedT = elapsed / SEED;
       } else if (elapsed < iterEnd) {
         const e = elapsed - SEED;
-        idx = Math.min(last, Math.floor(e / ITER));
-        t = Math.min(1, (e % ITER) / ITER);
-      } else if (elapsed < hullEnd) {
+        idx = Math.min(last, Math.floor(e / step));
+        t = Math.min(1, (e % step) / step);
+      } else if (elapsed < outlineEnd) {
         idx = last; t = 1;
-        hullT = (elapsed - iterEnd) / HULL;
+        outT = (elapsed - iterEnd) / OUTLINE;
       } else if (elapsed < holdEnd) {
-        idx = last; t = 1; hullT = 1;
+        idx = last; t = 1; outT = 1;
       } else {
-        idx = last; t = 1; hullT = 1;
+        idx = last; t = 1; outT = 1;
         fade = 1 - (elapsed - holdEnd) / FADE;
       }
 
-      const cur = iters[idx];
-      const next = iters[Math.min(last, idx + 1)];
+      const cur = frames[idx];
+      const next = frames[Math.min(last, idx + 1)];
       const et = easeInOut(t);
-      const cents = cur.cents.map((c, i) => ({
-        x: lerp(c.x, next.cents[i].x, et),
-        y: lerp(c.y, next.cents[i].y, et),
-      }));
+      const cents = cur.cents
+        ? cur.cents.map((c, i) => ({
+            x: lerp(c.x, next.cents![i].x, et),
+            y: lerp(c.y, next.cents![i].y, et),
+          }))
+        : null;
+      const covs = cur.covs
+        ? cur.covs.map((c, i) => c.map((v, j) => lerp(v, next.covs![i][j], et)))
+        : null;
 
-      // Reassignment lands at the start of an iteration; crossfade it briefly
-      // so points don't snap between clusters.
+      // Reassignment lands at the start of a frame; crossfade it briefly so
+      // points don't snap between clusters.
       const swap = Math.min(1, t / 0.3);
-      const prev = iters[Math.max(0, idx - 1)];
+      const prev = frames[Math.max(0, idx - 1)];
 
       ctx.globalAlpha = 1;
 
-      // Spokes: every point tethered to its centroid, fading as hulls take over
-      const spoke = fade * seedT * (1 - hullT) * 0.5;
+      // Spokes: every point tethered to its centroid, fading as outlines take over
+      const spoke = cents ? fade * seedT * (1 - outT) * 0.5 : 0;
       if (spoke > 0.01) {
         ctx.strokeStyle = `rgba(${inkRGB}, ${0.18 * spoke})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (let i = 0; i < pts.length; i++) {
-          const c = cents[cur.assign[i]];
+          const a = cur.assign[i];
+          if (a < 0) continue;
+          const c = cents[a];
           ctx.moveTo(pts[i].x, pts[i].y);
           ctx.lineTo(c.x, c.y);
         }
         ctx.stroke();
       }
 
-      if (hullT > 0) drawHulls(cur.assign, cents, Math.min(1, hullT) * fade);
+      if (outT > 0) {
+        const ot = Math.min(1, outT) * fade;
+        if (algo.outline === 'ellipse' && cents && covs) drawEllipses(cents, covs, ot);
+        else drawHulls(cur.assign, ot);
+      }
 
       // Points
       const r = 2.9;
@@ -389,7 +650,11 @@ const nav = [
         const b = cur.assign[i];
         const grow = seedT < 1 ? easeInOut(clamp(seedT * 1.6 - (i / pts.length) * 0.6, 0, 1)) : 1;
         if (grow <= 0) continue;
-        if (a !== b && swap < 1) {
+        if (b < 0) {
+          drawNoise(p.x, p.y, r * grow, fade);
+          continue;
+        }
+        if (a !== b && a >= 0 && swap < 1) {
           ctx.globalAlpha = fade * (1 - swap);
           ctx.fillStyle = palette[a % palette.length].color;
           shape(palette[a % palette.length].shape, p.x, p.y, r * grow);
@@ -403,16 +668,14 @@ const nav = [
       ctx.globalAlpha = 1;
 
       // Centroids ride in once the points have landed
-      if (seedT > 0.55) {
+      if (cents && seedT > 0.55) {
         const ca = fade * clamp((seedT - 0.55) / 0.45, 0, 1);
         for (const c of cents) drawCentroid(c, ca);
       }
 
-      // Inertia, normalised against the first pass so it reads as a descent
       if (metricEl) {
-        const base = iters[0].inertia || 1;
-        const shown = lerp(cur.inertia, next.inertia, et) / base;
-        metricEl.textContent = `inertia ${shown.toFixed(2)}`;
+        const shown = lerp(cur.metric, next.metric, et);
+        metricEl.textContent = algo.format(shown);
       }
 
       return elapsed >= cycleEnd;
@@ -432,13 +695,16 @@ const nav = [
       fitCanvas();
       const w = canvas!.clientWidth;
       const h = canvas!.clientHeight;
-      k = 3 + Math.floor(Math.random() * 3);
+      algo = ALGOS[algoIndex % ALGOS.length];
+      algoIndex++;
+      const k = 3 + Math.floor(Math.random() * 3);
       const n = clamp(Math.round((w * h) / 950), 60, 150);
       pts = makePoints(n, k, w, h);
-      iters = lloyd(pts, k);
+      const out = algo.run(pts, k, w, h);
+      frames = out.frames;
       started = 0;
       if (nEl) nEl.textContent = `n = ${n}`;
-      if (algoEl) algoEl.textContent = `k-means · k = ${k}`;
+      if (algoEl) algoEl.textContent = `${algo.name} · ${out.param}`;
     }
 
     function frame(now: number) {
@@ -461,11 +727,13 @@ const nav = [
       raf = requestAnimationFrame(frame);
     }
 
+    const settled = () => SEED + frames.length * algo.stepMs + OUTLINE;
+
     reset();
 
     if (reduced) {
-      // Settle straight to the converged state, hulls drawn, no motion.
-      render(SEED + iters.length * ITER + HULL);
+      // Settle straight to the converged state, outlines drawn, no motion.
+      render(settled());
     } else {
       // Only burn frames while the hero is actually on screen.
       const io = new IntersectionObserver(
@@ -483,7 +751,7 @@ const nav = [
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(() => {
         reset();
-        if (reduced) render(SEED + iters.length * ITER + HULL);
+        if (reduced) render(settled());
       }, 200);
     });
   }
@@ -554,7 +822,10 @@ const nav = [
   .hero-name .first .ltr {
     display: inline-block;
     font-variation-settings: "opsz" 144, "wght" 900;
-    animation: letter-wave 5s ease-in-out infinite;
+    /* Two passes on arrival, then it settles into the display cut for good.
+       The 0%/100% keyframe matches this base rule, so it lands seamlessly
+       without needing a fill-mode. */
+    animation: letter-wave 5s ease-in-out 2;
     /* Spread the phase over ~1/3 of the cycle so the ripple reads as travelling */
     animation-delay: calc(var(--i, 0) * -0.26s);
   }
@@ -604,17 +875,7 @@ const nav = [
     text-transform: uppercase;
     color: var(--muted);
   }
-  .viz-live { display: inline-flex; align-items: center; gap: 0.55em; color: var(--ink); font-weight: 500; }
-  .viz-live .dot {
-    width: 0.55em; height: 0.55em; border-radius: 50%;
-    background: var(--acid-deep);
-    box-shadow: 0 0 0 0 rgba(168, 224, 31, 0.6);
-    animation: live-pulse 1.5s ease-in-out infinite;
-  }
-  @keyframes live-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%      { opacity: 0.4; transform: scale(0.7); }
-  }
+  .viz-live { color: var(--ink); font-weight: 500; }
   .viz-canvas {
     width: 100%;
     height: clamp(200px, 32vh, 340px);
