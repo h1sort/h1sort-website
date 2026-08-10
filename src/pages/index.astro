@@ -30,7 +30,12 @@ const nav = [
         <span class="acid-label reveal d1">Data · Analytics · AI</span>
 
         <h1 class="hero-name reveal d2">
-          <span class="first">Carlos</span>
+          {/* Split server-side so Astro's scoped-style attribute lands on each
+              letter — runtime-created spans never get it, which silently killed
+              the wave. --i offsets each letter into a different phase. */}
+          <span class="first">{[...'Carlos'].map((ch, i) => (
+            <span class="ltr" style={`--i:${i}`}>{ch}</span>
+          ))}</span>
           <span class="last">Haro</span>
         </h1>
 
@@ -82,22 +87,8 @@ const nav = [
 
 <script>
   // ============================================================
-  // Ambient sorting-algorithm visualization + hero letter split
+  // Ambient sorting-algorithm visualization
   // ============================================================
-
-  // --- Hero: wrap first-name letters for the wave animation ---
-  const firstName = document.querySelector<HTMLElement>('.hero-name .first');
-  if (firstName) {
-    const text = firstName.textContent ?? '';
-    firstName.textContent = '';
-    [...text].forEach((ch, i) => {
-      const span = document.createElement('span');
-      span.className = 'ltr';
-      span.style.setProperty('--i', String(i));
-      span.textContent = ch === ' ' ? '\u00A0' : ch;
-      firstName.appendChild(span);
-    });
-  }
 
   // --- Canvas sorting animation ---
   type Frame = { a: number[]; hi: number[] };
@@ -362,22 +353,26 @@ const nav = [
   .hero-name .first, .hero-name .last { display: block; }
   .hero-name .last { font-style: italic; font-weight: 400; }
 
+  /* Mirrored Fraunces carries only opsz (9–144) and wght (100–900) — the
+     SOFT/WONK axes are not in the subset, so animating them does nothing.
+     Both keyframes list the same axes in the same order so they interpolate. */
   .hero-name .first .ltr {
     display: inline-block;
     font-variation-settings: "opsz" 144, "wght" 900;
-    animation: letter-wave 4.8s ease-in-out infinite;
-    animation-delay: calc(var(--i, 0) * -0.13s);
+    animation: letter-wave 5s ease-in-out infinite;
+    /* Spread the phase over ~1/3 of the cycle so the ripple reads as travelling */
+    animation-delay: calc(var(--i, 0) * -0.26s);
   }
   @keyframes letter-wave {
     0%, 100% { font-variation-settings: "opsz" 144, "wght" 900; }
-    50%      { font-variation-settings: "opsz" 18,  "wght" 640; }
+    50%      { font-variation-settings: "opsz" 12,  "wght" 520; }
   }
   .hero-name .last {
-    animation: breathe 9s ease-in-out 1.2s infinite;
+    animation: breathe 7s ease-in-out 1.2s infinite;
   }
   @keyframes breathe {
-    0%, 100% { font-variation-settings: "opsz" 144, "SOFT" 0; font-weight: 400; }
-    50%      { font-variation-settings: "opsz" 90,  "SOFT" 100; font-weight: 500; }
+    0%, 100% { font-variation-settings: "opsz" 144, "wght" 400; }
+    50%      { font-variation-settings: "opsz" 24,  "wght" 560; }
   }
 
   .hero-tagline {
