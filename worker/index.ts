@@ -56,7 +56,9 @@ const RATE_WINDOW_MS = 60_000;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const POLL_CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 const POLL_CODE_LENGTH = 7;
+const GROUP_CODE_LENGTH = 10;
 const POLL_CODE_RE = /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{7}$/;
+const GROUP_CODE_RE = /^[0-9A-Z]{10}$/;
 const POLLS_BODY_BYTES = 16_384;
 const LOGIN_BODY_BYTES = 4_096;
 const ADMIN_SESSION_SECONDS = 8 * 60 * 60;
@@ -142,6 +144,12 @@ async function handlePollsApi(request: Request, env: Env, url: URL): Promise<Res
     return createAdminPoll(request, env, url, groupPollsMatch[1]);
   }
 
+  const adminGroupMatch = path.match(/^\/api\/polls\/admin\/groups\/([^/]+)$/);
+  if (adminGroupMatch) {
+    if (request.method !== 'PATCH') return methodNotAllowed('PATCH');
+    return updateAdminGroupPolls(request, env, url, adminGroupMatch[1]);
+  }
+
   const adminPollMatch = path.match(/^\/api\/polls\/admin\/polls\/([^/]+)$/);
   if (adminPollMatch) {
     if (request.method !== 'PATCH') return methodNotAllowed('PATCH');
@@ -152,6 +160,12 @@ async function handlePollsApi(request: Request, env: Env, url: URL): Promise<Res
   if (voteMatch) {
     if (request.method !== 'POST') return methodNotAllowed('POST');
     return createPublicVote(request, env, url, voteMatch[1]);
+  }
+
+  const publicGroupMatch = path.match(/^\/api\/polls\/public\/groups\/([^/]+)$/);
+  if (publicGroupMatch) {
+    if (request.method !== 'GET') return methodNotAllowed('GET');
+    return getPublicGroup(request, env, url, publicGroupMatch[1]);
   }
 
   const publicPollMatch = path.match(/^\/api\/polls\/public\/([^/]+)$/);
@@ -166,11 +180,13 @@ async function handlePollsApi(request: Request, env: Env, url: URL): Promise<Res
 function handlePollShortUrl(request: Request, url: URL): Response {
   if (request.method !== 'GET') return methodNotAllowed('GET');
   const match = url.pathname.match(/^\/p\/([^/]+)$/);
-  const code = match ? normalizePollCode(match[1]) : null;
-  if (!code) return json({ error: 'not found' }, 404);
+  const rawCode = match ? decodeCode(match[1]) : null;
+  const pollCode = rawCode && POLL_CODE_RE.test(rawCode) ? rawCode : null;
+  const groupCode = rawCode && GROUP_CODE_RE.test(rawCode) ? rawCode : null;
+  if (!pollCode && !groupCode) return json({ error: 'not found' }, 404);
 
   const destination = new URL('/polls', url.origin);
-  destination.searchParams.set('vote', code);
+  destination.searchParams.set(groupCode ? 'group' : 'vote', groupCode ?? pollCode!);
   return new Response(null, {
     status: 302,
     headers: { location: destination.toString(), 'cache-control': 'no-store' },
@@ -251,7 +267,8 @@ async function getAdminGroups(request: Request, env: Env, url: URL): Promise<Res
   if (authError) return authError;
 
   const result = await env.DB.prepare(
-    `SELECT g.id AS group_id, g.title AS group_title, g.created_at AS group_created_at,
+    `SELECT g.id AS group_id, g.code AS group_code, g.title AS group_title,
+            g.created_at AS group_created_at,
             p.id AS poll_id, p.code, p.question, p.status,
             p.created_at AS poll_created_at, p.updated_at, p.opened_at, p.closed_at,
             o.id AS option_id, o.label, o.position,
@@ -282,10 +299,25 @@ async function createAdminGroup(request: Request, env: Env, url: URL): Promise<R
   if (!title) return json({ error: 'invalid title' }, 400);
 
   const id = crypto.randomUUID();
-  await env.DB.prepare(`INSERT INTO poll_groups (id, title) VALUES (?1, ?2)`).bind(id, title).run();
+  let code = '';
+  let created = false;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    code = randomCode(GROUP_CODE_LENGTH);
+    try {
+      await env.DB.prepare(`INSERT INTO poll_groups (id, code, title) VALUES (?1, ?2, ?3)`)
+        .bind(id, code, title)
+        .run();
+      created = true;
+      break;
+    } catch (error) {
+      if (!isGroupCodeCollision(error)) throw error;
+    }
+  }
+  if (!created) return json({ error: 'could not allocate group code' }, 503);
+
   const group = await env.DB.prepare(
-    `SELECT id, title, created_at FROM poll_groups WHERE id = ?1`,
-  ).bind(id).first<{ id: string; title: string; created_at: string }>();
+    `SELECT id, code, title, created_at FROM poll_groups WHERE id = ?1`,
+  ).bind(id).first<{ id: string; code: string; title: string; created_at: string }>();
   return json({ group: serializeGroup(group!) }, 201);
 }
 
@@ -348,6 +380,51 @@ async function createAdminPoll(
   return json({ poll }, 201);
 }
 
+async function updateAdminGroupPolls(
+  request: Request,
+  env: Env,
+  url: URL,
+  groupId: string,
+): Promise<Response> {
+  const originError = requireSameOrigin(request, url);
+  if (originError) return originError;
+  const authError = await requireAdmin(request, env, url);
+  if (authError) return authError;
+  if (!UUID_RE.test(groupId)) return json({ error: 'group not found' }, 404);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await readBoundedJsonObject(request, POLLS_BODY_BYTES);
+  } catch (error) {
+    return bodyErrorResponse(error);
+  }
+  const status = body.status;
+  if (status !== 'open' && status !== 'closed') {
+    return json({ error: 'invalid status' }, 400);
+  }
+
+  const group = await env.DB.prepare(`SELECT id FROM poll_groups WHERE id = ?1`)
+    .bind(groupId)
+    .first<{ id: string }>();
+  if (!group) return json({ error: 'group not found' }, 404);
+
+  const result = await env.DB.prepare(
+    `UPDATE polls
+        SET status = ?1,
+            opened_at = CASE
+              WHEN ?1 = 'open' THEN CASE WHEN status = 'open' THEN opened_at ELSE datetime('now') END
+              ELSE COALESCE(opened_at, datetime('now'))
+            END,
+            closed_at = CASE
+              WHEN ?1 = 'closed' THEN CASE WHEN status = 'closed' THEN closed_at ELSE datetime('now') END
+              ELSE NULL
+            END,
+            updated_at = datetime('now')
+      WHERE group_id = ?2`,
+  ).bind(status, groupId).run();
+  return json({ updated: Number(result.meta?.changes ?? 0) }, 200);
+}
+
 async function updateAdminPoll(
   request: Request,
   env: Env,
@@ -390,6 +467,105 @@ async function updateAdminPoll(
   const poll = await getAdminPoll(env.DB, pollId);
   if (!poll) return json({ error: 'poll not found' }, 404);
   return json({ poll }, 200);
+}
+
+async function getPublicGroup(
+  request: Request,
+  env: Env,
+  url: URL,
+  rawCode: string,
+): Promise<Response> {
+  if (!sessionSecretConfigured(env)) return json({ error: 'polls unavailable' }, 503);
+  const code = normalizeGroupCode(rawCode);
+  if (!code) return json({ error: 'group not found' }, 404);
+
+  const group = await env.DB.prepare(
+    `SELECT id, code, title FROM poll_groups WHERE code = ?1`,
+  ).bind(code).first<{ id: string; code: string; title: string }>();
+  if (!group) return json({ error: 'group not found' }, 404);
+
+  const result = await env.DB.prepare(
+    `SELECT p.rowid AS poll_order, p.id AS poll_id, p.code, p.question, p.status,
+            p.opened_at, p.closed_at, o.id AS option_id, o.label, o.position,
+            CASE WHEN p.status = 'closed' THEN
+              (SELECT COUNT(*) FROM poll_votes v
+                WHERE v.poll_id = p.id AND v.option_id = o.id)
+            ELSE NULL END AS vote_count
+       FROM polls p
+       JOIN poll_options o ON o.poll_id = p.id
+      WHERE p.group_id = ?1 AND p.status != 'draft'
+      ORDER BY p.rowid ASC, o.position ASC`,
+  ).bind(group.id).all<{
+    poll_order: number;
+    poll_id: string;
+    code: string;
+    question: string;
+    status: PollStatus;
+    opened_at: string | null;
+    closed_at: string | null;
+    option_id: string;
+    label: string;
+    position: number;
+    vote_count: number | null;
+  }>();
+
+  const votedPollIds = new Set<string>();
+  const voterToken = getCookie(request, voterCookieName(url));
+  if (isValidVoterToken(voterToken)) {
+    const voterHash = await hashVoterToken(env, voterToken);
+    const votes = await env.DB.prepare(
+      `SELECT v.poll_id FROM poll_votes v
+       JOIN polls p ON p.id = v.poll_id
+       WHERE p.group_id = ?1 AND v.voter_hash = ?2`,
+    ).bind(group.id, voterHash).all<{ poll_id: string }>();
+    for (const vote of votes.results ?? []) votedPollIds.add(vote.poll_id);
+  }
+
+  const polls = new Map<string, Record<string, unknown> & {
+    id: string;
+    status: PollStatus;
+    options: Record<string, unknown>[];
+    total?: number;
+  }>();
+  for (const row of result.results ?? []) {
+    let poll = polls.get(row.poll_id);
+    if (!poll) {
+      poll = {
+        id: row.poll_id,
+        groupId: group.id,
+        groupTitle: group.title,
+        code: row.code,
+        question: row.question,
+        status: row.status,
+        openedAt: row.opened_at,
+        closedAt: row.closed_at,
+        voted: votedPollIds.has(row.poll_id),
+        options: [],
+      };
+      if (row.status === 'closed') poll.total = 0;
+      polls.set(row.poll_id, poll);
+    }
+    const option: Record<string, unknown> = {
+      id: row.option_id,
+      label: row.label,
+      position: Number(row.position),
+    };
+    if (row.status === 'closed') {
+      const count = Number(row.vote_count ?? 0);
+      option.count = count;
+      poll.total = Number(poll.total ?? 0) + count;
+    }
+    poll.options.push(option);
+  }
+
+  return json({
+    group: {
+      id: group.id,
+      code: group.code,
+      title: group.title,
+      polls: Array.from(polls.values()),
+    },
+  }, 200);
 }
 
 async function getPublicPoll(
@@ -765,30 +941,41 @@ function decodeBase64Url(value: string): Uint8Array | null {
   }
 }
 
-function normalizePollCode(rawCode: string): string | null {
-  let decoded: string;
+function decodeCode(rawCode: string): string | null {
   try {
-    decoded = decodeURIComponent(rawCode);
+    return decodeURIComponent(rawCode).toUpperCase();
   } catch {
     return null;
   }
-  const code = decoded.toUpperCase();
-  return POLL_CODE_RE.test(code) ? code : null;
 }
 
-function randomPollCode(): string {
+function normalizePollCode(rawCode: string): string | null {
+  const code = decodeCode(rawCode);
+  return code && POLL_CODE_RE.test(code) ? code : null;
+}
+
+function normalizeGroupCode(rawCode: string): string | null {
+  const code = decodeCode(rawCode);
+  return code && GROUP_CODE_RE.test(code) ? code : null;
+}
+
+function randomCode(length: number): string {
   let code = '';
   const unbiasedLimit = Math.floor(256 / POLL_CODE_ALPHABET.length) * POLL_CODE_ALPHABET.length;
-  while (code.length < POLL_CODE_LENGTH) {
-    const bytes = new Uint8Array(POLL_CODE_LENGTH * 2);
+  while (code.length < length) {
+    const bytes = new Uint8Array(length * 2);
     crypto.getRandomValues(bytes);
     for (const byte of bytes) {
       if (byte >= unbiasedLimit) continue;
       code += POLL_CODE_ALPHABET[byte % POLL_CODE_ALPHABET.length];
-      if (code.length === POLL_CODE_LENGTH) break;
+      if (code.length === length) break;
     }
   }
   return code;
+}
+
+function randomPollCode(): string {
+  return randomCode(POLL_CODE_LENGTH);
 }
 
 function isValidVoterToken(value: string | null): value is string {
@@ -800,13 +987,24 @@ function isPollCodeCollision(error: unknown): boolean {
     && /UNIQUE constraint failed: polls\.code|polls_code_unique/i.test(error.message);
 }
 
-function serializeGroup(group: { id: string; title: string; created_at: string }): Record<string, unknown> {
-  return { id: group.id, title: group.title, createdAt: group.created_at, polls: [] };
+function isGroupCodeCollision(error: unknown): boolean {
+  return error instanceof Error
+    && /UNIQUE constraint failed: poll_groups\.code|idx_poll_groups_code/i.test(error.message);
+}
+
+function serializeGroup(group: {
+  id: string;
+  code: string;
+  title: string;
+  created_at: string;
+}): Record<string, unknown> {
+  return { id: group.id, code: group.code, title: group.title, createdAt: group.created_at, polls: [] };
 }
 
 function buildAdminGroups(rows: Record<string, unknown>[]): Record<string, unknown>[] {
   const groups = new Map<string, {
     id: string;
+    code: string;
     title: string;
     createdAt: string;
     polls: Array<Record<string, unknown> & { options: Record<string, unknown>[]; total: number }>;
@@ -819,6 +1017,7 @@ function buildAdminGroups(rows: Record<string, unknown>[]): Record<string, unkno
     if (!group) {
       group = {
         id: groupId,
+        code: String(row.group_code),
         title: String(row.group_title),
         createdAt: String(row.group_created_at),
         polls: [],
@@ -863,7 +1062,8 @@ function buildAdminGroups(rows: Record<string, unknown>[]): Record<string, unkno
 
 async function getAdminPoll(db: D1Database, pollId: string): Promise<Record<string, unknown> | null> {
   const result = await db.prepare(
-    `SELECT g.id AS group_id, g.title AS group_title, g.created_at AS group_created_at,
+    `SELECT g.id AS group_id, g.code AS group_code, g.title AS group_title,
+            g.created_at AS group_created_at,
             p.id AS poll_id, p.code, p.question, p.status,
             p.created_at AS poll_created_at, p.updated_at, p.opened_at, p.closed_at,
             o.id AS option_id, o.label, o.position,

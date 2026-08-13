@@ -71,7 +71,7 @@ import Base from '../layouts/Base.astro';
         <div>
           <span class="acid-label">Control room</span>
           <h1>Ask. Share. <span class="marker paint">Count.</span></h1>
-          <p>Each poll gets an independent short link and scannable QR code.</p>
+          <p>Each group gets one short link that guides voters through every open question.</p>
         </div>
         <div class="dashboard-actions">
           <button class="action" id="refreshButton" type="button">Refresh</button>
@@ -129,11 +129,13 @@ import Base from '../layouts/Base.astro';
       closedAt: string | null;
       options: PollOption[];
       total?: number;
+      voted?: boolean;
     };
     type PollGroup = {
       id: string;
+      code: string;
       title: string;
-      createdAt: string;
+      createdAt?: string;
       polls: Poll[];
     };
     type ApiFailure = { error?: string };
@@ -156,6 +158,7 @@ import Base from '../layouts/Base.astro';
     const emptyState = byId<HTMLElement>('emptyState');
     const voteForm = byId<HTMLFormElement>('voteForm');
     let activeVoteCode = '';
+    let activeGroupCode = '';
 
     const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({
       '&': '&amp;',
@@ -255,64 +258,77 @@ import Base from '../layouts/Base.astro';
 
     function renderGroups(groups: PollGroup[]) {
       emptyState.hidden = groups.length > 0;
-      groupsElement.innerHTML = groups.map((group, groupIndex) => `
-        <section class="group panel">
-          <div class="group-heading">
-            <div>
-              <span class="mono-label">Group ${String(groupIndex + 1).padStart(2, '0')}</span>
-              <h2>${escapeHtml(group.title)}</h2>
+      groupsElement.innerHTML = groups.map((group, groupIndex) => {
+        const groupUrl = `${location.origin}/p/${group.code}`;
+        return `
+          <section class="group panel">
+            <div class="group-heading">
+              <div>
+                <span class="mono-label">Group ${String(groupIndex + 1).padStart(2, '0')}</span>
+                <h2>${escapeHtml(group.title)}</h2>
+              </div>
+              <span class="group-count">${group.polls.length} ${group.polls.length === 1 ? 'question' : 'questions'}</span>
             </div>
-            <span class="group-count">${group.polls.length} ${group.polls.length === 1 ? 'poll' : 'polls'}</span>
-          </div>
 
-          <form class="poll-form" data-group-id="${group.id}">
-            <div class="poll-form-grid">
-              <label>
-                <span>Question</span>
-                <textarea name="question" placeholder="Which system should we improve first?" maxlength="500" required></textarea>
-              </label>
-              <label>
-                <span>Options, one per line</span>
-                <textarea name="labels" placeholder="Data quality&#10;Deployment speed&#10;Observability" required></textarea>
-              </label>
+            <div class="group-share">
+              <aside class="share-panel">
+                <img data-qr-url="${groupUrl}" alt="QR code for ${escapeHtml(group.title)}" width="192" height="192" />
+                <a class="download-link" data-qr-download download="h1sort-group-${group.code}.png">Download QR</a>
+              </aside>
+              <div class="share-copy">
+                <span class="mono-label">One link for every question</span>
+                <a class="group-url link" href="${groupUrl}" target="_blank" rel="noopener">h1sort.com/p/${group.code}</a>
+                <p>Open the questions when you are ready, then share this link or QR with the room.</p>
+                <div class="group-actions">
+                  <button class="action action-primary" type="button" data-group-id="${group.id}" data-group-status="open">Open all</button>
+                  <button class="action" type="button" data-group-id="${group.id}" data-group-status="closed">Close all</button>
+                  <button class="action" type="button" data-copy-url="${groupUrl}">Copy group link</button>
+                </div>
+              </div>
             </div>
-            <div class="form-footer">
-              <span>2–8 unique options</span>
-              <button class="action action-primary" type="submit">Add poll</button>
-            </div>
-            <p class="form-note" data-poll-message role="status" aria-live="polite"></p>
-          </form>
 
-          <div class="poll-list">
-            ${group.polls.length ? group.polls.map((poll) => {
-              const shortUrl = `${location.origin}/p/${poll.code}`;
-              const nextStatus: PollStatus = poll.status === 'open' ? 'closed' : 'open';
-              const nextLabel = poll.status === 'open' ? 'Close voting' : poll.status === 'closed' ? 'Reopen voting' : 'Open voting';
-              return `
-                <article class="poll-card">
-                  <div class="poll-main">
-                    <div class="poll-meta">
-                      <span class="status-chip status-${poll.status}">${statusLabel(poll.status)}</span>
-                      <span class="poll-code">${poll.code}</span>
+            <form class="poll-form" data-group-id="${group.id}">
+              <div class="poll-form-grid">
+                <label>
+                  <span>Question</span>
+                  <textarea name="question" placeholder="Which system should we improve first?" maxlength="500" required></textarea>
+                </label>
+                <label>
+                  <span>Options, one per line</span>
+                  <textarea name="labels" placeholder="Data quality&#10;Deployment speed&#10;Observability" required></textarea>
+                </label>
+              </div>
+              <div class="form-footer">
+                <span>2–8 unique options</span>
+                <button class="action action-primary" type="submit">Add question</button>
+              </div>
+              <p class="form-note" data-poll-message role="status" aria-live="polite"></p>
+            </form>
+
+            <div class="poll-list">
+              ${group.polls.length ? group.polls.map((poll, pollIndex) => {
+                const nextStatus: PollStatus = poll.status === 'open' ? 'closed' : 'open';
+                const nextLabel = poll.status === 'open' ? 'Close voting' : poll.status === 'closed' ? 'Reopen voting' : 'Open voting';
+                return `
+                  <article class="poll-card">
+                    <div class="poll-main">
+                      <div class="poll-meta">
+                        <span class="status-chip status-${poll.status}">${statusLabel(poll.status)}</span>
+                        <span class="poll-code">Question ${String(pollIndex + 1).padStart(2, '0')}</span>
+                      </div>
+                      <h3>${escapeHtml(poll.question)}</h3>
+                      <div class="admin-results">${resultRows(poll)}</div>
+                      <div class="poll-actions">
+                        <button class="action action-primary" type="button" data-poll-id="${poll.id}" data-next-status="${nextStatus}">${nextLabel}</button>
+                      </div>
                     </div>
-                    <h3>${escapeHtml(poll.question)}</h3>
-                    <div class="admin-results">${resultRows(poll)}</div>
-                    <div class="poll-actions">
-                      <button class="action action-primary" type="button" data-poll-id="${poll.id}" data-next-status="${nextStatus}">${nextLabel}</button>
-                      <button class="action" type="button" data-copy-url="${shortUrl}">Copy link</button>
-                    </div>
-                  </div>
-                  <aside class="share-panel">
-                    <img data-qr-url="${shortUrl}" alt="QR code for ${escapeHtml(poll.question)}" width="192" height="192" />
-                    <a class="short-url link" href="${shortUrl}" target="_blank" rel="noopener">h1sort.com/p/${poll.code}</a>
-                    <a class="download-link" data-qr-download download="h1sort-poll-${poll.code}.png">Download QR</a>
-                  </aside>
-                </article>
-              `;
-            }).join('') : '<p class="group-empty">No polls in this group yet.</p>'}
-          </div>
-        </section>
-      `).join('');
+                  </article>
+                `;
+              }).join('') : '<p class="group-empty">No questions in this group yet.</p>'}
+            </div>
+          </section>
+        `;
+      }).join('');
       void renderQrCodes();
     }
 
@@ -345,10 +361,14 @@ import Base from '../layouts/Base.astro';
       requestAnimationFrame(() => loginForm.querySelector<HTMLInputElement>('input[name="password"]')?.focus());
     }
 
-    function renderPublicPoll(poll: Poll, voted: boolean) {
-      byId<HTMLElement>('voteGroup').textContent = poll.groupTitle ?? 'Live poll';
+    function renderPublicPoll(
+      poll: Poll,
+      voted: boolean,
+      progress?: { groupTitle: string; current: number; total: number },
+    ) {
+      byId<HTMLElement>('voteGroup').textContent = progress?.groupTitle ?? poll.groupTitle ?? 'Live poll';
       const status = byId<HTMLElement>('voteStatus');
-      status.textContent = statusLabel(poll.status);
+      status.textContent = progress ? `${progress.current} / ${progress.total}` : statusLabel(poll.status);
       status.className = `status-chip status-${poll.status}`;
       byId<HTMLElement>('voteQuestion').textContent = poll.question;
       const intro = byId<HTMLElement>('voteIntro');
@@ -389,6 +409,7 @@ import Base from '../layouts/Base.astro';
     }
 
     async function showPublicPoll(code: string) {
+      activeGroupCode = '';
       activeVoteCode = code.toUpperCase();
       setVisible(bootState, false);
       setVisible(loginView, false);
@@ -404,6 +425,81 @@ import Base from '../layouts/Base.astro';
         byId<HTMLElement>('voteIntro').textContent = error instanceof ApiError && error.status === 404
           ? 'Check the short link or ask the host for a new QR code.'
           : 'The poll could not be loaded. Please try again.';
+        voteForm.innerHTML = '';
+        byId<HTMLElement>('voteResults').innerHTML = '';
+      }
+    }
+
+    function renderPublicGroup(group: PollGroup) {
+      const nextPoll = group.polls.find((poll) => poll.status === 'open' && !poll.voted);
+      if (nextPoll) {
+        activeVoteCode = nextPoll.code;
+        const current = group.polls.indexOf(nextPoll) + 1;
+        renderPublicPoll(nextPoll, false, { groupTitle: group.title, current, total: group.polls.length });
+        return;
+      }
+
+      activeVoteCode = '';
+      byId<HTMLElement>('voteGroup').textContent = group.title;
+      const status = byId<HTMLElement>('voteStatus');
+      const question = byId<HTMLElement>('voteQuestion');
+      const intro = byId<HTMLElement>('voteIntro');
+      const results = byId<HTMLElement>('voteResults');
+      voteForm.removeAttribute('aria-busy');
+      voteForm.innerHTML = '';
+      results.innerHTML = '';
+      setMessage('voteMessage', '');
+
+      if (!group.polls.length) {
+        status.textContent = 'Waiting';
+        status.className = 'status-chip status-draft';
+        question.textContent = 'Questions are not open yet.';
+        intro.textContent = 'The host is preparing this questionnaire. Check this page again when voting begins.';
+        return;
+      }
+
+      const closedPolls = group.polls.filter((poll) => poll.status === 'closed');
+      if (closedPolls.length === group.polls.length) {
+        status.textContent = 'Closed';
+        status.className = 'status-chip status-closed';
+        question.textContent = 'Room results';
+        intro.textContent = 'Voting is closed. Here is how the room responded to every question.';
+      } else {
+        status.textContent = 'Complete';
+        status.className = 'status-chip status-open';
+        question.textContent = 'You are all caught up.';
+        intro.textContent = 'Your votes are recorded. Return here if the host opens another question.';
+      }
+      if (closedPolls.length) {
+        results.innerHTML = closedPolls.map((poll, index) => `
+          <section class="question-results">
+            <span class="mono-label">Question ${String(index + 1).padStart(2, '0')}</span>
+            <h2>${escapeHtml(poll.question)}</h2>
+            ${resultRows(poll)}
+          </section>
+        `).join('');
+      }
+    }
+
+    async function showPublicGroup(code: string) {
+      activeGroupCode = code.toUpperCase();
+      setVisible(bootState, false);
+      setVisible(loginView, false);
+      setVisible(dashboard, false);
+      setVisible(voteView, true);
+      try {
+        const data = await requestJson<{ group: PollGroup }>(
+          `/api/polls/public/groups/${encodeURIComponent(activeGroupCode)}`,
+        );
+        renderPublicGroup(data.group);
+      } catch (error) {
+        byId<HTMLElement>('voteGroup').textContent = 'Polls';
+        byId<HTMLElement>('voteStatus').textContent = 'Not found';
+        byId<HTMLElement>('voteStatus').className = 'status-chip status-draft';
+        byId<HTMLElement>('voteQuestion').textContent = 'This questionnaire is not available.';
+        byId<HTMLElement>('voteIntro').textContent = error instanceof ApiError && error.status === 404
+          ? 'Check the short link or ask the host for a new QR code.'
+          : 'The questionnaire could not be loaded. Please try again.';
         voteForm.innerHTML = '';
         byId<HTMLElement>('voteResults').innerHTML = '';
       }
@@ -487,7 +583,21 @@ import Base from '../layouts/Base.astro';
           button.textContent = 'Copied';
           window.setTimeout(() => { button.textContent = original; }, 1400);
         } catch {
-          window.prompt('Copy this poll link:', button.dataset.copyUrl);
+          window.prompt('Copy this group link:', button.dataset.copyUrl);
+        }
+        return;
+      }
+      if (button.dataset.groupId && button.dataset.groupStatus) {
+        button.disabled = true;
+        try {
+          await requestJson(`/api/polls/admin/groups/${button.dataset.groupId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: button.dataset.groupStatus }),
+          });
+          await loadGroups();
+        } catch (error) {
+          window.alert(error instanceof ApiError ? error.message : 'Could not update questionnaire.');
+          button.disabled = false;
         }
         return;
       }
@@ -517,10 +627,12 @@ import Base from '../layouts/Base.astro';
           method: 'POST',
           body: JSON.stringify({ optionId }),
         });
-        await showPublicPoll(activeVoteCode);
+        if (activeGroupCode) await showPublicGroup(activeGroupCode);
+        else await showPublicPoll(activeVoteCode);
       } catch (error) {
         if (error instanceof ApiError && error.status === 409) {
-          await showPublicPoll(activeVoteCode);
+          if (activeGroupCode) await showPublicGroup(activeGroupCode);
+          else await showPublicPoll(activeVoteCode);
           return;
         }
         setMessage('voteMessage', error instanceof ApiError ? error.message : 'Could not record vote.', true);
@@ -547,7 +659,13 @@ import Base from '../layouts/Base.astro';
     });
 
     async function initialize() {
-      const voteCode = new URLSearchParams(location.search).get('vote');
+      const params = new URLSearchParams(location.search);
+      const groupCode = params.get('group');
+      if (groupCode) {
+        await showPublicGroup(groupCode);
+        return;
+      }
+      const voteCode = params.get('vote');
       if (voteCode) {
         await showPublicPoll(voteCode);
         return;
@@ -717,17 +835,21 @@ import Base from '../layouts/Base.astro';
     line-height: 1;
     letter-spacing: -0.03em;
   }
+  .group-share {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    border-bottom: 1px solid var(--rule);
+  }
+  .share-copy { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 1rem; padding: clamp(1.2rem, 3vw, 2.3rem); }
+  .share-copy p { max-width: 52ch; color: var(--muted); line-height: 1.5; }
+  .group-url { font-family: var(--font-mono); font-size: clamp(0.9rem, 2vw, 1.2rem); overflow-wrap: anywhere; }
+  .group-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; }
   .poll-form { padding: 1.5rem 0; border-bottom: 1px solid var(--rule); }
   .poll-form-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem; }
   .form-footer { align-items: center; margin-top: 0.8rem; }
   .poll-list { display: grid; gap: 1px; margin-top: 1.5rem; background: var(--rule); border: 1px solid var(--rule); }
   .group-empty { background: var(--bg); padding: 1.3rem; color: var(--muted); }
-  .poll-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 240px;
-    gap: 0;
-    background: var(--bg);
-  }
+  .poll-card { background: var(--bg); }
   .poll-main { padding: clamp(1.2rem, 2.5vw, 2rem); }
   .poll-meta { justify-content: flex-start; }
   .status-chip {
@@ -758,12 +880,11 @@ import Base from '../layouts/Base.astro';
     justify-content: center;
     gap: 0.75rem;
     padding: 1.2rem;
-    border-left: 1px solid var(--rule);
+    border-right: 1px solid var(--rule);
     background: var(--card);
     text-align: center;
   }
   .share-panel img { width: min(100%, 192px); aspect-ratio: 1; }
-  .short-url { font-family: var(--font-mono); font-size: 0.74rem; overflow-wrap: anywhere; }
   .download-link { cursor: pointer; }
   .admin-results { max-width: 720px; }
   .result-summary { padding-bottom: 0.7rem; border-bottom: 1px solid var(--rule); }
@@ -815,18 +936,21 @@ import Base from '../layouts/Base.astro';
   .option-index { font-family: var(--font-mono); font-size: var(--label-size); color: var(--muted); }
   .vote-submit { width: 100%; margin-top: 1rem; }
   .vote-view .results { margin-top: 2rem; }
+  .question-results { padding: clamp(1.3rem, 4vw, 2.4rem) 0; border-top: 1px solid var(--ink); }
+  .question-results h2 { margin: 0.6rem 0 1.4rem; font-family: var(--font-serif); font-size: clamp(1.5rem, 4vw, 2.4rem); line-height: 1.1; }
   .quiet-link { display: block; width: fit-content; margin: 1.5rem auto 0; color: var(--muted); font-family: var(--font-mono); font-size: var(--label-size); text-transform: uppercase; letter-spacing: 0.1em; }
   @media (max-width: 820px) {
     .login-view { grid-template-columns: 1fr; min-height: auto; }
     .dashboard-heading { align-items: flex-start; flex-direction: column; }
-    .poll-form-grid { grid-template-columns: 1fr; }
-    .poll-card { grid-template-columns: 1fr; }
-    .share-panel { border-left: 0; border-top: 1px solid var(--rule); }
+    .poll-form-grid,
+    .group-share { grid-template-columns: 1fr; }
+    .share-panel { border-right: 0; border-bottom: 1px solid var(--rule); }
   }
   @media (max-width: 560px) {
     .polls-page { padding-top: 6.5rem; }
     .rule-top > span:last-child { display: none; }
     .dashboard-actions,
+    .group-actions,
     .inline-form,
     .form-footer { align-items: stretch; display: grid; grid-template-columns: 1fr; width: 100%; }
     .group-heading { align-items: flex-start; }
