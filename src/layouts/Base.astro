@@ -7,12 +7,14 @@ export interface Props {
   description?: string;
   /** Path for canonical/OG url, e.g. "/cv" */
   path?: string;
+  assistant?: boolean;
 }
 
 const {
   title = 'Carlos Alberto Haro · AI Engineer & Technical Product Manager',
   description = 'Carlos Alberto Haro López, AI Engineer & Technical Product Manager. 8+ years designing and shipping end-to-end data & AI solutions across AWS, Azure and GCP.',
   path = '/',
+  assistant = true,
 } = Astro.props;
 
 // Pages are served as directories, so canonical URLs always end in a slash.
@@ -74,7 +76,7 @@ const person = {
   <body>
     <div class="grain" aria-hidden="true"></div>
     <slot />
-    <AskWidget />
+    {assistant && <AskWidget />}
 
     <script>
       // Global reveal-on-scroll observer for any [class~="reveal"] element.
