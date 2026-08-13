@@ -12,6 +12,7 @@ Highlights: FRED, a structured fraud-analysis agent in production at Santander M
 - [Teaching](https://h1sort.com/teaching/): Real-Time Data Processing, a 12-lesson hands-on course (OLTP, CDC, Kafka, stream processing, real-time OLAP, API)
 - [Writing](https://h1sort.com/writing/): blog and research write-ups (in progress)
 - [Devin Model Guide](https://h1sort.com/devin-model-guide/): an unlinked public field note on role-based model allowlists, escalation workflows, benchmark evidence, and dynamic ACU budgeting for Devin Desktop
+- [Live Polls](https://h1sort.com/polls/): create grouped multiple-choice polls and participate through short links or QR codes
 - [Contact](https://h1sort.com/contact/): email and socials
 
 ## Contact
