@@ -47,6 +47,7 @@ interface PollOptionRow {
 }
 
 type PollStatus = 'draft' | 'open' | 'closed';
+type PollKind = 'choice' | 'text';
 
 const MAX_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 1000;
@@ -162,6 +163,12 @@ async function handlePollsApi(request: Request, env: Env, url: URL): Promise<Res
     return createPublicVote(request, env, url, voteMatch[1]);
   }
 
+  const answerMatch = path.match(/^\/api\/polls\/public\/([^/]+)\/answers$/);
+  if (answerMatch) {
+    if (request.method !== 'POST') return methodNotAllowed('POST');
+    return createPublicAnswer(request, env, url, answerMatch[1]);
+  }
+
   const publicGroupMatch = path.match(/^\/api\/polls\/public\/groups\/([^/]+)$/);
   if (publicGroupMatch) {
     if (request.method !== 'GET') return methodNotAllowed('GET');
@@ -269,11 +276,13 @@ async function getAdminGroups(request: Request, env: Env, url: URL): Promise<Res
   const result = await env.DB.prepare(
     `SELECT g.id AS group_id, g.code AS group_code, g.title AS group_title,
             g.created_at AS group_created_at,
-            p.id AS poll_id, p.code, p.question, p.status,
+            p.id AS poll_id, p.code, p.question, p.status, p.kind, p.max_length,
             p.created_at AS poll_created_at, p.updated_at, p.opened_at, p.closed_at,
             o.id AS option_id, o.label, o.position,
             (SELECT COUNT(*) FROM poll_votes v
-             WHERE v.poll_id = p.id AND v.option_id = o.id) AS vote_count
+             WHERE v.poll_id = p.id AND v.option_id = o.id) AS vote_count,
+            (SELECT COUNT(*) FROM poll_text_answers t
+             WHERE t.poll_id = p.id) AS response_count
        FROM poll_groups g
        LEFT JOIN polls p ON p.group_id = g.id
        LEFT JOIN poll_options o ON o.poll_id = p.id
@@ -341,9 +350,23 @@ async function createAdminPoll(
   }
 
   const question = boundedText(body.question, 500);
-  const labels = parseOptionLabels(body.labels);
   if (!question) return json({ error: 'invalid question' }, 400);
-  if (!labels) return json({ error: 'labels must contain 2 to 8 unique options' }, 400);
+
+  const rawKind = body.kind;
+  if (rawKind !== undefined && rawKind !== 'choice' && rawKind !== 'text') {
+    return json({ error: 'invalid kind' }, 400);
+  }
+  const kind: PollKind = rawKind === 'text' ? 'text' : 'choice';
+
+  let labels: string[] | null = null;
+  let maxLength: number | null = null;
+  if (kind === 'choice') {
+    labels = parseOptionLabels(body.labels);
+    if (!labels) return json({ error: 'labels must contain 2 to 8 unique options' }, 400);
+  } else {
+    maxLength = parseMaxLength(body.maxLength);
+    if (!maxLength) return json({ error: 'max length must be between 1 and 500' }, 400);
+  }
 
   const group = await env.DB.prepare(`SELECT id FROM poll_groups WHERE id = ?1`)
     .bind(groupId)
@@ -351,15 +374,17 @@ async function createAdminPoll(
   if (!group) return json({ error: 'group not found' }, 404);
 
   const pollId = crypto.randomUUID();
-  const options = labels.map((label, position) => ({ id: crypto.randomUUID(), label, position }));
+  const options = kind === 'choice'
+    ? labels!.map((label, position) => ({ id: crypto.randomUUID(), label, position }))
+    : [];
   let code = '';
   let created = false;
   for (let attempt = 0; attempt < 4; attempt += 1) {
     code = randomPollCode();
     const statements = [
       env.DB.prepare(
-        `INSERT INTO polls (id, group_id, code, question) VALUES (?1, ?2, ?3, ?4)`,
-      ).bind(pollId, groupId, code, question),
+        `INSERT INTO polls (id, group_id, code, question, kind, max_length) VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+      ).bind(pollId, groupId, code, question, kind, maxLength),
       ...options.map((option) =>
         env.DB.prepare(
           `INSERT INTO poll_options (id, poll_id, label, position) VALUES (?1, ?2, ?3, ?4)`,
@@ -486,13 +511,17 @@ async function getPublicGroup(
 
   const result = await env.DB.prepare(
     `SELECT p.rowid AS poll_order, p.id AS poll_id, p.code, p.question, p.status,
+            p.kind, p.max_length,
             p.opened_at, p.closed_at, o.id AS option_id, o.label, o.position,
             CASE WHEN p.status = 'closed' THEN
               (SELECT COUNT(*) FROM poll_votes v
                 WHERE v.poll_id = p.id AND v.option_id = o.id)
-            ELSE NULL END AS vote_count
+            ELSE NULL END AS vote_count,
+            CASE WHEN p.status = 'closed' THEN
+              (SELECT COUNT(*) FROM poll_text_answers t WHERE t.poll_id = p.id)
+            ELSE NULL END AS response_count
        FROM polls p
-       JOIN poll_options o ON o.poll_id = p.id
+       LEFT JOIN poll_options o ON o.poll_id = p.id
       WHERE p.group_id = ?1 AND p.status != 'draft'
       ORDER BY p.rowid ASC, o.position ASC`,
   ).bind(group.id).all<{
@@ -501,24 +530,35 @@ async function getPublicGroup(
     code: string;
     question: string;
     status: PollStatus;
+    kind: PollKind;
+    max_length: number | null;
     opened_at: string | null;
     closed_at: string | null;
-    option_id: string;
-    label: string;
-    position: number;
+    option_id: string | null;
+    label: string | null;
+    position: number | null;
     vote_count: number | null;
+    response_count: number | null;
   }>();
 
   const votedPollIds = new Set<string>();
   const voterToken = getCookie(request, voterCookieName(url));
   if (isValidVoterToken(voterToken)) {
     const voterHash = await hashVoterToken(env, voterToken);
-    const votes = await env.DB.prepare(
-      `SELECT v.poll_id FROM poll_votes v
-       JOIN polls p ON p.id = v.poll_id
-       WHERE p.group_id = ?1 AND v.voter_hash = ?2`,
-    ).bind(group.id, voterHash).all<{ poll_id: string }>();
+    const [votes, answers] = await Promise.all([
+      env.DB.prepare(
+        `SELECT v.poll_id FROM poll_votes v
+         JOIN polls p ON p.id = v.poll_id
+         WHERE p.group_id = ?1 AND v.voter_hash = ?2`,
+      ).bind(group.id, voterHash).all<{ poll_id: string }>(),
+      env.DB.prepare(
+        `SELECT t.poll_id FROM poll_text_answers t
+         JOIN polls p ON p.id = t.poll_id
+         WHERE p.group_id = ?1 AND t.voter_hash = ?2`,
+      ).bind(group.id, voterHash).all<{ poll_id: string }>(),
+    ]);
     for (const vote of votes.results ?? []) votedPollIds.add(vote.poll_id);
+    for (const answer of answers.results ?? []) votedPollIds.add(answer.poll_id);
   }
 
   const polls = new Map<string, Record<string, unknown> & {
@@ -526,6 +566,7 @@ async function getPublicGroup(
     status: PollStatus;
     options: Record<string, unknown>[];
     total?: number;
+    responseCount?: number;
   }>();
   for (const row of result.results ?? []) {
     let poll = polls.get(row.poll_id);
@@ -537,14 +578,20 @@ async function getPublicGroup(
         code: row.code,
         question: row.question,
         status: row.status,
+        kind: row.kind,
+        maxLength: row.max_length === null ? null : Number(row.max_length),
         openedAt: row.opened_at,
         closedAt: row.closed_at,
         voted: votedPollIds.has(row.poll_id),
         options: [],
       };
-      if (row.status === 'closed') poll.total = 0;
+      if (row.status === 'closed') {
+        if (row.kind === 'text') poll.responseCount = Number(row.response_count ?? 0);
+        else poll.total = 0;
+      }
       polls.set(row.poll_id, poll);
     }
+    if (row.option_id === null) continue;
     const option: Record<string, unknown> = {
       id: row.option_id,
       label: row.label,
@@ -585,10 +632,17 @@ async function getPublicPoll(
   const voterToken = getCookie(request, voterCookieName(url));
   if (isValidVoterToken(voterToken)) {
     const voterHash = await hashVoterToken(env, voterToken);
-    const vote = await env.DB.prepare(
-      `SELECT 1 AS found FROM poll_votes WHERE poll_id = ?1 AND voter_hash = ?2`,
-    ).bind(poll.id, voterHash).first<{ found: number }>();
-    voted = Boolean(vote);
+    if (poll.kind === 'text') {
+      const answer = await env.DB.prepare(
+        `SELECT 1 AS found FROM poll_text_answers WHERE poll_id = ?1 AND voter_hash = ?2`,
+      ).bind(poll.id, voterHash).first<{ found: number }>();
+      voted = Boolean(answer);
+    } else {
+      const vote = await env.DB.prepare(
+        `SELECT 1 AS found FROM poll_votes WHERE poll_id = ?1 AND voter_hash = ?2`,
+      ).bind(poll.id, voterHash).first<{ found: number }>();
+      voted = Boolean(vote);
+    }
   }
 
   if (poll.status !== 'closed') {
@@ -628,6 +682,7 @@ async function createPublicVote(
 
   const poll = await getPollWithOptions(env.DB, code, false);
   if (!poll) return json({ error: 'poll not found' }, 404);
+  if (poll.kind !== 'choice') return json({ error: 'poll is not a choice question' }, 400);
   if (poll.status !== 'open') return json({ error: 'poll is not open' }, 409);
   if (!poll.options.some((option) => option.id === optionId)) {
     return json({ error: 'invalid option' }, 400);
@@ -680,6 +735,78 @@ async function createPublicVote(
   }
 
   return json({ error: 'could not record vote' }, 503);
+}
+
+async function createPublicAnswer(
+  request: Request,
+  env: Env,
+  url: URL,
+  rawCode: string,
+): Promise<Response> {
+  const originError = requireSameOrigin(request, url);
+  if (originError) return originError;
+  if (!sessionSecretConfigured(env)) return json({ error: 'polls unavailable' }, 503);
+  const code = normalizePollCode(rawCode);
+  if (!code) return json({ error: 'poll not found' }, 404);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await readBoundedJsonObject(request, POLLS_BODY_BYTES);
+  } catch (error) {
+    return bodyErrorResponse(error);
+  }
+
+  const poll = await getPollWithOptions(env.DB, code, false);
+  if (!poll) return json({ error: 'poll not found' }, 404);
+  if (poll.kind !== 'text') return json({ error: 'poll is not a text question' }, 400);
+  if (poll.status !== 'open') return json({ error: 'poll is not open' }, 409);
+
+  const answerText = boundedText(body.body, poll.maxLength ?? 500);
+  if (!answerText) return json({ error: 'invalid answer' }, 400);
+
+  const cookieName = voterCookieName(url);
+  const existingToken = getCookie(request, cookieName);
+  const voterToken = isValidVoterToken(existingToken) ? existingToken : randomToken(32);
+  const voterHash = await hashVoterToken(env, voterToken);
+  const cookieHeader = voterToken === existingToken
+    ? undefined
+    : serializeCookie(cookieName, voterToken, VOTER_COOKIE_SECONDS, url);
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const result = await env.DB.prepare(
+      `INSERT OR IGNORE INTO poll_text_answers (id, poll_id, voter_hash, body)
+       SELECT ?1, p.id, ?2, ?3
+         FROM polls p
+        WHERE p.code = ?4 AND p.status = 'open' AND p.kind = 'text'`,
+    ).bind(crypto.randomUUID(), voterHash, answerText, code).run();
+    if ((result.meta?.changes ?? 0) === 1) {
+      return json(
+        { answered: true },
+        201,
+        cookieHeader ? { 'set-cookie': cookieHeader } : undefined,
+      );
+    }
+
+    const duplicate = await env.DB.prepare(
+      `SELECT 1 AS found FROM poll_text_answers WHERE poll_id = ?1 AND voter_hash = ?2`,
+    ).bind(poll.id, voterHash).first<{ found: number }>();
+    if (duplicate) {
+      return json(
+        { error: 'already answered' },
+        409,
+        cookieHeader ? { 'set-cookie': cookieHeader } : undefined,
+      );
+    }
+
+    const current = await env.DB.prepare(
+      `SELECT status FROM polls WHERE id = ?1`,
+    ).bind(poll.id).first<{ status: PollStatus }>();
+    if (!current || current.status !== 'open') {
+      return json({ error: 'poll is not open' }, 409);
+    }
+  }
+
+  return json({ error: 'could not record answer' }, 503);
 }
 
 class BodyReadError extends Error {
@@ -772,6 +899,12 @@ function parseOptionLabels(value: unknown): string[] | null {
     labels.push(label);
   }
   return labels;
+}
+
+function parseMaxLength(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isInteger(value)) return null;
+  if (value < 1 || value > 500) return null;
+  return value;
 }
 
 function requireSameOrigin(request: Request, url: URL): Response | null {
@@ -1036,12 +1169,15 @@ function buildAdminGroups(rows: Record<string, unknown>[]): Record<string, unkno
         code: String(row.code),
         question: String(row.question),
         status: String(row.status),
+        kind: String(row.kind ?? 'choice'),
+        maxLength: row.max_length === null || row.max_length === undefined ? null : Number(row.max_length),
         createdAt: String(row.poll_created_at),
         updatedAt: String(row.updated_at),
         openedAt: row.opened_at === null ? null : String(row.opened_at),
         closedAt: row.closed_at === null ? null : String(row.closed_at),
         options: [],
         total: 0,
+        responseCount: Number(row.response_count ?? 0),
       };
       group.pollsById.set(pollId, poll);
       group.polls.push(poll);
@@ -1064,14 +1200,16 @@ async function getAdminPoll(db: D1Database, pollId: string): Promise<Record<stri
   const result = await db.prepare(
     `SELECT g.id AS group_id, g.code AS group_code, g.title AS group_title,
             g.created_at AS group_created_at,
-            p.id AS poll_id, p.code, p.question, p.status,
+            p.id AS poll_id, p.code, p.question, p.status, p.kind, p.max_length,
             p.created_at AS poll_created_at, p.updated_at, p.opened_at, p.closed_at,
             o.id AS option_id, o.label, o.position,
             (SELECT COUNT(*) FROM poll_votes v
-             WHERE v.poll_id = p.id AND v.option_id = o.id) AS vote_count
+             WHERE v.poll_id = p.id AND v.option_id = o.id) AS vote_count,
+            (SELECT COUNT(*) FROM poll_text_answers t
+             WHERE t.poll_id = p.id) AS response_count
        FROM polls p
        JOIN poll_groups g ON g.id = p.group_id
-       JOIN poll_options o ON o.poll_id = p.id
+       LEFT JOIN poll_options o ON o.poll_id = p.id
       WHERE p.id = ?1
       ORDER BY o.position ASC`,
   ).bind(pollId).all<Record<string, unknown>>();
@@ -1080,6 +1218,13 @@ async function getAdminPoll(db: D1Database, pollId: string): Promise<Record<stri
   return Array.isArray(polls) ? (polls[0] as Record<string, unknown> ?? null) : null;
 }
 
+// Fetches a poll by short code. With includeCounts=false this returns the
+// bare poll (used for validation and for the open/draft public view); with
+// includeCounts=true it only matches a poll that is still 'closed' (the
+// caller falls back to the bare fetch if the status changed underneath it)
+// and attaches aggregate counts: per-option vote_count for choice polls, a
+// single response_count for text polls. Individual text answers are never
+// read back here or anywhere else the public or admin API can reach.
 async function getPollWithOptions(
   db: D1Database,
   code: string,
@@ -1087,63 +1232,15 @@ async function getPollWithOptions(
 ): Promise<(Record<string, unknown> & {
   id: string;
   status: PollStatus;
+  kind: PollKind;
+  maxLength: number | null;
   options: Array<Record<string, unknown> & { id: string }>;
 }) | null> {
-  if (includeCounts) {
-    const result = await db.prepare(
-      `SELECT p.id, p.group_id, g.title AS group_title, p.code, p.question, p.status,
-              p.opened_at, p.closed_at, o.id AS option_id, o.label, o.position,
-              COUNT(v.id) AS vote_count
-         FROM polls p
-         JOIN poll_groups g ON g.id = p.group_id
-         JOIN poll_options o ON o.poll_id = p.id
-         LEFT JOIN poll_votes v ON v.poll_id = p.id AND v.option_id = o.id
-        WHERE p.code = ?1 AND p.status = 'closed'
-        GROUP BY p.id, p.group_id, g.title, p.code, p.question, p.status,
-                 p.opened_at, p.closed_at, o.id, o.label, o.position
-        ORDER BY o.position ASC`,
-    ).bind(code).all<{
-      id: string;
-      group_id: string;
-      group_title: string;
-      code: string;
-      question: string;
-      status: PollStatus;
-      opened_at: string | null;
-      closed_at: string | null;
-      option_id: string;
-      label: string;
-      position: number;
-      vote_count: number;
-    }>();
-    const rows = result.results ?? [];
-    if (!rows.length) return null;
-    const first = rows[0];
-    let total = 0;
-    const options = rows.map((row) => {
-      const count = Number(row.vote_count);
-      total += count;
-      return { id: row.option_id, label: row.label, position: Number(row.position), count };
-    });
-    return {
-      id: first.id,
-      groupId: first.group_id,
-      groupTitle: first.group_title,
-      code: first.code,
-      question: first.question,
-      status: first.status,
-      openedAt: first.opened_at,
-      closedAt: first.closed_at,
-      options,
-      total,
-    };
-  }
-
   const poll = await db.prepare(
     `SELECT p.id, p.group_id, g.title AS group_title, p.code, p.question, p.status,
-            p.opened_at, p.closed_at
+            p.kind, p.max_length, p.opened_at, p.closed_at
        FROM polls p JOIN poll_groups g ON g.id = p.group_id
-      WHERE p.code = ?1`,
+      WHERE p.code = ?1${includeCounts ? " AND p.status = 'closed'" : ''}`,
   ).bind(code).first<{
     id: string;
     group_id: string;
@@ -1151,10 +1248,52 @@ async function getPollWithOptions(
     code: string;
     question: string;
     status: PollStatus;
+    kind: PollKind;
+    max_length: number | null;
     opened_at: string | null;
     closed_at: string | null;
   }>();
   if (!poll) return null;
+
+  const base = {
+    id: poll.id,
+    groupId: poll.group_id,
+    groupTitle: poll.group_title,
+    code: poll.code,
+    question: poll.question,
+    status: poll.status,
+    kind: poll.kind,
+    maxLength: poll.max_length === null || poll.max_length === undefined ? null : Number(poll.max_length),
+    openedAt: poll.opened_at,
+    closedAt: poll.closed_at,
+  };
+
+  if (poll.kind === 'text') {
+    if (!includeCounts) return { ...base, options: [] };
+    const counted = await db.prepare(
+      `SELECT COUNT(*) AS response_count FROM poll_text_answers WHERE poll_id = ?1`,
+    ).bind(poll.id).first<{ response_count: number }>();
+    return { ...base, options: [], responseCount: Number(counted?.response_count ?? 0) };
+  }
+
+  if (includeCounts) {
+    const result = await db.prepare(
+      `SELECT o.id, o.label, o.position, COUNT(v.id) AS vote_count
+         FROM poll_options o
+         LEFT JOIN poll_votes v ON v.poll_id = o.poll_id AND v.option_id = o.id
+        WHERE o.poll_id = ?1
+        GROUP BY o.id, o.label, o.position
+        ORDER BY o.position ASC`,
+    ).bind(poll.id).all<PollOptionRow>();
+    const rows = result.results ?? [];
+    let total = 0;
+    const options = rows.map((row) => {
+      const count = Number(row.vote_count ?? 0);
+      total += count;
+      return { id: row.id, label: row.label, position: Number(row.position), count };
+    });
+    return { ...base, options, total };
+  }
 
   const result = await db.prepare(
     `SELECT id, label, position FROM poll_options WHERE poll_id = ?1 ORDER BY position ASC`,
@@ -1164,17 +1303,7 @@ async function getPollWithOptions(
     label: option.label,
     position: Number(option.position),
   }));
-  return {
-    id: poll.id,
-    groupId: poll.group_id,
-    groupTitle: poll.group_title,
-    code: poll.code,
-    question: poll.question,
-    status: poll.status,
-    openedAt: poll.opened_at,
-    closedAt: poll.closed_at,
-    options,
-  };
+  return { ...base, options };
 }
 
 function withoutVoteCounts<T extends Record<string, unknown> & { options: Record<string, unknown>[] }>(poll: T): T {
