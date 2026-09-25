@@ -112,6 +112,7 @@ import Base from '../layouts/Base.astro';
     import QRCode from 'qrcode';
 
     type PollStatus = 'draft' | 'open' | 'closed';
+    type PollKind = 'choice' | 'text';
     type PollOption = {
       id: string;
       label: string;
@@ -125,10 +126,13 @@ import Base from '../layouts/Base.astro';
       code: string;
       question: string;
       status: PollStatus;
+      kind: PollKind;
+      maxLength: number | null;
       openedAt: string | null;
       closedAt: string | null;
       options: PollOption[];
       total?: number;
+      responseCount?: number;
       voted?: boolean;
     };
     type PollGroup = {
@@ -159,6 +163,7 @@ import Base from '../layouts/Base.astro';
     const voteForm = byId<HTMLFormElement>('voteForm');
     let activeVoteCode = '';
     let activeGroupCode = '';
+    let activeVoteKind: PollKind = 'choice';
 
     const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({
       '&': '&amp;',
@@ -237,6 +242,20 @@ import Base from '../layouts/Base.astro';
       `;
     };
 
+    // Free-text answers are never returned by the API to any caller (admin
+    // included): only an aggregate count. This renders that count for both
+    // the admin card and the public results view, and never the answer body.
+    const textResultSummary = (poll: Poll) => {
+      const count = poll.responseCount ?? 0;
+      return `
+        <div class="result-summary">
+          <span class="mono-label">Responses</span>
+          <strong>${count} ${count === 1 ? 'response' : 'responses'}</strong>
+        </div>
+        <p class="text-answers-note">Free-text answers stay private; only the count is shown.</p>
+      `;
+    };
+
     async function renderQrCodes() {
       const styles = getComputedStyle(document.documentElement);
       const dark = styles.getPropertyValue('--ink').trim();
@@ -288,18 +307,33 @@ import Base from '../layouts/Base.astro';
             </div>
 
             <form class="poll-form" data-group-id="${group.id}">
+              <div class="poll-kind-row">
+                <span>Question type</span>
+                <label class="kind-option">
+                  <input type="radio" name="kind" value="choice" checked />
+                  <span>Choice</span>
+                </label>
+                <label class="kind-option">
+                  <input type="radio" name="kind" value="text" />
+                  <span>Free text</span>
+                </label>
+              </div>
               <div class="poll-form-grid">
                 <label>
                   <span>Question</span>
                   <textarea name="question" placeholder="Which system should we improve first?" maxlength="500" required></textarea>
                 </label>
-                <label>
+                <label data-kind-field="choice">
                   <span>Options, one per line</span>
                   <textarea name="labels" placeholder="Data quality&#10;Deployment speed&#10;Observability" required></textarea>
                 </label>
+                <label data-kind-field="text" hidden>
+                  <span>Max answer length</span>
+                  <input name="maxLength" type="number" min="1" max="500" value="280" />
+                </label>
               </div>
               <div class="form-footer">
-                <span>2–8 unique options</span>
+                <span data-kind-hint>2–8 unique options</span>
                 <button class="action action-primary" type="submit">Add question</button>
               </div>
               <p class="form-note" data-poll-message role="status" aria-live="polite"></p>
@@ -315,9 +349,10 @@ import Base from '../layouts/Base.astro';
                       <div class="poll-meta">
                         <span class="status-chip status-${poll.status}">${statusLabel(poll.status)}</span>
                         <span class="poll-code">Question ${String(pollIndex + 1).padStart(2, '0')}</span>
+                        ${poll.kind === 'text' ? '<span class="poll-kind">Free text</span>' : ''}
                       </div>
                       <h3>${escapeHtml(poll.question)}</h3>
-                      <div class="admin-results">${resultRows(poll)}</div>
+                      <div class="admin-results">${poll.kind === 'text' ? textResultSummary(poll) : resultRows(poll)}</div>
                       <div class="poll-actions">
                         <button class="action action-primary" type="button" data-poll-id="${poll.id}" data-next-status="${nextStatus}">${nextLabel}</button>
                       </div>
@@ -330,6 +365,23 @@ import Base from '../layouts/Base.astro';
         `;
       }).join('');
       void renderQrCodes();
+    }
+
+    function updatePollKindFields(form: HTMLFormElement) {
+      const kind = form.querySelector<HTMLInputElement>('input[name="kind"]:checked')?.value === 'text'
+        ? 'text'
+        : 'choice';
+      const isText = kind === 'text';
+      const labelsField = form.querySelector<HTMLElement>('[data-kind-field="choice"]');
+      const maxLengthField = form.querySelector<HTMLElement>('[data-kind-field="text"]');
+      const labelsInput = form.querySelector<HTMLTextAreaElement>('textarea[name="labels"]');
+      const maxLengthInput = form.querySelector<HTMLInputElement>('input[name="maxLength"]');
+      const hint = form.querySelector<HTMLElement>('[data-kind-hint]');
+      if (labelsField) labelsField.hidden = isText;
+      if (maxLengthField) maxLengthField.hidden = !isText;
+      if (labelsInput) labelsInput.required = !isText;
+      if (maxLengthInput) maxLengthInput.required = isText;
+      if (hint) hint.textContent = isText ? 'Up to 500 characters' : '2–8 unique options';
     }
 
     async function loadGroups() {
@@ -366,6 +418,7 @@ import Base from '../layouts/Base.astro';
       voted: boolean,
       progress?: { groupTitle: string; current: number; total: number },
     ) {
+      activeVoteKind = poll.kind;
       byId<HTMLElement>('voteGroup').textContent = progress?.groupTitle ?? poll.groupTitle ?? 'Live poll';
       const status = byId<HTMLElement>('voteStatus');
       status.textContent = progress ? `${progress.current} / ${progress.total}` : statusLabel(poll.status);
@@ -383,12 +436,36 @@ import Base from '../layouts/Base.astro';
         return;
       }
       if (poll.status === 'closed') {
-        intro.textContent = 'Voting is closed. Here is how the room responded.';
-        results.innerHTML = resultRows(poll);
+        if (poll.kind === 'text') {
+          intro.textContent = 'This question is closed.';
+          results.innerHTML = textResultSummary(poll);
+        } else {
+          intro.textContent = 'Voting is closed. Here is how the room responded.';
+          results.innerHTML = resultRows(poll);
+        }
         return;
       }
       if (voted) {
-        intro.textContent = 'Your vote is recorded. Results will appear here when the host closes the poll.';
+        intro.textContent = poll.kind === 'text'
+          ? 'Your answer is recorded. It stays private, even from the host.'
+          : 'Your vote is recorded. Results will appear here when the host closes the poll.';
+        return;
+      }
+
+      if (poll.kind === 'text') {
+        const maxLength = poll.maxLength ?? 500;
+        intro.textContent = 'Type a short answer. Your browser can submit one answer for this question.';
+        voteForm.innerHTML = `
+          <label class="text-answer-field">
+            <span class="sr-only">Your answer</span>
+            <textarea name="body" maxlength="${maxLength}" required></textarea>
+            <div class="textarea-footer">
+              <span class="char-counter" data-char-counter>0 / ${maxLength}</span>
+            </div>
+          </label>
+          <p class="text-hint">Sin nombre, empresa ni datos personales</p>
+          <button class="action action-primary vote-submit" type="submit">Send answer <span aria-hidden="true">→</span></button>
+        `;
         return;
       }
 
@@ -475,7 +552,7 @@ import Base from '../layouts/Base.astro';
           <section class="question-results">
             <span class="mono-label">Question ${String(index + 1).padStart(2, '0')}</span>
             <h2>${escapeHtml(poll.question)}</h2>
-            ${resultRows(poll)}
+            ${poll.kind === 'text' ? textResultSummary(poll) : resultRows(poll)}
           </section>
         `).join('');
       }
@@ -548,6 +625,13 @@ import Base from '../layouts/Base.astro';
       }
     });
 
+    groupsElement.addEventListener('change', (event) => {
+      const input = event.target as HTMLElement;
+      if (!(input instanceof HTMLInputElement) || input.name !== 'kind') return;
+      const form = input.closest<HTMLFormElement>('.poll-form');
+      if (form) updatePollKindFields(form);
+    });
+
     groupsElement.addEventListener('submit', async (event) => {
       const form = event.target as HTMLFormElement;
       if (!form.matches('.poll-form')) return;
@@ -557,11 +641,17 @@ import Base from '../layouts/Base.astro';
       message.classList.remove('is-error');
       setBusy(form, true);
       const formData = new FormData(form);
-      const labels = String(formData.get('labels') ?? '').split(/\r?\n/).map((label) => label.trim()).filter(Boolean);
+      const kind = formData.get('kind') === 'text' ? 'text' : 'choice';
+      const payload: Record<string, unknown> = { question: formData.get('question'), kind };
+      if (kind === 'text') {
+        payload.maxLength = Number(formData.get('maxLength'));
+      } else {
+        payload.labels = String(formData.get('labels') ?? '').split(/\r?\n/).map((label) => label.trim()).filter(Boolean);
+      }
       try {
         await requestJson(`/api/polls/admin/groups/${form.dataset.groupId}/polls`, {
           method: 'POST',
-          body: JSON.stringify({ question: formData.get('question'), labels }),
+          body: JSON.stringify(payload),
         });
         form.reset();
         await loadGroups();
@@ -615,9 +705,41 @@ import Base from '../layouts/Base.astro';
       }
     });
 
+    voteForm.addEventListener('input', (event) => {
+      const textarea = event.target as HTMLElement;
+      if (!(textarea instanceof HTMLTextAreaElement) || textarea.name !== 'body') return;
+      const counter = voteForm.querySelector<HTMLElement>('[data-char-counter]');
+      if (counter) counter.textContent = `${textarea.value.length} / ${textarea.maxLength}`;
+    });
+
     voteForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const formData = new FormData(voteForm);
+
+      if (activeVoteKind === 'text') {
+        const answerBody = String(formData.get('body') ?? '').trim();
+        if (!answerBody) return;
+        setBusy(voteForm, true);
+        setMessage('voteMessage', 'Sending your answer...');
+        try {
+          await requestJson(`/api/polls/public/${encodeURIComponent(activeVoteCode)}/answers`, {
+            method: 'POST',
+            body: JSON.stringify({ body: answerBody }),
+          });
+          if (activeGroupCode) await showPublicGroup(activeGroupCode);
+          else await showPublicPoll(activeVoteCode);
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 409) {
+            if (activeGroupCode) await showPublicGroup(activeGroupCode);
+            else await showPublicPoll(activeVoteCode);
+            return;
+          }
+          setMessage('voteMessage', error instanceof ApiError ? error.message : 'Could not send answer.', true);
+          setBusy(voteForm, false);
+        }
+        return;
+      }
+
       const optionId = formData.get('optionId');
       if (!optionId) return;
       setBusy(voteForm, true);
@@ -845,13 +967,37 @@ import Base from '../layouts/Base.astro';
   .group-url { font-family: var(--font-mono); font-size: clamp(0.9rem, 2vw, 1.2rem); overflow-wrap: anywhere; }
   .group-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; }
   .poll-form { padding: 1.5rem 0; border-bottom: 1px solid var(--rule); }
+  .poll-kind-row {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    margin-bottom: 1.1rem;
+    font-family: var(--font-mono);
+    font-size: var(--label-size);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .kind-option { display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; color: var(--ink); }
+  .kind-option input { accent-color: var(--acid-deep); }
   .poll-form-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem; }
+  .poll-form-grid input[type='number'] { max-width: 12rem; }
   .form-footer { align-items: center; margin-top: 0.8rem; }
   .poll-list { display: grid; gap: 1px; margin-top: 1.5rem; background: var(--rule); border: 1px solid var(--rule); }
   .group-empty { background: var(--bg); padding: 1.3rem; color: var(--muted); }
   .poll-card { background: var(--bg); }
   .poll-main { padding: clamp(1.2rem, 2.5vw, 2rem); }
   .poll-meta { justify-content: flex-start; }
+  .poll-kind {
+    font-family: var(--font-mono);
+    font-size: var(--label-size);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--rule);
+    padding: 0.3rem 0.55rem;
+  }
+  .text-answers-note { margin-top: 0.7rem; color: var(--muted); font-size: 0.85rem; }
   .status-chip {
     display: inline-flex;
     width: fit-content;
@@ -918,6 +1064,11 @@ import Base from '../layouts/Base.astro';
   .vote-intro { max-width: 58ch; color: var(--muted); line-height: 1.55; }
   .vote-form { margin-top: 2rem; }
   .vote-form fieldset { display: grid; gap: 0.7rem; border: 0; }
+  .text-answer-field { display: block; }
+  .text-answer-field textarea { min-height: 9rem; font-family: var(--font-serif); font-size: 1.1rem; }
+  .textarea-footer { display: flex; justify-content: flex-end; margin-top: 0.4rem; }
+  .char-counter { font-family: var(--font-mono); font-size: var(--label-size); letter-spacing: 0.08em; color: var(--muted); }
+  .text-hint { margin-top: 0.9rem; color: var(--muted); font-size: 0.85rem; font-style: italic; }
   .vote-option {
     position: relative;
     display: grid;
