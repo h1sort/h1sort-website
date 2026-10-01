@@ -106,12 +106,16 @@
   .topline .mark{display:inline-flex;align-items:center;gap:.7em}
   .topline .mark i{width:.55em;height:.55em;border:1.5px solid var(--slide-accent,var(--evidence));transform:rotate(45deg)}
   .bottomline{padding-top:.45rem}
-  .bottomline .url{color:var(--ink-2);text-decoration:none;letter-spacing:.12em;text-transform:none}
-  .bottomline .url:hover{color:var(--slide-accent,var(--evidence))}
-  @media (max-width:640px){.bottomline .who{display:none}}
+  .bottomline .find{display:inline-flex;align-items:center;gap:.75em;text-transform:none;letter-spacing:.12em}
+  .bottomline .find a{color:var(--ink-2);text-decoration:none;display:inline-flex;align-items:center}
+  .bottomline .find a:hover{color:var(--slide-accent,var(--evidence))}
+  .bottomline .find svg{width:1.05em;height:1.05em;fill:currentColor}
+  .bottomline .find .handle{color:var(--ink-2)}
+  @media (max-width:640px){.bottomline .who,.bottomline .find .sep{display:none}.bottomline .find{gap:.6em;letter-spacing:.04em}}
   .folio{font-variant-numeric:tabular-nums}
   .slide.bare .topline,.slide.bare .bottomline{visibility:hidden}
-  .slide.bare .bottomline .url{visibility:visible}
+  .slide.bare .bottomline .find{visibility:visible}
+  .slide.nofoot .bottomline{visibility:hidden}
 
   /* ---------- layout primitives ---------- */
   .main{min-height:0;display:flex;flex-direction:column;justify-content:center;gap:var(--gap);padding:clamp(.5rem,2vh,1.6rem) 0}
@@ -373,6 +377,9 @@ html[data-still] .s01 .motif *{animation:none!important}
 .s03 .n0{fill:var(--paper-hi);stroke:var(--ink);stroke-width:1.6}
 .s03 .n1{fill:var(--paper-hi);stroke:var(--evidence);stroke-width:1.6}
 .s03 .lk{fill:none;stroke:var(--evidence);stroke-width:1.6;opacity:.65}
+.s03 .qm{font-family:var(--f-display);font-size:30px;font-weight:500;fill:var(--action)}
+.s03 .band{fill:var(--evidence);opacity:.08}
+.s03 .ok{fill:none;stroke:var(--evidence);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .s03 .q{font-size:clamp(1.05rem,1.85vw,2rem);line-height:1.38;max-width:62ch;color:var(--ink);font-family:var(--f-display);font-weight:360;text-wrap:pretty;padding-left:clamp(.8rem,1.4vw,1.4rem);border-left:2px solid var(--slide-accent)}
 @media (max-width:760px){.s03 .split{grid-template-columns:1fr}.s03 .figure{max-height:24vh}}
 .s04 .motif{position:absolute;z-index:0;right:0;top:9%;bottom:9%;width:58%;display:flex;align-items:center;justify-content:center;pointer-events:none}
@@ -417,6 +424,40 @@ html[data-still] .s01 .motif *{animation:none!important}
 html[data-still] .s04 .row{animation:none!important}
 @media (prefers-reduced-motion:reduce){.s04.active .row{animation:none}}
 @media (max-width:760px){.s04 .motif{inset:auto 0 0 0;height:40%;width:100%;opacity:.7}.s04 .col{max-width:none}.s04 .main{justify-content:flex-start}}
+
+/* --- 01-04.html --- */
+.s04b .main{justify-content:center}
+.s04b .split{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(1.5rem,5vw,6rem);align-items:center}
+.s04b .txt{display:flex;flex-direction:column;gap:clamp(.7rem,2.4vh,1.8rem)}
+.s04b h2{font-size:clamp(2.4rem,5.6vw,6rem);max-width:none}
+.s04b .lede{max-width:30ch}
+.s04b .sign{font-family:var(--f-mono);font-size:clamp(1rem,1.7vw,1.7rem);letter-spacing:.04em;color:var(--ink);display:flex;align-items:center;flex-wrap:wrap;gap:.6em;margin-top:clamp(.2rem,1.4vh,1rem)}
+.s04b .sign::before{content:'';width:2.2em;height:1px;background:var(--action);flex:none;margin-right:.2em}
+.s04b .sign a{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
+.s04b .sign a:hover{color:var(--evidence)}
+.s04b .sign svg{width:.95em;height:.95em;fill:currentColor}
+.s04b .sign .sep{color:var(--ink-dim)}
+.s04b .takeswrap{position:relative;padding:clamp(.6rem,1.6vh,1.2rem)}
+.s04b .mk{position:absolute;width:clamp(.9rem,2vh,1.6rem);height:clamp(.9rem,2vh,1.6rem);border:0 solid var(--action);opacity:.8;pointer-events:none}
+.s04b .mk.tl{left:0;top:0;border-width:1.5px 0 0 1.5px}.s04b .mk.tr{right:0;top:0;border-width:1.5px 1.5px 0 0}
+.s04b .mk.bl{left:0;bottom:0;border-width:0 0 1.5px 1.5px}.s04b .mk.br{right:0;bottom:0;border-width:0 1.5px 1.5px 0}
+.s04b .takes{background:var(--paper-hi);border:1px solid var(--ink-faint);box-shadow:0 30px 60px -36px rgba(23,56,47,.45);padding:clamp(1rem,3vh,2.4rem) clamp(1.1rem,2.4vw,2.6rem);display:flex;flex-direction:column;gap:clamp(.7rem,2.2vh,1.6rem)}
+.s04b .takes .label{font-family:var(--f-mono);font-size:var(--t-label);letter-spacing:.16em;color:var(--action)}
+.s04b .takes p{margin:0}
+.s04b .takes p:not(.label){font-family:var(--f-display);font-weight:340;font-size:clamp(1.15rem,2.1vw,2.3rem);line-height:1.18;letter-spacing:-.01em;font-variation-settings:'opsz' 144;text-wrap:balance}
+.s04b .old{position:relative;color:var(--ink-2);transition:color .5s var(--ease) .4s}
+.s04b .old:has(.strike-at.shown){color:var(--ink-dim)}
+.s04b .old .t{background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'><g fill='none' stroke='%23b75437' stroke-width='3' stroke-linecap='round' vector-effect='non-scaling-stroke'><path vector-effect='non-scaling-stroke' d='M0,6.2 C18,4.6 33,6.8 51,5.2 S82,4.4 100,5.6'/><path vector-effect='non-scaling-stroke' d='M99,3.8 C80,6.4 62,3.6 44,6.4 S14,4.4 1,7'/></g></svg>");background-repeat:no-repeat;background-position:left 55%;background-size:0% 100%;-webkit-box-decoration-break:clone;box-decoration-break:clone;transition:background-size .7s cubic-bezier(.5,0,.3,1)}
+.s04b .old:has(.strike-at.shown) .t{background-size:100% 100%}
+.s04b .old + .old:has(.strike-at.shown) .t{transition-delay:.45s}
+.s04b .strike-at{position:absolute;width:0;height:0}
+.s04b .new{color:var(--ink);padding-top:clamp(.6rem,1.8vh,1.3rem);border-top:1px solid var(--ink-faint)}
+.s04b .new em{font-style:italic;font-weight:320;color:var(--evidence)}
+@media (prefers-reduced-motion:reduce){.s04b .old .t{transition:none}}
+html.no-js .s04b .old .t{background-size:100% 100%}
+@media (max-width:760px){
+  .s04b .split{grid-template-columns:1fr;gap:1.4rem}
+}
 
 /* --- 05-08.html --- */
 /* ===== shared by the four history slides (s05–s08): one map, viewBox 0 -10 1100 460 ===== */
@@ -549,8 +590,14 @@ html[data-still] .s04 .row{animation:none!important}
 .s18 .main{justify-content:center}
 .s18 .col{max-width:min(36%,34rem);display:flex;flex-direction:column;gap:clamp(.8rem,2.6vh,2rem)}
 .s18 h2{font-size:clamp(1.9rem,3.7vw,4rem);max-width:12ch}
-.s18 .url{font-family:var(--f-mono);font-size:clamp(1rem,1.5vw,1.45rem);letter-spacing:.06em;color:var(--ink);display:flex;align-items:center;gap:.8em}
-.s18 .url::before{content:'';width:2.2em;height:1px;background:var(--action)}
+.s18 .sign{font-family:var(--f-mono);font-size:clamp(.9rem,1.3vw,1.3rem);letter-spacing:.06em;color:var(--ink-2);display:flex;align-items:center;flex-wrap:wrap;gap:.7em;margin:0}
+.s18 .sign::before{content:'';width:2.2em;height:1px;background:var(--action)}
+.s18 .sign a{color:inherit;display:inline-flex}.s18 .sign a:hover{color:var(--evidence)}
+.s18 .sign svg{width:1.05em;height:1.05em;fill:currentColor}
+.s18 .deckurl{display:flex;flex-direction:column;gap:.45rem;width:fit-content;max-width:100%;text-decoration:none;color:var(--ink);background:var(--paper-hi);border:1px solid var(--ink-faint);border-left:4px solid var(--action);padding:clamp(.7rem,1.8vh,1.2rem) clamp(.9rem,1.6vw,1.6rem);box-shadow:0 18px 40px -28px rgba(23,56,47,.45)}
+.s18 .deckurl .label{color:var(--action)}
+.s18 .deckurl .u{font-family:var(--f-mono);font-weight:500;font-size:clamp(1.35rem,2.7vw,3rem);letter-spacing:-.01em;line-height:1.05;white-space:nowrap}
+.s18 .deckurl em{font-style:normal;color:var(--action)}
 @media (max-width:760px){
   .s18 .motif{inset:auto 0 0 0;height:48%;width:100%;opacity:.9}
   .s18 .main{justify-content:flex-start}
@@ -604,7 +651,7 @@ html[data-still] .s04 .row{animation:none!important}
         <circle class="pt" cx="120" cy="263" r="4.2"/><circle class="pt" cx="137" cy="315" r="4.6"/><circle class="pt" cx="311" cy="266" r="4.9"/><circle class="pt" cx="224" cy="235" r="5.9"/><circle class="pt" cx="172" cy="255" r="5.4"/><circle class="pt" cx="426" cy="255" r="3.3"/><circle class="pt" cx="201" cy="299" r="5.4"/><circle class="pt" cx="415" cy="209" r="3.8"/><circle class="pt" cx="475" cy="248" r="6.6"/>
           <circle class="pt" cx="127" cy="417" r="6.2"/><circle class="pt" cx="471" cy="364" r="3.7"/><circle class="pt" cx="416" cy="446" r="5.9"/><circle class="pt" cx="490" cy="427" r="4.7"/><circle class="pt" cx="214" cy="404" r="3.1"/><circle class="pt" cx="250" cy="436" r="3"/><circle class="pt" cx="366" cy="446" r="5.2"/><circle class="pt" cx="371" cy="391" r="6.4"/><circle class="pt" cx="420" cy="391" r="3.9"/>
           <circle class="pt" cx="138" cy="454" r="6.3"/><circle class="pt" cx="160" cy="491" r="5.2"/><circle class="pt" cx="259" cy="507" r="3.4"/><circle class="pt" cx="332" cy="516" r="6.7"/><circle class="pt" cx="156" cy="569" r="7"/><circle class="pt" cx="406" cy="518" r="4.5"/><circle class="pt" cx="476" cy="519" r="6.6"/><circle class="pt" cx="227" cy="550" r="4.5"/><circle class="pt" cx="308" cy="477" r="3.4"/>
-        <path class="lead draw" pathLength="1" d="M483,248 L520,255.7"/><path class="lead draw" pathLength="1" d="M498,427 L520,414.05"/><path class="lead draw" pathLength="1" d="M484,519 L520,515.85"/>
+        <path class="lead draw" d="M483,248 L520,255.7"/><path class="lead draw" d="M498,427 L520,414.05"/><path class="lead draw" d="M484,519 L520,515.85"/>
       </g>
       <rect class="gate" x="548" y="150" width="24" height="480" rx="2"/><rect class="slot" x="548" y="248" width="24" height="44"/><path class="slotbar" d="M551,270 H569"/><rect class="slot" x="548" y="368" width="24" height="44"/><path class="slotbar" d="M551,390 H569"/><rect class="slot" x="548" y="488" width="24" height="44"/><path class="slotbar" d="M551,510 H569"/>
       <circle class="node ghost" cx="650" cy="270" r="17"/><circle class="node ghost" cx="650" cy="390" r="17"/><circle class="node ghost" cx="650" cy="510" r="17"/>
@@ -660,12 +707,63 @@ html[data-still] .s04 .row{animation:none!important}
         <span class="who">Agente</span>
         <p class="beat"><em>una pregunta de negocio</em></p>
         <div class="figure">
-          <svg class="dg" viewBox="0 0 660 262" role="img" aria-label="Por respondiente se enlazan tres observaciones: trabajo, uso reciente de IA y agente con base de datos. Un enlace falta en una fila.">
-            <text class="t-mono" x="21" y="22">Trabajo</text>
-            <text class="t-mono t-ev" x="330" y="22" text-anchor="middle">IA reciente</text>
-            <text class="t-mono t-ev" x="639" y="22" text-anchor="end">Agente con base de datos</text>
-            <path class="lk" d="M30,70 H330 H630"/><path class="lk" d="M30,115 H330 H630"/><path class="lk" d="M30,160 H330"/><path class="lk" d="M30,205 H330 H630"/><circle class="n0" cx="30" cy="70" r="9"/><circle class="n1" cx="330" cy="70" r="9"/><circle class="n1" cx="630" cy="70" r="9"/><circle class="n0" cx="30" cy="115" r="9"/><circle class="n1" cx="330" cy="115" r="9"/><circle class="n1" cx="630" cy="115" r="9"/><circle class="n0" cx="30" cy="160" r="9"/><circle class="n1" cx="330" cy="160" r="9"/><circle class="node ghost" cx="630" cy="160" r="9"/><circle class="n0" cx="30" cy="205" r="9"/><circle class="n1" cx="330" cy="205" r="9"/><circle class="n1" cx="630" cy="205" r="9"/>
-            <text class="t-mono" x="330" y="252" text-anchor="middle">Señal de escena, no un resultado.</text>
+          <svg class="dg" viewBox="0 0 660 292" role="img" aria-label="Cuatro respondentes recorren las seis preguntas del poll. La pregunta de negocio cruza la 1, la 2 y la 5. Dos respondentes contestan todo; el tercero se queda en la pregunta 3 y nunca llega a la 5; el cuarto se queda en la 5, que sí cuenta.">
+            <rect class="band" x="168" y="8" width="44" height="216" rx="4"/>
+            <rect class="band" x="244" y="8" width="44" height="216" rx="4"/>
+            <rect class="band" x="472" y="8" width="44" height="216" rx="4"/>
+            <text class="t-mono" x="0" y="26">preguntas</text>
+            <text class="t-mono t-ev" x="190" y="26" text-anchor="middle">1</text>
+            <text class="t-mono t-ev" x="266" y="26" text-anchor="middle">2</text>
+            <text class="t-mono" x="342" y="26" text-anchor="middle">3</text>
+            <text class="t-mono" x="418" y="26" text-anchor="middle">4</text>
+            <text class="t-mono t-ev" x="494" y="26" text-anchor="middle">5</text>
+            <text class="t-mono" x="570" y="26" text-anchor="middle">6</text>
+            <g data-step="2">
+              <text class="t-mono" x="0" y="71">respondente 1</text>
+              <path class="lk" d="M190,66 H570"/>
+              <circle class="n1" cx="190" cy="66" r="9"/>
+              <circle class="n1" cx="266" cy="66" r="9"/>
+              <circle class="n1" cx="342" cy="66" r="9"/>
+              <circle class="n1" cx="418" cy="66" r="9"/>
+              <circle class="n1" cx="494" cy="66" r="9"/>
+              <circle class="n1" cx="570" cy="66" r="9"/>
+              <path class="ok" d="M604,66 l6,6 l12,-13"/>
+            </g>
+            <g data-step="2">
+              <text class="t-mono" x="0" y="117">respondente 2</text>
+              <path class="lk" d="M190,112 H570"/>
+              <circle class="n1" cx="190" cy="112" r="9"/>
+              <circle class="n1" cx="266" cy="112" r="9"/>
+              <circle class="n1" cx="342" cy="112" r="9"/>
+              <circle class="n1" cx="418" cy="112" r="9"/>
+              <circle class="n1" cx="494" cy="112" r="9"/>
+              <circle class="n1" cx="570" cy="112" r="9"/>
+              <path class="ok" d="M604,112 l6,6 l12,-13"/>
+            </g>
+            <g data-step="3">
+              <text class="t-mono" x="0" y="163">respondente 3</text>
+              <path class="lk" d="M190,158 H342"/>
+              <circle class="n1" cx="190" cy="158" r="9"/>
+              <circle class="n1" cx="266" cy="158" r="9"/>
+              <circle class="n1" cx="342" cy="158" r="9"/>
+              <circle class="node ghost" cx="418" cy="158" r="9"/>
+              <circle class="node ghost" cx="494" cy="158" r="9"/>
+              <circle class="node ghost" cx="570" cy="158" r="9"/>
+              <text class="t-act qm" x="604" y="167">?</text>
+            </g>
+            <g data-step="4">
+              <text class="t-mono" x="0" y="209">respondente 4</text>
+              <path class="lk" d="M190,204 H494"/>
+              <circle class="n1" cx="190" cy="204" r="9"/>
+              <circle class="n1" cx="266" cy="204" r="9"/>
+              <circle class="n1" cx="342" cy="204" r="9"/>
+              <circle class="n1" cx="418" cy="204" r="9"/>
+              <circle class="n1" cx="494" cy="204" r="9"/>
+              <circle class="node ghost" cx="570" cy="204" r="9"/>
+              <path class="ok" d="M604,204 l6,6 l12,-13"/>
+            </g>
+            <text class="t-sub" x="0" y="250">sombreadas: las que cruza la pregunta de negocio</text>
+            <text class="t-sub t-act" x="0" y="280" data-step="3">El 3 no llegó a la 5 (trabajo). ¿Dónde queda en la tabla?</text>
           </svg>
         </div>
       </div>
@@ -689,9 +787,32 @@ html[data-still] .s04 .row{animation:none!important}
     </div>
   </div>
 </section>
+<!-- ============ 04b · ¿QUIÉN ES ESTE TIPO? ============ -->
+
+<section class="slide s04b" data-title="¿Quién es este tipo?" data-section="Apertura" data-budget="0:45" data-clock="5:00–5:45" style="--slide-accent:var(--evidence)">
+  <div class="main">
+    <div class="split">
+      <div class="txt">
+        <p class="eyebrow reveal">¿Quién es este tipo?</p>
+        <h2 class="reveal d1">Carlos <em>Haro</em></h2>
+        <p class="lede reveal d2">Sr. AI Engineer en Banco Santander. Casi 10 años lidiando con datos.</p>
+        <p class="sign reveal d3"><a href="https://x.com/h1sort" target="_blank" rel="noopener" aria-label="X: @h1sort"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href="https://www.linkedin.com/in/h1sort" target="_blank" rel="noopener" aria-label="LinkedIn: h1sort"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.937 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.064 2.064 0 1 1 0-4.128 2.064 2.064 0 0 1 0 4.128zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0z"/></svg></a><span>@h1sort</span><span class="sep">·</span><a href="https://h1sort.com" target="_blank" rel="noopener">h1sort.com</a></p>
+      </div>
+      <div class="takeswrap reveal d2">
+        <i class="mk tl"></i><i class="mk tr"></i><i class="mk bl"></i><i class="mk br"></i>
+        <div class="takes">
+          <p class="label">Hot takes</p>
+          <p class="old"><span class="t">pandas es una pésima librería para el análisis de datos</span><i class="strike-at" data-step="1" aria-hidden="true"></i></p>
+          <p class="old"><span class="t">los perros son mejores que los gatos</span><i class="strike-at" data-step="1" aria-hidden="true"></i></p>
+          <p class="new" data-step="2"><em>Santos Laguna</em> es el mejor equipo de futbol de la historia.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- ===== 05-08.html ===== -->
-<section class="slide s05" data-title="~2013: la pregunta cabía en el negocio" data-section="Historia" data-budget="1:00" data-clock="5:00–6:00" style="--slide-accent:var(--action)">
+<section class="slide s05" data-title="~2013: la pregunta cabía en el negocio" data-section="Historia" data-budget="1:00" data-clock="5:45–6:45" style="--slide-accent:var(--action)">
   <div class="main">
     <div class="hd">
       <div class="hdl"><p class="eyebrow reveal">Cuatro fases aproximadas · ~2013</p><h2 class="reveal d1">La pregunta cabía en el negocio, <em>no en el stack.</em></h2></div>
@@ -724,7 +845,7 @@ html[data-still] .s04 .row{animation:none!important}
     <div class="foot reveal d3"><p class="q">¿En qué punto perdemos a los clientes entre iniciar una solicitud y fondear una cuenta?</p><div class="chips"><span>Fragmentación</span><span>Forma</span><span>Escala</span></div></div>
   </div>
 </section>
-<section class="slide s06" data-title="~2016: observar más del negocio" data-section="Historia" data-budget="1:00" data-clock="6:00–7:00" style="--slide-accent:var(--evidence)">
+<section class="slide s06" data-title="~2016: observar más del negocio" data-section="Historia" data-budget="1:00" data-clock="6:45–7:45" style="--slide-accent:var(--evidence)">
   <div class="main">
     <div class="hd">
       <div class="hdl"><p class="eyebrow reveal">~2016</p><h2 class="reveal d1">Podemos observar <em>más del negocio.</em></h2></div>
@@ -747,7 +868,7 @@ html[data-still] .s04 .row{animation:none!important}
     <div class="foot reveal d3"><div class="chips"><span>Más fuentes</span><span>Más escala</span><span>Cargas mejor aisladas</span></div></div>
   </div>
 </section>
-<section class="slide s07" data-title="~2020: de observar a operar" data-section="Historia" data-budget="1:00" data-clock="7:00–8:00" style="--slide-accent:var(--evidence)">
+<section class="slide s07" data-title="~2020: de observar a operar" data-section="Historia" data-budget="1:00" data-clock="7:45–8:45" style="--slide-accent:var(--evidence)">
   <div class="main">
     <div class="hd">
       <div class="hdl"><p class="eyebrow reveal">~2020</p><h2 class="reveal d1">De observar <em>a operar.</em></h2></div>
@@ -771,7 +892,7 @@ html[data-still] .s04 .row{animation:none!important}
     <div class="foot reveal d3"><div class="chips"><span>ETL: lo que podemos ver</span><span>Reverse ETL: lo que podemos hacer</span></div></div>
   </div>
 </section>
-<section class="slide s08" data-title="~2026: la respuesta abunda" data-section="Historia" data-budget="1:00" data-clock="8:00–9:00" style="--slide-accent:var(--warm-ink)">
+<section class="slide s08" data-title="~2026: la respuesta abunda" data-section="Historia" data-budget="1:00" data-clock="8:45–9:45" style="--slide-accent:var(--warm-ink)">
   <div class="main">
     <div class="hd">
       <div class="hdl"><p class="eyebrow reveal">~2026</p><h2 class="reveal d1">La respuesta abunda. El <em>criterio</em> sigue siendo escaso.</h2></div>
@@ -814,7 +935,7 @@ html[data-still] .s04 .row{animation:none!important}
 
 <!-- ===== 09-12.html ===== -->
 <!-- ============================ 09 ============================ -->
-<section class="slide s09" data-title="Una definición útil de agente" data-section="Agentes" data-budget="1:00" data-clock="9:00–10:00" style="--slide-accent:var(--warm-ink)">
+<section class="slide s09" data-title="Una definición útil de agente" data-section="Agentes" data-budget="1:00" data-clock="9:45–10:45" style="--slide-accent:var(--warm-ink)">
   <div class="main">
     <p class="eyebrow reveal">Una definición operativa</p>
     <div class="split">
@@ -850,7 +971,7 @@ html[data-still] .s04 .row{animation:none!important}
 </section>
 
 <!-- ============================ 10 ============================ -->
-<section class="slide s10" data-title="El modelo propone. La aplicación ejecuta." data-section="Agentes" data-budget="1:30" data-clock="10:00–11:30" style="--slide-accent:var(--action)">
+<section class="slide s10" data-title="El modelo propone. La aplicación ejecuta." data-section="Agentes" data-budget="1:30" data-clock="10:45–12:15" style="--slide-accent:var(--action)">
   <div class="main">
     <div class="hd">
       <p class="eyebrow reveal">La frontera</p>
@@ -913,7 +1034,7 @@ html[data-still] .s04 .row{animation:none!important}
 </section>
 
 <!-- ============================ 11 ============================ -->
-<section class="slide s11" data-title="Una solicitud todavía no es una acción" data-section="Agentes" data-budget="2:30" data-clock="11:30–14:00" style="--slide-accent:var(--action)">
+<section class="slide s11" data-title="Una solicitud todavía no es una acción" data-section="Agentes" data-budget="2:30" data-clock="12:15–14:45" style="--slide-accent:var(--action)">
   <div class="main">
     <div class="hd">
       <p class="eyebrow reveal"><span class="tag live" style="margin-left:0">Demo en vivo</span></p>
@@ -922,20 +1043,21 @@ html[data-still] .s04 .row{animation:none!important}
     </div>
     <div class="split reveal d3">
       <div class="left">
-        <div class="code" role="group" aria-label="Código real de duckdb_query en tools.py, líneas 55 a 64">
-          <span class="cap">demos/clase-03/agent/tools.py · L55–64</span>
-          <span class="ln l1" data-n="55" style="--i:4"><span class="a">    if _FORBIDDEN.search(sql):</span></span>
-          <span class="ln" data-n="56" style="--i:8"><span class="a">        return </span><span class="s">"error: solo se permiten consultas de lectura (SELECT) sobre `trips`"</span></span>
-          <span class="ln" data-n="57" style="--i:4">    con = duckdb.connect(":memory:")</span>
-          <span class="ln" data-n="58" style="--i:4">    con.execute(f"CREATE VIEW trips AS SELECT * FROM read_parquet('{TAXI_GLOB}')")</span>
-          <span class="ln" data-n="59" style="--i:4"><span class="k">    try:</span></span>
-          <span class="ln" data-n="60" style="--i:8"><span class="k">        con.execute(sql)</span></span>
-          <span class="ln" data-n="61" style="--i:8">        rows = con.fetchall()</span>
-          <span class="ln" data-n="62" style="--i:8">        cols = [d[0] for d in con.description]</span>
-          <span class="ln" data-n="63" style="--i:4">    except Exception as exc:  <span class="c"># se lo devolvemos al modelo como observación, no lo tumbamos</span></span>
-          <span class="ln" data-n="64" style="--i:8">        return f"error ejecutando SQL: {exc}"</span>
+        <div class="code" role="group" aria-label="Código real de d1_query en demo/agent.py, líneas 111 a 121">
+          <span class="cap">demo/agent.py · L111–121</span>
+          <span class="ln l1" data-n="111" style="--i:0"><span class="k">def</span> d1_query(sql: str) -&gt; str:</span>
+          <span class="ln" data-n="112" style="--i:4">    motivo = validate(sql)  <span class="c"># VALIDACIÓN</span></span>
+          <span class="ln" data-n="113" style="--i:4">    <span class="a">if</span> motivo:</span>
+          <span class="ln" data-n="114" style="--i:8">        <span class="a">stage(</span><span class="s">"RECHAZADA"</span><span class="a">, motivo)</span></span>
+          <span class="ln" data-n="115" style="--i:8">        <span class="a">return </span><span class="s">f"rechazada por la aplicación: {motivo}"</span></span>
+          <span class="ln" data-n="116" style="--i:4">    stage(<span class="s">"VALIDACIÓN"</span>, <span class="s">"ok · solo lectura"</span>)</span>
+          <span class="ln" data-n="117" style="--i:4">    <span class="k">try:</span></span>
+          <span class="ln" data-n="118" style="--i:8">        <span class="k">rows = wrangler(sql, show=True)</span>  <span class="c"># EJECUCIÓN</span></span>
+          <span class="ln" data-n="119" style="--i:4">    <span class="k">except</span> RuntimeError <span class="k">as</span> exc:</span>
+          <span class="ln" data-n="120" style="--i:8">        <span class="k">return</span> <span class="s">f"error ejecutando SQL: {exc}"</span></span>
+          <span class="ln" data-n="121" style="--i:4">    <span class="k">return</span> render(rows)  <span class="c"># OBSERVACIÓN</span></span>
         </div>
-        <p class="note-line">Mismo mecanismo · otro dataset (taxis NYC)</p>
+        <p class="note-line">La misma pregunta · la base real de la encuesta · vía wrangler</p>
       </div>
       <div class="right">
         <div class="figure">
@@ -972,7 +1094,7 @@ html[data-still] .s04 .row{animation:none!important}
 </section>
 
 <!-- ============================ 12 ============================ -->
-<section class="slide s12" data-title="Dos lugares distintos para la IA" data-section="Agentes" data-budget="1:00" data-clock="14:00–15:00" style="--slide-accent:var(--warm-ink)">
+<section class="slide s12" data-title="Dos lugares distintos para la IA" data-section="Agentes" data-budget="1:00" data-clock="14:45–15:45" style="--slide-accent:var(--warm-ink)">
   <div class="main">
     <div class="hd">
       <p class="eyebrow reveal">Dos lugares</p>
@@ -1027,7 +1149,7 @@ html[data-still] .s04 .row{animation:none!important}
 
 <!-- ===== 13-18.html ===== -->
 <!-- ============ 13 · ASK / EXECUTE / JUDGE ============ -->
-<section class="slide s13" data-title="El mismo modelo. Distintas consecuencias." data-section="Banca" data-budget="1:00" data-clock="15:00–16:00" style="--slide-accent:var(--warm-ink)">
+<section class="slide s13" data-title="El mismo modelo. Distintas consecuencias." data-section="Banca" data-budget="1:00" data-clock="15:45–16:45" style="--slide-accent:var(--warm-ink)">
   <div class="main">
     <div>
       <p class="eyebrow reveal">Ask / Execute / Judge</p>
@@ -1087,7 +1209,7 @@ html[data-still] .s04 .row{animation:none!important}
 </section>
 
 <!-- ============ 14 · ASK ============ -->
-<section class="slide s14" data-title="Ask: ¿cuántos clientes activos tenemos?" data-section="Banca · Ask" data-budget="2:30" data-clock="16:00–18:30" style="--slide-accent:var(--evidence)">
+<section class="slide s14" data-title="Ask: ¿cuántos clientes activos tenemos?" data-section="Banca · Ask" data-budget="2:30" data-clock="16:45–19:15" style="--slide-accent:var(--evidence)">
   <div class="main">
     <div class="hd">
       <div>
@@ -1149,7 +1271,7 @@ html[data-still] .s04 .row{animation:none!important}
 </section>
 
 <!-- ============ 15 · EXECUTE ============ -->
-<section class="slide s15" data-title="Execute: una petición cambia el mundo" data-section="Banca · Execute" data-budget="2:30" data-clock="18:30–21:00" style="--slide-accent:var(--action)">
+<section class="slide s15" data-title="Execute: una petición cambia el mundo" data-section="Banca · Execute" data-budget="2:30" data-clock="19:15–21:45" style="--slide-accent:var(--action)">
   <div class="main">
     <div class="hd">
       <div>
@@ -1221,7 +1343,7 @@ html[data-still] .s04 .row{animation:none!important}
 </section>
 
 <!-- ============ 16 · JUDGE ============ -->
-<section class="slide s16" data-title="Judge: agencia local, invariantes globales" data-section="Banca · Judge" data-budget="3:00" data-clock="21:00–24:00" style="--slide-accent:var(--action)">
+<section class="slide s16" data-title="Judge: agencia local, invariantes globales" data-section="Banca · Judge" data-budget="3:00" data-clock="21:45–24:45" style="--slide-accent:var(--action)">
   <div class="main">
     <div class="hd">
       <div>
@@ -1306,7 +1428,7 @@ html[data-still] .s04 .row{animation:none!important}
 </section>
 
 <!-- ============ 17 · JEV ============ -->
-<section class="slide s17" data-title="Jev: un juicio que el software puede consumir" data-section="Banca · Jev" data-budget="2:00" data-clock="24:00–26:00" style="--slide-accent:var(--warm-ink)">
+<section class="slide s17" data-title="Jev: un juicio que el software puede consumir" data-section="Banca · Jev" data-budget="2:00" data-clock="24:45–26:45" style="--slide-accent:var(--warm-ink)">
   <div class="main">
     <div class="hd">
       <div>
@@ -1381,7 +1503,7 @@ html[data-still] .s04 .row{animation:none!important}
 </section>
 
 <!-- ============ 18 · CLOSE ============ -->
-<section class="slide s18" data-title="El criterio también se construye" data-section="Cierre" data-budget="2:00" data-clock="26:00–28:00" style="--slide-accent:var(--evidence)">
+<section class="slide s18 nofoot" data-title="El criterio también se construye" data-section="Cierre" data-budget="2:00" data-clock="26:45–28:45" style="--slide-accent:var(--evidence)">
   <div class="motif">
     <svg class="dg reveal d2" viewBox="0 0 1000 780" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Los mismos puntos de la portada, ahora conectados: tres caminos gobernados atraviesan la puerta de confianza hacia significado compartido, ejecución gobernada y juicio verificable; la evidencia regresa a la fuente.">
       <g>
@@ -1409,7 +1531,8 @@ html[data-still] .s04 .row{animation:none!important}
       <p class="eyebrow reveal">Hoy y mañana</p>
       <p class="lede reveal d1">El análisis se abarató. Nuestro trabajo:</p>
       <h2 class="reveal d2">Que el significado y las consecuencias <em>no se pierdan.</em></h2>
-      <p class="url reveal d3">h1sort.com</p>
+      <p class="sign reveal d3"><span>Carlos Haro</span><span class="sep">·</span><a href="https://x.com/h1sort" target="_blank" rel="noopener" aria-label="X: @h1sort"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href="https://www.linkedin.com/in/h1sort" target="_blank" rel="noopener" aria-label="LinkedIn: h1sort"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.937 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.064 2.064 0 1 1 0-4.128 2.064 2.064 0 0 1 0 4.128zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0z"/></svg></a><span>@h1sort</span></p>
+      <a class="deckurl reveal d4" href="https://h1sort.com/gbm-ai/"><span class="label">Las diapositivas</span><span class="u">h1sort.com/<em>gbm-ai</em></span></a>
     </div>
   </div>
 </section>
@@ -1572,7 +1695,11 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
       atmo.after(top);
       const bottom = document.createElement('footer');
       bottom.className = 'bottomline';
-      bottom.innerHTML = '<span class="who">Carlos Haro · GBM AI Experience</span><a class="url" href="https://h1sort.com/gbm-ai/">h1sort.com/gbm-ai</a><span class="folio"></span>';
+      const find = '<span class="find"><a class="deck-link" href="https://h1sort.com/gbm-ai/">h1sort.com/gbm-ai</a><span class="sep">·</span>'
+        + '<a href="https://x.com/h1sort" target="_blank" rel="noopener" aria-label="X: @h1sort"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>'
+        + '<a href="https://www.linkedin.com/in/h1sort" target="_blank" rel="noopener" aria-label="LinkedIn: h1sort"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.937 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.064 2.064 0 1 1 0-4.128 2.064 2.064 0 0 1 0 4.128zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0z"/></svg></a>'
+        + '<span class="handle">@h1sort</span></span>';
+      bottom.innerHTML = '<span class="who">GBM AI Experience</span>' + find + '<span class="folio"></span>';
       bottom.querySelector('.folio').textContent = pad(i + 1) + ' / ' + pad(total);
       const notes = s.querySelector(':scope > .notes');
       s.insertBefore(bottom, notes || null);
