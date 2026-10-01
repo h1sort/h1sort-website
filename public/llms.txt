@@ -14,6 +14,7 @@ Highlights: FRED, a structured fraud-analysis agent in production at Santander M
 - [Devin Model Guide](https://h1sort.com/devin-model-guide/): an unlinked public field note on role-based model allowlists, escalation workflows, benchmark evidence, and dynamic ACU budgeting for Devin Desktop
 - [Live Polls](https://h1sort.com/polls/): create grouped multiple-choice polls and participate through short links or QR codes
 - [Fantastic Agents](https://h1sort.com/slides/fantastic-agents/): a 23-slide illustrated field guide to production agents, their authority, and the controls around them
+- [AI en la banca](https://h1sort.com/gbm-ai/): an 18-slide Spanish talk for the GBM AI Experience on how banking analytics evolved from cheap analysis to judgment built into infrastructure, with live demos and a QR survey
 - [Contact](https://h1sort.com/contact/): email and socials
 
 ## Contact
