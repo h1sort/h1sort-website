@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" class="no-js">
+<html lang="es" class="no-js" data-public>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -266,6 +266,7 @@
   html.no-js .dg .exec.draw,html.no-js .dg .refuse.draw,html.no-js .dg .wire.draw{stroke-dasharray:none!important}
   html.no-js .dg .propose.draw,html.no-js .dg .return.draw,html.no-js .dg .rail.draw{opacity:1!important}
   html.no-js .hud{display:none}
+  html[data-public] .hud{display:none}   /* live site copy: no controls, notes stripped at publish */
 
 
 /* --- 01-04.html --- */
@@ -616,13 +617,6 @@ html[data-still] .s04 .row{animation:none!important}
     <p class="sub reveal d3">Del análisis barato al criterio convertido en infraestructura</p>
     <div class="byline reveal d4"><span class="rule"></span><span class="label">Carlos Haro · “Charlie” · AI Engineer</span></div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> fijar que esta es una charla sobre la economía cambiante del análisis y los sistemas institucionales para usarlo. La imagen ya anuncia el argumento: datos dispersos frente a una frontera que todavía no deja pasar nada de forma gobernada. Sin biografía, sin agenda, sin logos.</p>
-    <p><strong>Tiempo:</strong> 0:00–0:20 (0:20). Presentarse en una frase: Carlos Haro (“Charlie”), AI Engineer. Marco: enseñanza pública, no producto.</p>
-    <blockquote>Buenas tardes. Voy a empezar con algo que no es una diapositiva: vamos a crear datos entre todos, ahora mismo.</blockquote>
-    <p class="warn">Antes de la charla: abrir el grupo de la encuesta (los seis polls) en h1sort.com/polls; el grupo no tiene respuestas todavía y nunca se muestran resultados históricos de la Clase 1 como esta sala. No mencionar horario ni fecha de la charla (no confirmados). El subtítulo es subordinado, no está bloqueado.</p>
-    <p><strong>Transición:</strong> “Saquen el teléfono.”</p>
-  </aside>
 </section>
 
 <!-- ============ 02 · QR ============ -->
@@ -642,16 +636,6 @@ html[data-still] .s04 .row{animation:none!important}
       </div>
     </div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> la sala crea el dataset. El QR tiene prioridad visual; nada se mueve detrás.</p>
-    <p><strong>Tiempo:</strong> 0:20–2:20 (2:00).</p>
-    <blockquote>Vamos a trabajar con datos que estamos creando aquí, no con un dataset preparado para que la demostración salga bien.</blockquote>
-    <blockquote>Son seis preguntas, unos dos minutos. Respondan con calma; yo les cuento el contexto mientras tanto.</blockquote>
-    <p class="warn">Antes de la charla: abrir el grupo (los seis polls) en h1sort.com/polls (requiere autenticación) y comprobar que existe, “GBM · AI en la banca”, con seis preguntas clonadas verbatim de la Clase 1. Todos los polls están en DRAFT y las encuestas en borrador son invisibles para quien vote: abrir los seis ANTES de mostrar el QR (solo con autorización del orador; no modificar preguntas ni borrar votos).</p>
-    <p class="warn">El grupo no tiene respuestas todavía. Nunca mostrar resultados históricos de la Clase 1 como si fueran de esta sala. Se cuentan filas de respuesta, no personas (un navegador no es una persona verificada). No proyectar identificadores ni respuestas individuales.</p>
-    <p>Las seis preguntas no se leen en voz alta ni se proyectan aquí; están en el diálogo Fuentes/apéndice. Probar el QR con un teléfono y verificar que la URL visible coincide: h1sort.com/p/UFRHASU9D4.</p>
-    <p><strong>Transición:</strong> “Mientras responden, vamos a hacer lo que hacíamos siempre: contar.”</p>
-  </aside>
 </section>
 
 <!-- ============ 03 · COUNT → PREGUNTA ============ -->
@@ -688,34 +672,6 @@ html[data-still] .s04 .row{animation:none!important}
     </div>
     <p class="q" data-step="1">Por tipo de trabajo: ¿qué porcentaje usó IA para datos en los últimos 7 días y qué porcentaje ha usado un agente con una base de datos?</p>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> mostrar que producir análisis se abarató. El conteo manual es el punto de partida tradicional; la pregunta del agente exige un SQL sustancialmente más elaborado. Paso 1 (→): aparece la pregunta de negocio tras el conteo manual. El diagrama es una señal de escena, no un resultado: sin tabla ni números.</p>
-    <p><strong>Tiempo:</strong> 2:20–4:30 (2:10).</p>
-    <blockquote>Primero, como siempre: un conteo. Cuántas filas de respuesta hay hasta ahora.</blockquote>
-    <blockquote>Ya contamos respuestas. Pero todavía no sabemos quién está en la sala ni cómo está usando IA.</blockquote>
-    <blockquote>Ahora le hago una pregunta de negocio a un agente.</blockquote>
-    <blockquote>Yo escribí un conteo. El agente construyó y ejecutó el análisis que respondía una pregunta de negocio. Eso es lo que se abarató.</blockquote>
-    <p><strong>Consulta de conteo preparada</strong> (grupo por código; el corte UTC se obtiene en la misma sesión con <code>SELECT datetime('now','-1 second');</code> y se pega el literal; no proyectar el placeholder):</p>
-    <pre>SELECT COUNT(*) AS respuestas
-FROM poll_votes v
-JOIN polls p       ON p.id = v.poll_id
-JOIN poll_groups g ON g.id = p.group_id
-WHERE g.code = 'UFRHASU9D4'
-  AND v.created_at &lt;= '&lt;UTC_CUTOFF&gt;';</pre>
-    <p>Vía wrangler: <code>npx wrangler d1 execute h1sort-chat --remote --command "&lt;sql&gt;"</code> desde el repo h1sort-website, o la misma SQL en la consola del dashboard. Cuenta filas de respuesta, no personas (a lo más seis por navegador). Mientras el grupo esté abierto, el público no ve conteos: el de D1 es el único.</p>
-    <p><strong>Prompt escenificado completo (solo notas):</strong></p>
-    <pre>Con el grupo y el corte UTC acordados, responde:
-Por cada tipo de trabajo, ¿qué porcentaje usó IA para datos en los últimos
-siete días y qué porcentaje ha utilizado un agente conectado a una base de datos?
-Cruza Q5 con Q1 y Q2 usando el identificador interno de navegador.
-Usa un denominador de pares válidos para cada porcentaje; no conviertas faltantes en No.
-Muestra el corte, SQL ejecutado y una tabla compacta con numeradores y denominadores.
-No muestres identificadores ni respuestas individuales. Resume sin inferir causalidad o competencia.</pre>
-    <p class="warn">Denominadores: el % de Q1 usa pares válidos Q5+Q1; el % de Q2 usa pares válidos Q5+Q2. Los faltantes no son “No” (la fila punteada del diagrama lo sugiere). Denominador cero = indefinido, no 0 %. Marcar como “muestra insuficiente” los trabajos con muy pocos pares válidos (fijar el umbral en el ensayo). Q1 es uso reciente (7 días); Q2 es experiencia alguna vez: no son un embudo.</p>
-    <p class="warn">Secuencia: Cloudflare (conteo manual) → entorno de agente preparado (SQL generado y ejecutado en vivo). El resultado real vive en ese entorno; la diapositiva no se conecta a la base de datos. Sin dashboard, reporte ni ETL. Conexión, esquema, grupo, permisos y modelo se preparan antes; la generación y ejecución del SQL son en vivo. Conteo y agente usan el mismo grupo y el mismo corte UTC fijo. Verificar el esquema real en el ensayo.</p>
-    <p class="warn">Acceso limitado a las tablas de encuestas; no inspeccionar chats, mensajes ni autenticación (“SELECT-only” en el prompt no es autorización de solo lectura). Un voter_hash es un navegador, no una persona: nunca proyectarlo ni inferir el tamaño de la audiencia. Si la muestra es pequeña o vacía, no inventar hallazgos. Si falla la red o la cuota: grabación o snapshot del ensayo rotulado como tal; nunca fabricar votos, errores ni resultados.</p>
-    <p><strong>Transición:</strong> “Rápido, sí. Pero rápido no es lo mismo que correcto. Resumamos lo que acaba de pasar.”</p>
-  </aside>
 </section>
 
 <!-- ============ 04 · TESIS ============ -->
@@ -732,13 +688,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
       <p class="lede reveal d3">Acordar qué significa sigue requiriendo criterio.</p>
     </div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> primer aterrizaje del argumento. “Barato” = menor fricción y costo marginal de producir consultas y respuestas plausibles; no significa costo cero de infraestructura ni inferencia gratis a escala. El motivo (muchas marcas de consulta casi iguales, unas pocas ocres) sugiere abundancia, no resultados.</p>
-    <p><strong>Tiempo:</strong> 4:30–5:00 (0:30).</p>
-    <blockquote>Todavía falta saber si relacionó correctamente las respuestas y qué denominador utilizó. Una respuesta rápida no resuelve esas preguntas por sí sola.</blockquote>
-    <p class="warn">No auditar el resultado a fondo aquí; solo sembrar join y denominador. No presentar el resultado de la demo como validado.</p>
-    <p><strong>Transición:</strong> “Hoy podemos formular esa pregunta y obtener el análisis casi inmediatamente. No siempre pudimos hacerlo. Cada generación del stack eliminó una limitación distinta.”</p>
-  </aside>
 </section>
 
 <!-- ===== 05-08.html ===== -->
@@ -774,15 +723,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
     </div>
     <div class="foot reveal d3"><p class="q">¿En qué punto perdemos a los clientes entre iniciar una solicitud y fondear una cuenta?</p><div class="chips"><span>Fragmentación</span><span>Forma</span><span>Escala</span></div></div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> una pregunta razonable de negocio, impráctica por fragmentación, forma de los datos y escala. Es investigar un recorrido y sus patrones observados, no probar por qué se van los clientes.</p>
-    <blockquote>Pensemos en una pregunta razonable de negocio. Queremos entender qué ocurre entre iniciar una solicitud y fondear una cuenta.</blockquote>
-    <blockquote>Las solicitudes están en un sistema. Los movimientos, en otro. Los eventos de la aplicación quizá no están disponibles para análisis. Cruzar esa información requiere extracciones, coordinación y recursos que pueden competir con la operación.</blockquote>
-    <blockquote>No nos faltaban preguntas. Nos faltaba una forma práctica de reunir la evidencia para responderlas. La infraestructura decidía qué preguntas podíamos permitirnos hacer.</blockquote>
-    <p class="warn">“Fases aproximadas” se dice aquí (una vez). Arquitectura representativa: decir “impráctico o costoso en este entorno representativo”, no “imposible en todos lados”; no decir que no existían warehouses ni sistemas distribuidos. Sin villano DBA: mostramos aislamiento, no bloqueo humano.</p>
-    <p>→ paso 1: Fragmentación (evidencia en sistemas separados, extracción costosa). → paso 2: Forma (eventos semiestructurados). → paso 3: Escala (cargas que compiten con la operación). La barra al final de “Reporte” marca dónde terminaba el trayecto: contrastar con 2020.</p>
-    <p><strong>Transición:</strong> “Con los años, la infraestructura cambió qué tanto del negocio podíamos observar.”</p>
-  </aside>
 </section>
 <section class="slide s06" data-title="~2016: observar más del negocio" data-section="Historia" data-budget="1:00" data-clock="6:00–7:00" style="--slide-accent:var(--evidence)">
   <div class="main">
@@ -806,14 +746,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
     </div>
     <div class="foot reveal d3"><div class="chips"><span>Más fuentes</span><span>Más escala</span><span>Cargas mejor aisladas</span></div></div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> más que mover una base de datos: cambió el alcance de lo investigable. Más fuentes juntas, más historia, cargas analíticas mejor aisladas.</p>
-    <blockquote>Ahora podemos reconstruir una parte mucho más completa del recorrido: solicitud, actividad y primer fondeo.</blockquote>
-    <blockquote>Pero ojo: tener los datos juntos no significa que ya acordamos qué significan.</blockquote>
-    <p class="warn">No decir “cómputo/almacenamiento infinito”, verdad única automática, que todos los warehouses son idénticos, ni que un proveedor inventó los warehouses en la nube. El rectángulo punteado interior es el alcance de ~2013. Reporte sigue siendo el final del análisis: el cambio es de alcance.</p>
-    <p>→ paso 1: plano analítico + fuentes conectadas. → paso 2: alcance ampliado a las tres fuentes. → paso 3: carga analítica aislada de la operación.</p>
-    <p><strong>Transición:</strong> “Y una vez que podíamos ver más, la siguiente pregunta fue: ¿podemos hacer algo con lo que vemos?”</p>
-  </aside>
 </section>
 <section class="slide s07" data-title="~2020: de observar a operar" data-section="Historia" data-budget="1:00" data-clock="7:00–8:00" style="--slide-accent:var(--evidence)">
   <div class="main">
@@ -838,14 +770,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
     </div>
     <div class="foot reveal d3"><div class="chips"><span>ETL: lo que podemos ver</span><span>Reverse ETL: lo que podemos hacer</span></div></div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> puente hacia Execute. Los profesionales de datos ya podían crear consecuencias operativas antes de los agentes.</p>
-    <blockquote>El análisis ya no termina necesariamente en una presentación. Una segmentación puede actualizar un CRM o alimentar un proceso operativo.</blockquote>
-    <blockquote>ETL amplió lo que podíamos ver. Reverse ETL amplió lo que podíamos hacer.</blockquote>
-    <p class="warn">Adaptado de Ian Macomber (“The Shape and Feel of the Post-AI Data Stack”); no es cita textual, no ponerlo entre comillas como palabras suyas. CRM representativo, no un producto concreto. No reducirlo a “filtros que llegan más rápido a insights”.</p>
-    <p>→ paso 1: ingesta administrada (“ETL: lo que podemos ver”). → paso 2: transformaciones (datos reutilizables). → paso 3: Reverse ETL hacia el CRM / proceso operativo (“lo que podemos hacer”).</p>
-    <p><strong>Transición:</strong> “Y entonces llegó 2026.”</p>
-  </aside>
 </section>
 <section class="slide s08" data-title="~2026: la respuesta abunda" data-section="Historia" data-budget="1:00" data-clock="8:00–9:00" style="--slide-accent:var(--warm-ink)">
   <div class="main">
@@ -886,15 +810,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
     </div>
     <div class="foot reveal d3"><p class="lede">Criterio experto, convertido en infraestructura.</p><span class="cite">Adaptado de Ian Macomber, “The Shape and Feel of the Post-AI Data Stack”</span></div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> muchas interfaces pueden producir análisis; el criterio compartido debe sobrevivirlas. Espina histórica: alcance limitado → visión más completa → capacidad de operar → criterio reutilizable.</p>
-    <blockquote>Hace unos minutos formulamos una pregunta, y un agente construyó el análisis. Cada persona de una organización puede hacer lo mismo, desde su propia interfaz.</blockquote>
-    <blockquote>Ahora el problema no es únicamente producir respuestas. Es conseguir que esas respuestas conserven las definiciones y el conocimiento del negocio.</blockquote>
-    <blockquote>El nuevo apalancamiento: convertir el criterio de los expertos en infraestructura que otros puedan usar sin tener al experto presente.</blockquote>
-    <p class="warn">Macomber se cita discreto y adaptado (“Adaptado de…”), no copiado; la síntesis “criterio como infraestructura” es del ponente. El stack post-IA no elimina warehouses, ETL, modelado ni gobernanza; los hace más valiosos. No usar “asume que los modelos nunca se equivocan”, “cómputo infinito” ni consenso como prueba. Si hay que ir rápido: conservar fragmentación y la transición de 2020.</p>
-    <p>→ paso 1: varias interfaces (persona, agente, interfaz) + harness. → paso 2: contexto compartido (definiciones, procedencia). → paso 3: las correcciones regresan.</p>
-    <p><strong>Transición:</strong> “Hasta ahora vimos lo que el agente produjo. ¿Qué tuvimos que construir para que pudiera hacerlo?”</p>
-  </aside>
 </section>
 
 <!-- ===== 09-12.html ===== -->
@@ -932,14 +847,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
       </div>
     </div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> dar una definición concreta y operativa; no una afirmación filosófica sobre toda agencia de software. (1:00)</p>
-    <blockquote>Voy a usar una definición operativa, de Simon Willison: un agente de LLM ejecuta herramientas en un bucle para lograr un objetivo.</blockquote>
-    <blockquote>Objetivo, herramientas, bucle y una condición de salida. Un pipeline fijo de recuperación o una sola llamada al modelo no es automáticamente un agente.</blockquote>
-    <p>Fuente: Simon Willison, “Agents”, 18 sep 2025 (simonwillison.net/2025/Sep/18/agents/). La “condición de salida” está en su texto (“there is a stopping condition”), aunque no en la frase de una línea. Willison no se pronunció sobre pipelines fijos: decir solo que, según esta definición, una llamada única o un pipeline fijo no es por sí mismo un agente.</p>
-    <p class="warn">Cita exacta en inglés, con atribución. Sin desvíos sobre transformers ni entrenamiento. El bucle del dibujo es deliberadamente sobrio: no es una arquitectura.</p>
-    <p><strong>Transición:</strong> “Veamos qué ocurre dentro de ese bucle.”</p>
-  </aside>
 </section>
 
 <!-- ============================ 10 ============================ -->
@@ -1003,15 +910,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
       </svg>
     </div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> propuesta y ejecución son distintas; la frontera de confianza vive en la aplicación. (1:30)</p>
-    <blockquote>El modelo propone la siguiente acción. La aplicación decide si puede ejecutarla.</blockquote>
-    <blockquote>La selección puede ser probabilística. Las condiciones para autorizar y ejecutar deben estar explícitas en el sistema.</blockquote>
-    <blockquote>Un prompt guía el comportamiento; los permisos los hacen cumplir la aplicación y los servicios autoritativos.</blockquote>
-    <p>Pasos con →: 1 la solicitud (discontinua, aún sin efecto) llega a la puerta; 2 si se autoriza, la herramienta se ejecuta (línea sólida gruesa, ✓); 3 si no, ⊣ “rechazada”, sin efecto; 4 la observación (resultado o rechazo) regresa al modelo y se evalúa la condición de salida o hay otro turno. Aprobado y rechazado se distinguen por forma y palabra, no solo por color.</p>
-    <p class="warn">No decir que el modelo ejecuta código de base de datos ni que establece la identidad. Alcance, identidad de confianza, presupuestos, timeouts y autorización rodean al bucle. “Implementado en código” no significa resultado idéntico para siempre ni corrección probada. Nunca animar una solicitud como ejecutada antes de cruzar la puerta.</p>
-    <p><strong>Transición:</strong> “Eso fue el diagrama. Ahora lo vemos pasar de verdad.”</p>
-  </aside>
 </section>
 
 <!-- ============================ 11 ============================ -->
@@ -1071,23 +969,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
       </div>
     </div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> mostrar el mecanismo, no solo la capacidad. Una solicitud auténtica, el handler real, ejecución o rechazo, y la observación devuelta. (2:30)</p>
-    <blockquote>Hace un momento viste la capacidad. Ahora quiero que veas el mecanismo.</blockquote>
-    <blockquote>Esta es la solicitud real. Todavía no pasó nada: el efecto no existe.</blockquote>
-    <blockquote>Esta es la implementación, el código que sí se ejecuta. Y esta es la observación que regresa al modelo.</blockquote>
-    <p><strong>Procedimiento.</strong> Mismo mecanismo, <em>otro dataset</em>: taxis NYC de la clase 3; sin red, sin D1 ni Databricks, sin afirmación bancaria. Decirlo en voz alta. Requiere <code>ANTHROPIC_API_KEY</code> (llamada de pago; nunca mostrar <code>.dev.vars</code>). <strong>Ensayar una vez antes.</strong></p>
-    <ol>
-      <li>Terminal en <code>/Users/Haro/Code/ai4data-class</code>: <code>uv run --with langchain-anthropic --with langchain-core --with duckdb python -m pdb demos/clase-03/agent/agent.py "¿Cuántos viajes hay en el dataset de taxis?"</code>, luego <code>b demos/clase-03/agent/agent.py:70</code> y <code>c</code>.</li>
-      <li>El proceso se detiene en L70, después de imprimirse la línea real <code>TOOL REQUEST &gt;</code> (L68). <code>p call</code> muestra la solicitud del modelo. Eso es “pendiente”: la solicitud existe, el efecto no. Decir “pausamos el proceso”, nunca “aprobación”: <code>agent.py</code> no tiene pausa de aprobación; el pdb es solo un depurador.</li>
-      <li><code>n</code>: corre el handler e imprime <code>OBSERVATION &gt;</code> (L71).</li>
-      <li>Rama de rechazo: <strong>la solicitud la escribe el orador</strong> (“esta la escribo yo para forzar la rama de rechazo; no es una captura del modelo”): <code>PYTHONDONTWRITEBYTECODE=1 uv run --with duckdb python -c "import sys; sys.path.insert(0,'demos/clase-03/agent'); import tools; print(tools.duckdb_query('DROP TABLE trips'))"</code>. Esperado (L56): <code>error: solo se permiten consultas de lectura (SELECT) sobre `trips`</code>. Mantener visiblemente distintas la solicitud del modelo (paso 1) y la tecleada.</li>
-      <li>Cierre: los errores y rechazos se devuelven al modelo como observación (L63–64), no se lanzan: así se cierra el bucle.</li>
-    </ol>
-    <p class="warn">Advertencias honestas (solo en notas): (1) <code>_FORBIDDEN</code> (L48) es una lista negra de palabras clave: una validación didáctica, <strong>no una frontera de seguridad</strong>; en producción lo impone el servicio (rol de solo lectura, vistas permitidas). (2) El texto de rechazo es salida de la aplicación; el modelo no decide ser rechazado. Validar no es corrección semántica: un SELECT válido puede responder la pregunta equivocada. (3) No pedirle al modelo que reconstruya su conversación en JSON como si fuera una traza. Código mostrado sin alterar (tools.py L55–64, solo con ajuste visual de líneas largas). Sin reportes, dashboards ni frameworks en vivo; sin información sensible al cambiar de pestaña.</p>
-    <p class="warn"><strong>Respaldo:</strong> si falla la red o la API, mostrar una grabación previa rotulada explícitamente como “grabación”; no presentarla como en vivo. El lado derecho de la diapositiva es conceptual (pendiente), no un log.</p>
-    <p><strong>Transición:</strong> “Una cosa más: ¿quién escribió ese código, y qué lugar ocupa la IA en él?”</p>
-  </aside>
 </section>
 
 <!-- ============================ 12 ============================ -->
@@ -1142,14 +1023,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
     </div>
     <p class="land reveal d3">Una propuesta puede ser <em>probabilística</em>. Los permisos deben ser <em>explícitos</em>.</p>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> software escrito por IA y juicios de un modelo en tiempo de ejecución son cosas distintas. (1:00)</p>
-    <blockquote>Que un agente haya escrito una función no convierte esa función en un modelo de lenguaje. Cuando se ejecuta, sigue siendo software, con sus pruebas, permisos y límites.</blockquote>
-    <blockquote>Una propuesta puede ser probabilística. Un permiso no debería depender de que el modelo obedezca.</blockquote>
-    <p>→ paso 1: aparece el carril de abajo (IA dentro del programa). El software ordinario del carril de arriba no se dibuja como modelo (no es ocre): ya es código normal.</p>
-    <p class="warn">Una herramienta puede llamar APIs externas o incluso otro modelo; no equiparar todo código con resultados puramente deterministas ni con corrección semántica. Un cómputo estable sobre un snapshot fijo no es lo mismo que consultar datos vivos.</p>
-    <p><strong>Transición:</strong> “El mismo modelo puede responder una pregunta, proponer una acción o contribuir a un juicio. La inteligencia puede ser la misma. Las consecuencias no.”</p>
-  </aside>
 </section>
 
 <!-- ===== 13-18.html ===== -->
@@ -1211,14 +1084,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
       </article>
     </div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> la arquitectura sigue a la autoridad delegada y a la consecuencia, no al modelo. Tres columnas del mismo peso, sin flechas entre ellas.</p>
-    <blockquote>Estos no son niveles de madurez. Son arquetipos de autoridad: un mismo sistema puede combinarlos.</blockquote>
-    <blockquote>Consultar: confiar en la respuesta. Ejecutar: confiar en la acción. Juzgar: defender la evaluación. Cada una falla distinto.</blockquote>
-    <blockquote>Una respuesta equivocada y una acción equivocada son problemas distintos.</blockquote>
-    <p class="warn">Clasificar por la libertad delegada de mayor consecuencia, no por la operación más frecuente y segura. Autonomía prolongada no es lo mismo que autoridad operativa. Juzgar = evaluación acotada que un proceso gobernado puede usar; no es un veredicto final sin revisión ni necesariamente un «LLM como juez». Los casos que siguen son compuestos didácticos: una arquitectura representativa.</p>
-    <p><strong>Transición:</strong> “Empecemos por Consultar, con la pregunta más inocente del banco.”</p>
-  </aside>
 </section>
 
 <!-- ============ 14 · ASK ============ -->
@@ -1281,15 +1146,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
       <p class="land">El warehouse reúne los datos.<br><em>La capa semántica conserva su significado.</em></p>
     </div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> ejecutar con éxito un SQL no resuelve el significado de una métrica. Caso ilustrativo, arquitectura representativa. No se muestra ningún total bancario.</p>
-    <blockquote>“Cliente activo” puede significar muchas cosas: período, exclusiones, granularidad. Un SQL que se ejecuta con éxito puede darte tres números distintos.</blockquote>
-    <blockquote>El warehouse reúne los datos. La capa semántica conserva su significado.</blockquote>
-    <blockquote>Con la misma definición, permisos y fecha de corte, ¿cambia la respuesta al cambiar de interfaz o modelo? Esa es la prueba.</blockquote>
-    <p>Base fija: la pregunta y el contraste de definiciones (sin cifras). → 1: definición aprobada y corte alimentan al investigador acotado. → 2: la herramienta autorizada devuelve evidencia con procedencia; autorización antes del contexto. → 3: la evaluación contra una referencia validada regresa; cada corrección se vuelve un caso de regresión.</p>
-    <p class="warn">No inventar totales. Coincidir entre interfaces no es prueba de verdad: comparar con una referencia validada y evidencia requerida. Contexto ambiguo es un modo de falla, no el único. Artefactos legibles para agentes (significado y procedencia, no capturas), herramientas operables, contexto compartido entre interfaces, consistencia verificable y correcciones conservadas. Abstención cuando no hay base. La variante de investigación de políticas (recuperación autorizada, versiones vigentes, citas) es alternativa; no enseñar dos arquitecturas completas.</p>
-    <p><strong>Transición:</strong> “Responder es una cosa. Cambiar el mundo es otra.”</p>
-  </aside>
 </section>
 
 <!-- ============ 15 · EXECUTE ============ -->
@@ -1362,16 +1218,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
       <div class="chips"><span>Identidad</span><span>Autorización</span><span>Efecto exacto</span><span>Recibo</span></div>
     </div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> una operación propuesta debe volverse una ejecución gobernada y recuperable. Caso ilustrativo, arquitectura representativa; no es el sistema de ningún empleador.</p>
-    <blockquote>El modelo interpreta y propone una operación estrecha. La aplicación y el servicio autoritativo establecen identidad confiable, derechos, objetivo y parámetros válidos, y una aprobación proporcional al riesgo.</blockquote>
-    <blockquote>El fallo típico: la operación correcta sobre la tarjeta equivocada, o dos ejecuciones porque la primera terminó en timeout.</blockquote>
-    <blockquote>Por eso hace falta idempotencia, y reconciliar antes de reintentar: primero averiguar qué pasó, luego decidir.</blockquote>
-    <blockquote>Una respuesta equivocada y una acción equivocada son problemas distintos.</blockquote>
-    <p>→ 1: petición y propuesta acotada (línea punteada: aún no es un efecto). → 2: compuerta de política y validación; rechazo «rechazada». → 3: aprobación donde aplique, ejecución en el sistema autoritativo. → 4: recibo; rama de timeout que concilia el estado antes de reintentar; riel de auditoría, idempotencia y conciliación.</p>
-    <p class="warn">La aprobación no otorga autoridad que el usuario no tiene. No toda lectura u operación reversible exige aprobación humana. Idempotencia y conciliación en lenguaje llano: la misma orden dos veces produce un solo efecto; ante un resultado incierto, primero se consulta qué ocurrió. No se ejecuta ninguna acción bancaria real. Un checkpoint no es idempotencia.</p>
-    <p><strong>Transición:</strong> “Y hay casos donde ni siquiera pedimos una acción, sino una evaluación.”</p>
-  </aside>
 </section>
 
 <!-- ============ 16 · JUDGE ============ -->
@@ -1457,16 +1303,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
       <span class="n"><b>No puede</b>decidir que la evidencia obligatoria dejó de ser obligatoria.</span>
     </div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> la discreción del modelo vive dentro de un proceso que impone evidencia y ruteo. Agencia local, invariantes globales. Aquí vive el contraste «puede» frente a «debe»; no hay otra diapositiva para repetirlo.</p>
-    <blockquote>Un prompt puede pedir una condición. Un workflow puede convertirla en un requisito.</blockquote>
-    <blockquote>Puedes decidir qué evidencia adicional inspeccionar. No puedes decidir que la evidencia obligatoria dejó de ser obligatoria.</blockquote>
-    <blockquote>Agencia local. Invariantes globales.</blockquote>
-    <blockquote>Construir un caso, no dictar un veredicto: el agente recomienda; la política decide el ruteo y la revisión.</blockquote>
-    <p class="warn">Alerta sintética; arquitectura representativa. Judge = juicio acotado sobre evidencia que un proceso gobernado puede usar; no es un veredicto autónomo final. Los puntajes de riesgo existentes son parte de la evidencia: el LLM no reemplaza modelos validados de fraude o crédito. Un grafo no es inherentemente un agente ni universalmente seguro: el agente es el bucle acotado modelo/herramientas dentro del proceso; la topología explícita se justifica con orden obligatorio, persistencia, recuperación o revisión. Un checkpoint preserva estado; no evita por sí solo efectos externos duplicados. Los umbrales de ruteo requieren evaluación con datos retenidos y del dominio, no la «sensación» de confianza del modelo. Presupuesto 3:00: si vas retrasado, recorta inventarios de arquitectura y conserva la unión de evidencia.</p>
-    <p>→ 1: alerta, alcance y ramas de evidencia autorizada hasta la unión obligatoria. → 2: falla segura si falta evidencia. → 3: agente acotado con su bucle pequeño (pide / observa). → 4: la política decide ruteo y revisión; riel de estado duradero, procedencia y decisiones de revisión.</p>
-    <p><strong>Transición:</strong> “A veces no necesitamos que la IA escriba una respuesta; necesitamos que evalúe una condición dentro de un programa.”</p>
-  </aside>
 </section>
 
 <!-- ============ 17 · JEV ============ -->
@@ -1542,16 +1378,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
       <p class="land">Una categoría válida <em>no necesariamente es correcta.</em></p>
     </div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> un modelo con salidas tipadas y acotadas encaja con software ordinario, sin demostrar corrección semántica. Jev es un componente que el código invoca, no un agente.</p>
-    <blockquote>No siempre necesitamos que la IA escriba una respuesta. A veces necesitamos que evalúe una condición dentro de un programa.</blockquote>
-    <blockquote>Estado más preguntas tipadas predefinidas; regresan valores y probabilidades; el código de la aplicación decide qué hacer con ellos. Jev clasifica; SQL cuenta.</blockquote>
-    <blockquote>La segunda encuesta da la ilustración de bajo riesgo: títulos de puesto en texto libre se vuelven categorías predefinidas, y luego SQL ordinario agrega esa columna. No hace falta encuestar de nuevo a la sala.</blockquote>
-    <blockquote>Restringir las respuestas posibles elimina una clase de errores. No elimina el error de juicio.</blockquote>
-    <p>→ 1: estado y pregunta tipada (texto libre → categorías predefinidas) entran a una llamada a Jev. → 2: regresan valores y probabilidades; una etiqueta válida no es necesariamente la correcta. → 3: el código de la aplicación agrega con SQL ordinario o enruta.</p>
-    <p class="warn">Solo ilustrativo: el título «gerente de analítica» es sintético; no hay probabilidades inventadas, ni resultados medidos, ni etiquetas «producidas por Jev», ni dependencia de una API en vivo. No copiar respuestas reales de la encuesta (el texto libre puede ser personal). Según la documentación de TypeSafe: Choice elige entre opciones, Score califica en niveles ordenados y Noul estima un sí/no; Choice y Score reportan confianza, que resume la concentración de la distribución y no prueba corrección. Tres fronteras: una etiqueta válida no es necesariamente correcta; una llamada a Jev no es, por sí sola, un agente; una salida tipada o probabilística no vuelve determinista el juicio ni reemplaza la política. Requiere evaluación de dominio antes de que las probabilidades impulsen una ruta bancaria. Evitar multiplicadores de latencia o costo, «no alucina», «primer clasificador» y «listo para producción en este banco».</p>
-    <p><strong>Transición:</strong> “Con esto, volvamos a la pregunta de fondo.”</p>
-  </aside>
 </section>
 
 <!-- ============ 18 · CLOSE ============ -->
@@ -1586,14 +1412,6 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
       <p class="url reveal d3">h1sort.com</p>
     </div>
   </div>
-  <aside class="notes">
-    <p><strong>Propósito:</strong> cerrar con el mismo motivo de la portada, ya resuelto: los puntos dispersos ahora están conectados y cruzan la frontera por caminos gobernados; la evidencia regresa. Las tres anclas (significado compartido, ejecución gobernada, juicio verificable) están rotuladas en el dibujo.</p>
-    <p>Hoy: análisis asistido, investigación acotada de evidencia y capacidades estrechas y gobernadas. Mañana: más definiciones, juicios y correcciones institucionales se vuelven infraestructura reutilizable, mientras las interfaces y la orquestación cambian y la ejecución consecuente sigue gobernada.</p>
-    <blockquote>El futuro de la IA en la banca no es solamente un modelo más inteligente. Es una institución capaz de convertir su criterio en sistemas: qué significa una métrica, qué evidencia exige un juicio y quién puede autorizar una acción.</blockquote>
-    <blockquote>El análisis se abarató. Nuestro trabajo es que su significado y sus consecuencias no se pierdan.</blockquote>
-    <p class="warn">Nada después de esta línea; no abrir un tema nuevo. Hasta 2:00 de buffer para preguntas. Tono optimista: los controles habilitan una delegación útil. Puente opcional para el panel (no proyectar): «¿Qué debe construir una institución alrededor de un modelo para que sus capacidades se conviertan en un producto financiero confiable?»</p>
-    <p><strong>Transición:</strong> ninguna. Fin. Pasar a preguntas.</p>
-  </aside>
 </section>
 
 <!-- ===== 99-integrator.html ===== -->
@@ -1729,7 +1547,8 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
     const root = document.documentElement;
     root.classList.remove('no-js');
     const still = params.get('still') === '1';
-    const presenter = params.get('presenter') === '1';
+    const pub = 'public' in root.dataset;
+    const presenter = !pub && params.get('presenter') === '1';
     if (still) root.dataset.still = '1';
     if (presenter) root.dataset.presenter = '1';
     const reduced = still || matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1867,6 +1686,7 @@ No muestres identificadores ni respuestas individuales. Resume sin inferir causa
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === 'Escape') { document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open')); return; }
       const k = e.key.toLowerCase();
+      if (pub && (k === 'n' || k === 'p' || k === '?' || k === 'h')) return;
       if (k === 'n') return act('notes');
       if (k === 's') return act('sources');
       if (k === '?' || k === 'h') return act('help');
