@@ -1,0 +1,175 @@
+---
+import Base from '../layouts/Base.astro';
+
+const talk = {
+  event: 'Snowflake World Tour · Ciudad de México · 13 oct 2026',
+  title: 'El futuro de los servicios financieros',
+  subtitle: 'Agentes con contexto de la industria y conectividad',
+  blurb:
+    'Quince minutos, una encuesta en vivo y un mismo modelo en tres papeles: consultar, juzgar y ejecutar. Lo que cambia es la consecuencia, y por eso cambia el diseño.',
+};
+
+const links = [
+  { label: 'Diapositivas', value: 'Descargar PDF', href: '/snowflake/diapositivas.pdf' },
+  { label: 'La máquina', value: 'Versión interactiva', href: '/snowflake/maquina/' },
+];
+
+const ideas = [
+  { tag: 'Ask', text: 'Una respuesta solo vale bajo una definición aprobada, con dueño y versión.' },
+  { tag: 'Judge', text: 'Puede decidir qué evidencia revisar. No puede decidir que la evidencia obligatoria dejó de serlo.' },
+  { tag: 'Act', text: 'El modelo propone, la aplicación ejecuta. Una solicitud todavía no es una acción.' },
+];
+---
+
+<Base
+  title="El futuro de los servicios financieros · Carlos Alberto Haro"
+  description="Diapositivas de la charla de Carlos Haro en Snowflake World Tour Ciudad de México 2026: agentes con contexto de la industria y conectividad."
+  path="/snowflake"
+>
+  <section class="swt">
+    <header class="rule-top">
+      <a class="brand link" href="/">
+        <svg class="brand-mark" viewBox="0 0 64 40" aria-hidden="true">
+          <rect x="2" y="26" width="10" height="12" rx="1.5"></rect>
+          <rect x="18" y="16" width="10" height="22" rx="1.5"></rect>
+          <rect x="34" y="8" width="10" height="30" rx="1.5"></rect>
+          <rect x="50" y="2" width="10" height="36" rx="1.5"></rect>
+        </svg>
+        <span class="strong">h1sort.com</span>
+      </a>
+      <a class="link" href="/talking/">Talking</a>
+    </header>
+
+    <div class="swt-content">
+      <span class="acid-label reveal d1">{talk.event}</span>
+      <h1 class="swt-title reveal d2">{talk.title}</h1>
+      <p class="swt-sub reveal d3">{talk.subtitle}</p>
+      <p class="swt-blurb reveal d3">{talk.blurb}</p>
+
+      <div class="swt-links reveal d4">
+        {links.map((l) => (
+          <a class="swt-link" href={l.href}>
+            <span class="swt-link-label">{l.label}</span>
+            <span class="swt-link-value">{l.value} →</span>
+          </a>
+        ))}
+      </div>
+
+      <a class="swt-figure reveal d5" href="/snowflake/maquina/" aria-label="Abrir la máquina interactiva">
+        <img
+          src="/snowflake/maquina.webp"
+          width="1800"
+          height="760"
+          loading="lazy"
+          alt="Máquina isométrica: un ticket pasa por un archivero de definiciones, un calibrador con cuatro pines de evidencia y una prensa con dos llaves hasta la bandeja de recibos; el rechazo cae a una bandeja aparte."
+        />
+      </a>
+
+      <ol class="swt-ideas">
+        {ideas.map((i, n) => (
+          <li class={`swt-idea reveal d${Math.min(5 + n, 8)}`}>
+            <span class="swt-idea-tag">{i.tag}</span>
+            <span class="swt-idea-text">{i.text}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+
+    <footer class="rule-bottom">
+      <span class="strong">Carlos Alberto Haro López · @h1sort</span>
+      <a class="link" href="/">← h1sort.com</a>
+    </footer>
+  </section>
+</Base>
+
+<style>
+  .swt {
+    position: relative;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(4.5rem, 9vh, 6.5rem) var(--page-padding);
+    background: var(--bg);
+  }
+  .brand { display: inline-flex; align-items: center; gap: 0.6em; }
+  .brand-mark { width: 1.6em; height: 1em; fill: var(--ink); }
+
+  .swt-content { max-width: 72rem; margin: clamp(1.5rem, 5vh, 3.5rem) 0; }
+  .swt-title {
+    font-family: var(--font-serif);
+    font-weight: 900;
+    font-size: var(--display-size);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    margin: clamp(1rem, 2.5vh, 1.6rem) 0 0.6rem;
+    font-variation-settings: "opsz" 144;
+    max-width: 18ch;
+  }
+  .swt-sub {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: var(--tagline-size);
+    color: var(--ink-soft);
+    margin: 0 0 1.2rem;
+  }
+  .swt-blurb { color: var(--muted); max-width: 60ch; line-height: 1.6; }
+
+  .swt-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-top: 1px solid var(--ink);
+    max-width: 640px;
+    margin-top: clamp(1.5rem, 3.5vh, 2.5rem);
+  }
+  .swt-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: clamp(1rem, 2.2vh, 1.4rem) 1rem clamp(1rem, 2.2vh, 1.4rem) 0;
+    border-bottom: 1px solid var(--rule);
+    color: inherit;
+    text-decoration: none;
+  }
+  .swt-link + .swt-link { padding-left: 1rem; border-left: 1px solid var(--rule); }
+  .swt-link-label {
+    font-family: var(--font-mono);
+    font-size: var(--label-size);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .swt-link-value { font-weight: 600; }
+  .swt-link:hover .swt-link-value,
+  .swt-link:focus-visible .swt-link-value { color: var(--acid-deep); }
+
+  .swt-figure {
+    display: block;
+    margin: clamp(2rem, 5vh, 3.5rem) 0 clamp(1.5rem, 4vh, 2.5rem);
+    background: var(--card);
+    border: 1px solid var(--rule);
+  }
+  .swt-figure img { display: block; width: 100%; height: auto; }
+
+  .swt-ideas {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(1rem, 2vw, 2rem);
+  }
+  .swt-idea { display: flex; flex-direction: column; gap: 0.5rem; border-top: 1px solid var(--ink); padding-top: 0.9rem; }
+  .swt-idea-tag {
+    font-family: var(--font-mono);
+    font-size: var(--label-size);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .swt-idea-text { color: var(--ink-soft); line-height: 1.5; }
+
+  @media (max-width: 720px) {
+    .swt-links { grid-template-columns: 1fr; }
+    .swt-link + .swt-link { padding-left: 0; border-left: none; }
+    .swt-ideas { grid-template-columns: 1fr; }
+  }
+</style>
