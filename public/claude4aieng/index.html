@@ -1159,7 +1159,7 @@ without tool_result blocks immediately after</span></div>
 <span class="a"># TODO(paso-3)</span> <span class="c">¿y si stop_reason == "max_tokens"?</span>
 <span class="c">messages.append({"role": "assistant", "content": [… todo …]})</span></div>
         <div class="code" data-step="2"><span class="cap">paso-3 · lo que tecleas (4 líneas) · el cortado ni se guarda ni se ejecuta</span><span class="k">if</span> resp.stop_reason == <span class="s">"max_tokens"</span> <span class="k">and</span> uses:
-    self.max_tokens = min(self.max_tokens * 2, MAX_TOKENS_TOPE)  <span class="c"># más margen</span>
+    self.max_tokens = min(self.max_tokens * 4, MAX_TOKENS_TOPE)  <span class="c"># más margen</span>
     self._log(turn)
     <span class="k">continue</span>   <span class="c"># reintenta sin guardar el bloque cortado</span></div>
         <div class="panel ev checkpoint" data-step="3">
@@ -1416,34 +1416,34 @@ without tool_result blocks immediately after</span></div>
   </div>
 </section>
 
-<!-- ============ 11b · la tabla (W2-C la reemplaza con la corrida real) ============ -->
+<!-- ============ 11b · la tabla (corrida real del 2026-10-18) ============ -->
 <section class="slide s11b" data-title="Medir: tabla de errores y costo por tarea" data-section="Medir" data-budget="3:30" data-clock="34:30–38:00"
          style="--slide-accent:var(--evidence)">
   <div class="main">
     <div class="hd">
-      <p class="eyebrow reveal">Tu tabla <span class="tag illus">Ilustrativo · sin datos</span></p>
+      <p class="eyebrow reveal">Mi corrida · 18 oct 2026 <span class="tag live">Medido</span></p>
       <h2 class="reveal d1">Lo que cuesta no es la llamada, es la <em>tarea resuelta</em></h2>
     </div>
     <div class="split wide-left reveal d2">
       <div class="col">
         <div data-step="1">
-          <!-- W2-C: reemplazar solo este bloque (hasta el comentario de cierre) con la corrida real de medir.py --vs -->
-          <table class="med" data-placeholder="medicion">
-            <caption class="label">Marcador de posición · aún sin corrida real</caption>
-            <thead><tr><th>Métrica</th><th>Modelo A</th><th>Modelo B (--vs)</th></tr></thead>
+          <!-- corrida real: uv run python -m taller.medir --vs claude-haiku-5-5 (2026-10-18) -->
+          <table class="med" data-measured="2026-10-18">
+            <caption class="label">medir --vs · 20 tareas · runs/medicion-*-20261018-151955.json</caption>
+            <thead><tr><th>Métrica</th><th>sonnet-5-5</th><th>haiku-5-5</th></tr></thead>
             <tbody>
-              <tr><th>tareas resueltas</th><td>—</td><td>—</td></tr>
-              <tr><th>wrong_tool</th><td>—</td><td>—</td></tr>
-              <tr><th>bad_args</th><td>—</td><td>—</td></tr>
-              <tr><th>gate_rejected</th><td>—</td><td>—</td></tr>
-              <tr><th>exec_error</th><td>—</td><td>—</td></tr>
-              <tr><th>truncated</th><td>—</td><td>—</td></tr>
-              <tr><th>orphaned</th><td>—</td><td>—</td></tr>
-              <tr class="sum"><th>tokens (entrada / salida)</th><td>—</td><td>—</td></tr>
-              <tr><th>costo por tarea resuelta</th><td>—</td><td>—</td></tr>
+              <tr><th>tareas resueltas</th><td>20/20</td><td>20/20</td></tr>
+              <tr><th>wrong_tool</th><td>0</td><td>0</td></tr>
+              <tr><th>bad_args</th><td>0</td><td>0</td></tr>
+              <tr><th>gate_rejected</th><td>0</td><td><b>1</b> (a02)</td></tr>
+              <tr><th>exec_error</th><td>0</td><td>0</td></tr>
+              <tr><th>truncated</th><td>0</td><td>0</td></tr>
+              <tr><th>orphaned</th><td>0</td><td>0</td></tr>
+              <tr class="sum"><th>tokens (entrada / salida)</th><td>67.6K / 5.9K</td><td>83.5K / 8.1K</td></tr>
+              <tr><th>costo por tarea resuelta</th><td>$0.0097</td><td><b>$0.0006</b></td></tr>
             </tbody>
           </table>
-          <!-- /W2-C -->
+          
         </div>
       </div>
       <div class="col">
@@ -1459,8 +1459,8 @@ without tool_result blocks immediately after</span></div>
           <p class="small">Página de precios, consultada el 2026-10-18. Haiku: prompts de hasta 100K tokens.</p>
         </div>
         <div class="panel mod" data-step="3">
-          <p class="label" style="margin-bottom:.4rem">Hipótesis para la sala</p>
-          <p>Un modelo más caro por token puede salir <b>más barato por tarea resuelta</b> si falla y reintenta menos. No es un hecho: lo decide la columna de la derecha.</p>
+          <p class="label" style="margin-bottom:.4rem">Hipótesis vs. mi corrida</p>
+          <p><b>Aquí no:</b> Haiku resolvió igual por ~1/16 del costo. Pero intentó leer <code>secretos</code> (a02) y la compuerta lo frenó. Barato y seguro <b>porque</b> hay compuerta.</p>
         </div>
       </div>
     </div>
