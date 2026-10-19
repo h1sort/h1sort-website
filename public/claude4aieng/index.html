@@ -30,7 +30,7 @@
   /* ============================================================
      TOOL USE SIN ABSTRACCIONES — "institutional daylight" visual system (extraído de ai-en-la-banca.html)
      Ivory paper, deep green ink, copper for consequence,
-     green for evidence/authorized paths. Guía de autor: deck/SYSTEM.md.
+     green for evidence/authorized paths.
      ============================================================ */
   :root{
     /* --- paper & ink --- */
@@ -275,7 +275,7 @@
   html[data-public] .hud{display:none}   /* live site copy: no controls, notes stripped at publish */
 
 /* ============================================================
-   AUTHORING HELPERS (promovidos desde las reglas por-diapositiva de GBM)
+   AUTHORING HELPERS (compartidos entre diapositivas)
    ============================================================ */
 .hd{display:flex;flex-direction:column;gap:clamp(.4rem,1.2vh,.9rem)}            /* bloque de encabezado: eyebrow + h2 + lede */
 .hd h2{font-size:clamp(1.6rem,3.6vw,3.8rem);max-width:none}
@@ -294,7 +294,7 @@
 .ln.l1{padding-left:4ch;text-indent:0}
 
 /* ============================================================
-   PORTADA — <section class="slide cover bare"> (de s01 en GBM)
+   PORTADA — <section class="slide cover bare">
    .motif = ilustración SVG a la derecha; sus hijos directos de <g> entran escalonados.
    ============================================================ */
 .cover .motif{position:absolute;z-index:0;right:0;top:0;bottom:0;width:64%;display:flex;align-items:center;justify-content:center;pointer-events:none}
@@ -399,11 +399,11 @@ html[data-still] .cover .motif *{animation:none!important}
 
 /* --- 03-quien.html --- */
 .s03 .who-name{font-size:clamp(2.6rem,7vw,7rem);max-width:none}
-  .s03 .facts{display:flex;flex-direction:column;gap:clamp(.8rem,2.4vh,1.6rem)}
-  .s03 .facts .row{display:grid;grid-template-columns:minmax(7rem,9rem) 1fr;gap:1rem;align-items:baseline;padding-bottom:clamp(.6rem,1.6vh,1.1rem);border-bottom:1px solid var(--ink-faint)}
-  .s03 .facts .row:last-child{border-bottom:0}
-  .s03 .facts .val{font-family:var(--f-display);font-weight:360;font-size:clamp(1.1rem,2vw,2.1rem);line-height:1.2;color:var(--ink)}
-  .s03 .facts .val small{display:block;font-family:var(--f-body);font-size:var(--t-body);color:var(--ink-dim);margin-top:.25em}
+  .s03 .datos{display:flex;flex-direction:column;gap:clamp(.8rem,2.4vh,1.6rem)}
+  .s03 .datos .row{display:grid;grid-template-columns:minmax(7rem,9rem) 1fr;gap:1rem;align-items:baseline;padding-bottom:clamp(.6rem,1.6vh,1.1rem);border-bottom:1px solid var(--ink-faint)}
+  .s03 .datos .row:last-child{border-bottom:0}
+  .s03 .datos .val{font-family:var(--f-display);font-weight:360;font-size:clamp(1.1rem,2vw,2.1rem);line-height:1.2;color:var(--ink)}
+  .s03 .datos .val small{display:block;font-family:var(--f-body);font-size:var(--t-body);color:var(--ink-dim);margin-top:.25em}
 
 /* --- 04-texto.html --- */
 .s04 .hd h2{max-width:24ch}
@@ -465,6 +465,10 @@ html[data-still] .cover .motif *{animation:none!important}
   .s05c .opts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.45rem}
   .s05c .opts li{font-size:var(--t-body);line-height:1.35;color:var(--ink-2);padding-left:1.9rem;position:relative}
   .s05c .opts li b{position:absolute;left:0;top:0;font-family:var(--f-mono);font-weight:500;color:var(--warm-ink)}
+  .s05c .hint .opts{gap:.25rem;margin-top:.5rem}
+  .s05c .hint .opts li{padding-left:4.8rem}
+  .s05c .code{flex-shrink:0}
+  .s05c .hint .opts li b{font-size:.85em;letter-spacing:.04em}
   .s05c .note{font-size:clamp(.78rem,1.05vw,1rem);line-height:1.4;color:var(--ink-2);margin:0}
   .s05c code.i,.s05c .note code,.s05c .opts code{font-family:var(--f-mono);font-size:.92em;color:var(--ink)}
   .s05c .ck{display:flex;flex-wrap:wrap;gap:.4rem 1.4rem;align-items:center}
@@ -474,6 +478,15 @@ html[data-still] .cover .motif *{animation:none!important}
     .s05c .split{grid-template-columns:1fr}
     
     .s05c .code{white-space:pre-wrap;overflow-wrap:anywhere}
+    .s05c p.note{display:none}
+    .s05c .hint{padding:.5rem .7rem}
+    .s05c .hint .opts li{font-size:.72rem;line-height:1.3;padding-left:3.6rem}
+    .s05c .hint .tag{display:none}
+    .s05c .ask{padding:.5rem .7rem}
+    .s05c .ask h3{font-size:.95rem;margin-bottom:.3rem}
+    .s05c .ask .opts{display:none}
+    .s05c .code{font-size:.58rem;line-height:1.4}
+    .s05c .ck{padding:.5rem .7rem}
   }
 
 /* --- 05c-paralelo.html --- */
@@ -500,6 +513,11 @@ html[data-still] .cover .motif *{animation:none!important}
     .s05d .split{grid-template-columns:1fr}
     .s05d .code{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.6rem}
     .s05d .code.ctx{display:none}
+    .s05d .note{font-size:.7rem;line-height:1.3}
+    .s05d p.note[data-step="2"]{display:none}
+    .s05d .ask h3{font-size:.9rem}
+    .s05d .key{font-size:1rem}
+    .s05d .code.after{display:none}
   }
 
 /* --- 06-restringida.html --- */
@@ -524,7 +542,13 @@ html[data-still] .cover .motif *{animation:none!important}
   .s07 .rules code,.s07 .lede code{font-family:var(--f-mono);font-size:.9em;color:var(--ink)}
   .s07 .code{margin:0;font-size:clamp(.7rem,.98vw,1.05rem)}
   .s07 .split > *{min-width:0}
-  @media (max-width:760px){.s07 .code.ctx{display:none}.s07 .code{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.6rem;padding:.45rem .6rem}.s07 .rules li{font-size:.82rem}}
+  @media (max-width:760px){.s07 .hint p{font-size:.72rem;line-height:1.3}.s07 .hint{padding:.5rem .7rem}.s07 .hint p:last-child{display:none}.s07 .checkpoint{padding:.5rem .7rem}.s07 .col .code{padding:.4rem .6rem}.s07 .col .ask h3{font-size:.95rem;margin-bottom:.3rem}.s07 .code.ctx{display:none}.s07 .code{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.6rem;padding:.45rem .6rem}.s07 .rules li{font-size:.82rem}}
+  @media (min-width:761px){.s07 .col .code{flex-shrink:0}}
+  .s07 .col .hint,.s07 .col .checkpoint{padding:.55rem 1rem}
+  .s07 .hint p{margin:0;font-size:calc(var(--t-body)*.92);line-height:1.35;color:var(--ink-2);max-width:none}
+  .s07 .hint p + p{margin-top:.2rem}
+  .s07 .hint code{font-family:var(--f-mono);font-size:.9em;color:var(--ink)}
+  .s07 .hint b{color:var(--ink);font-weight:650}
   .s07 .checkpoint{display:flex;flex-wrap:wrap;gap:.4rem 1rem;align-items:center}
   .s07 .ask h3{font-family:var(--f-display);font-weight:360;font-size:clamp(1.05rem,1.7vw,1.7rem);letter-spacing:-.01em;line-height:1.15;margin:.2rem 0 .5rem}
   .s07 .opts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.3rem}
@@ -555,11 +579,16 @@ html[data-still] .cover .motif *{animation:none!important}
   .s09b .split > *{min-width:0}
   .s09b .col{display:flex;flex-direction:column;gap:var(--gap);justify-content:center;min-height:0}
   .s09b .code{margin:0;font-size:clamp(.78rem,1.12vw,1.08rem)}
+  .s09b .main > .code{font-size:clamp(.66rem,.92vw,.98rem);line-height:1.35;padding-top:.6rem;padding-bottom:.6rem}
+  .s09b .col .hint{padding:.55rem 1rem}
+  .s09b .col .hint p{font-size:calc(var(--t-body)*.92);line-height:1.35}
+  @media (min-width:761px){.s09b .col .code{flex-shrink:0}}
   .s09b .code .sol{display:block;margin-top:.5em}
+  .s09b .hint p + p,.s09b .ck p + p{margin-top:.3rem}
   .s09b .panel p{font-size:var(--t-body);line-height:1.45;color:var(--ink-2);max-width:none}
   .s09b .panel code{font-family:var(--f-mono);font-size:.9em;color:var(--ink)}
   .s09b .panel b{color:var(--ink);font-weight:650}
-  @media (max-width:760px){.s09b .code{white-space:pre-wrap;overflow-wrap:anywhere}}
+  @media (max-width:760px){.s09b .code{white-space:pre-wrap;overflow-wrap:anywhere}.s09b .panel{padding:.5rem .7rem}.s09b .panel p{font-size:.72rem;line-height:1.3}.s09b .hint p + p,.s09b .ck p + p{margin-top:.15rem}}
 
 /* --- 11-medir.html --- */
 .s11 .split{align-items:stretch}
@@ -793,7 +822,7 @@ html[data-still] .cover .motif *{animation:none!important}
         <p class="eyebrow reveal">Quién habla</p>
         <h2 class="who-name reveal d1">Carlos <em>Haro</em></h2>
       </div>
-      <div class="facts reveal d2">
+      <div class="datos reveal d2">
         <div class="row"><span class="label">Trabajo</span><span class="val">Sr. AI Engineer en Santander México<small>Data &amp; AI</small></span></div>
         <div class="row"><span class="label">Construyo</span><span class="val">Agentes que consultan datos<small>con herramientas, compuertas y medición</small></span></div>
         <div class="row"><span class="label">Escribo y enseño</span><span class="val">h1sort.com<small>y el curso «IA para Datos» en Código Facilito</small></span></div>
@@ -928,7 +957,7 @@ Eres un asistente del banco.
         <p>Con llamadas paralelas la API no impone orden entre los resultados: manda el <code>tool_use_id</code> de cada uno.</p>
       </div>
     </div>
-    <p class="note-line src">Docs de Anthropic: handle-tool-calls y parallel-tool-use · verificado 2026-10-18 (FACTS §1 y §5)</p>
+    <p class="note-line src">Docs de Anthropic: handle-tool-calls y parallel-tool-use · verificado 2026-10-18</p>
   </div>
 </section>
 
@@ -943,7 +972,7 @@ Eres un asistente del banco.
     <div class="split reveal d2">
       <div class="stack">
         <div class="code"><span class="cap">terminal</span>$ git stash &amp;&amp; git checkout paso-0
-<span class="c"># abre taller/agent.py y busca # TODO(paso-1)</span>
+<span class="c"># abre taller/agent.py: Agent.run · # TODO(paso-1)</span>
 $ uv run python -m taller.agent
 <span class="c">tú › ¿cuántas tarjetas bloqueadas hay?</span></div>
         <div class="panel ev">
@@ -953,6 +982,11 @@ $ uv run python -m taller.agent
             <li>Arma <b>UN</b> mensaje <code>{"role": "user", "content": […]}</code>.</li>
             <li>Un <code>tool_result</code> por llamada, con su <code>tool_use_id</code>, <b>antes</b> que cualquier texto; <code>is_error</code> si falló.</li>
           </ol>
+        </div>
+        <div class="panel mod ck" data-step="1">
+          <span class="label">Checkpoint</span>
+          <span class="body">Mano arriba si el agente respondió 26 con una consulta real.</span>
+          <span class="body">¿Atrasado? <code>git stash &amp;&amp; git checkout paso-1</code></span>
         </div>
       </div>
       <div class="stack">
@@ -965,14 +999,15 @@ tool_choice={"type": "<span class="a">tool</span>", ⋯} <span class="a"># 400</
 tool_choice={"type": "<span class="k">auto</span>"}  <span class="c"># + strict: true</span></div>
           <p class="body">Usa <code>auto</code> con <code>strict: true</code>: valida la forma del input, no su sentido.</p>
         </div>
-        <div class="panel mod ck">
-          <span class="label">Checkpoint</span>
-          <span class="body">Mano arriba si el agente respondió 26 con una consulta real.</span>
-          <span class="body">Atrasado: <code>git stash &amp;&amp; git checkout paso-1</code></span>
-        </div>
+        <div class="code" data-step="1"><span class="cap">taller/agent.py · lo que va en el TODO</span><span class="c"># &gt;&gt;&gt; paso-1</span>
+results = <span class="k">await</span> execute_calls(turn.calls, self.tools)
+messages.append({"role": "user", "content": [
+    {"type": "tool_result", "tool_use_id": r.tool_use_id,
+     "content": r.content, ⋯} <span class="k">for</span> r <span class="k">in</span> results]})
+<span class="c"># &lt;&lt;&lt; paso-1</span></div>
       </div>
     </div>
-    <p class="note-line src">Fuente de la trampa: docs de Anthropic, define-tools · verificado 2026-10-18 (FACTS §1)</p>
+    <p class="note-line src">Fuente de la trampa: docs de Anthropic, define-tools · verificado 2026-10-18</p>
   </div>
 </section>
 
@@ -1000,7 +1035,16 @@ tool_choice={"type": "<span class="k">auto</span>"}  <span class="c"># + strict:
 <span class="a">RECHAZADA › 400 · ⋯ tool_use ids were found without</span>
 <span class="a">           tool_result blocks immediately after ⋯</span></div>
       </div>
-      <div class="stack" data-step="2">
+      <div class="stack">
+        <div class="panel act hint" data-step="1">
+          <span class="label">Tu turno · paso-2 <span class="tag live" style="margin-left:.4rem">teclean · silencio del orador</span></span>
+          <ul class="opts">
+            <li><b>Dónde</b><code>taller/agent.py</code> · <code>sanitize_history</code> · <code># TODO(paso-2)</code></li>
+            <li><b>Qué</b>Por cada huérfano, un <code>tool_result</code> con <code>is_error</code>, <strong>primero</strong> en el mensaje siguiente.</li>
+            <li><b>Verifica</b><code>uv run python -m taller.romper huerfano</code></li>
+          </ul>
+        </div>
+        <div class="stack" data-step="2">
         <div class="code"><span class="cap">taller/agent.py · sanitize_history · TODO(paso-2) · 3 líneas</span><span class="c"># el esqueleto ya encontró los tool_use sin resultado: orphans</span>
 <span class="k">if</span> orphans:
     errores = [{"type": "<span class="k">tool_result</span>", "tool_use_id": t,
@@ -1011,11 +1055,12 @@ tool_choice={"type": "<span class="k">auto</span>"}  <span class="c"># + strict:
         <div class="panel ev ck">
           <span class="label">Checkpoint</span>
           <span class="note">Mano arriba si el DESPUÉS de <code>romper huerfano</code> ya funciona.</span>
-          <span class="note">Atrasado: <code>git stash &amp;&amp; git checkout paso-2</code></span>
+          <span class="note">¿Atrasado? <code>git stash &amp;&amp; git checkout paso-2</code></span>
+        </div>
         </div>
       </div>
     </div>
-    <p class="note-line src">Fuente: docs de Anthropic, handle-tool-calls (fragmento del 400 e is_error) · verificado 2026-10-18 (FACTS §5)</p>
+    <p class="note-line src">Fuente: docs de Anthropic, handle-tool-calls (fragmento del 400 e is_error) · verificado 2026-10-18</p>
   </div>
 </section>
 
@@ -1054,22 +1099,23 @@ gather: 1.50 s · una tras otra serían ≥ 4.6 s</span></div>
                              return_exceptions=<span class="k">True</span>)
 <span class="c"># Versión ingenua: solo las que terminaron</span>
 results = [r <span class="k">for</span> r <span class="k">in</span> hechos <span class="k">if</span> isinstance(r, ToolResult)]
-<span class="a"># TODO(paso-2b)</span> <span class="c">un tool_result POR CADA llamada, también la que no terminó</span></div>
+<span class="a"># TODO(paso-2b)</span> <span class="c">un tool_result POR CADA llamada; el timeout vuelve como is_error</span></div>
+        <p class="note" data-step="1"><b>Dónde:</b> <code>taller/agent.py</code> · <code>execute_calls</code> · <code># TODO(paso-2b)</code>. <b>Qué:</b> un <code>tool_result</code> por cada llamada; el timeout vuelve como <code>is_error</code>. <b>Verifica:</b> <code>uv run python -m taller.romper paralelo</code> y busca <b>3 de 3</b>.</p>
         <div class="code" data-step="2"><span class="cap">paso-2b · lo que tecleas (4 líneas) · resuelto en paso-2</span><span class="c"># un timeout es un is_error, no un hueco</span>
 results = [r <span class="k">if</span> isinstance(r, ToolResult) <span class="k">else</span> ToolResult(c.id, ToolOutcome.EXEC_ERROR,
     f<span class="s">"{c.name} no terminó en {tope:g} s ({type(r).__name__}); reintenta …"</span>, <span class="a">True</span>)
     <span class="k">for</span> c, r <span class="k">in</span> zip(calls, hechos)]</div>
-        <div class="code" data-step="2"><span class="cap">DESPUÉS · con tu arreglo</span>toolu_…h → <span class="k">is_error</span> · sql_query no terminó en 1.5 s (TimeoutError)
+        <div class="code after" data-step="2"><span class="cap">DESPUÉS · con tu arreglo</span>toolu_…h → <span class="k">is_error</span> · sql_query no terminó en 1.5 s (TimeoutError)
 <span class="k">DESPUÉS › 3 de 3 tool_result en un solo mensaje</span>
 <span class="k">MODELO › reintenta sql_query</span></div>
         <div class="panel ev ck" data-step="2">
           <span class="label">Checkpoint</span>
           <span class="note">Mano arriba si ya ves <b>3 de 3</b>.</span>
-          <span class="note">Atrasado o con prisa: <code>git stash &amp;&amp; git checkout paso-2</code></span>
+          <span class="note">¿Atrasado o con prisa? <code>git stash &amp;&amp; git checkout paso-2</code></span>
         </div>
       </div>
     </div>
-    <p class="note-line src">Corrida en vivo 2026-10-18 · claude-sonnet-5-5 · la latencia es artificial y la anuncia el script (FACTS: ensayo en vivo y §5)</p>
+    <p class="note-line src">Corrida en vivo 2026-10-18 · claude-sonnet-5-5 · la latencia es artificial y la anuncia el script</p>
   </div>
 </section>
 
@@ -1233,16 +1279,23 @@ without tool_result blocks immediately after</span></div>
       </div>
       <div class="col">
         <div class="code ctx"><span class="cap">taller/agent.py · el bucle · paso-2</span><span class="c">turn.calls = [ToolCall(b.id, b.name, b.input) for b in uses]</span>
-<span class="a"># TODO(paso-3)</span> <span class="c">¿y si stop_reason == "max_tokens"?</span>
+<span class="a"># TODO(paso-3)</span> <span class="c">¿y si stop_reason == "max_tokens" y hay tool_use?</span>
 <span class="c">messages.append({"role": "assistant", "content": [… todo …]})</span></div>
-        <div class="code" data-step="2"><span class="cap">paso-3 · lo que tecleas (4 líneas) · el cortado ni se guarda ni se ejecuta</span><span class="k">if</span> resp.stop_reason == <span class="s">"max_tokens"</span> <span class="k">and</span> uses:
+        <div class="panel act hint" data-step="1">
+          <p><b>Dónde:</b> <code>taller/agent.py</code> · el bucle de <code>Agent.run</code> · <code># TODO(paso-3)</code>.</p>
+          <p><b>Qué:</b> si <code>stop_reason == "max_tokens"</code> y hay <code>tool_use</code>, no lo ejecutes ni lo guardes; sube <code>max_tokens</code> y repite.</p>
+          <p><b>Verifica:</b> <code>uv run python -m taller.romper truncado</code></p>
+        </div>
+        <div class="col" data-step="2">
+        <div class="code"><span class="cap">paso-3 · lo que tecleas (4 líneas) · el cortado ni se guarda ni se ejecuta</span><span class="k">if</span> resp.stop_reason == <span class="s">"max_tokens"</span> <span class="k">and</span> uses:
     self.max_tokens = min(self.max_tokens * 4, MAX_TOKENS_TOPE)  <span class="c"># más margen</span>
     self._log(turn)
     <span class="k">continue</span>   <span class="c"># reintenta sin guardar el bloque cortado</span></div>
-        <div class="panel ev checkpoint" data-step="3">
+        <div class="panel ev checkpoint">
           <span class="label">Checkpoint</span>
           <span class="body">Mano arriba si el mensaje siguiente ya no da 400.</span>
-          <span class="body">Atrasado: <code>git stash &amp;&amp; git checkout paso-3</code></span>
+          <span class="body">¿Atrasado? <code>git stash &amp;&amp; git checkout paso-3</code></span>
+        </div>
         </div>
       </div>
     </div>
@@ -1379,14 +1432,23 @@ without tool_result blocks immediately after</span></div>
       <div class="col">
         <div class="code"><span class="cap">taller/tools.py · sql_query (abreviado)</span><span class="k">def</span> sql_query(sql: str) -&gt; str:
     motivo = <span class="k">None</span>
-    <span class="a"># TODO(paso-4)</span> <span class="c">validar antes de ejecutar</span><span class="sol" data-step="1">    motivo = _gate(sql)  <span class="c"># None = permitido</span></span>    <span class="k">if</span> motivo:            <span class="c"># rechazada: no se ejecuta</span>
+    <span class="a"># TODO(paso-4)</span> <span class="c">validar antes de ejecutar</span><span class="sol" data-step="2">    motivo = _gate(sql)  <span class="c"># None = permitido</span></span>    <span class="k">if</span> motivo:            <span class="c"># rechazada: no se ejecuta</span>
         <span class="k">return</span> motivo     <span class="c"># → is_error: true</span></div>
+        <div class="panel act hint">
+          <p><b>Dónde:</b> <code>taller/tools.py</code> · <code>sql_query</code> · <code># TODO(paso-4)</code>.</p>
+          <p><b>Qué:</b> llama a la compuerta y deja el resultado en <code>motivo</code> (<code>None</code> = permitido).</p>
+          <p><b>Verifica:</b> <code>uv run python -m taller.romper drop</code></p>
+        </div>
       </div>
       <div class="col">
-        <div class="panel mod" data-step="2">
+        <div class="panel mod" data-step="1">
           <p><b>bloquear_tarjeta</b> es una escritura: pide <b>confirmación humana</b> en la terminal antes de ejecutar. La compuerta cubre la lectura; las escrituras las confirma una persona.</p>
         </div>
-        <p class="note-line" data-step="3">Checkpoint: mano arriba si <b style="color:var(--ink)">romper drop</b> ya rechaza <b style="color:var(--ink)">secretos</b> y el DROP · ¿Atrás? <b style="color:var(--ink)">git stash &amp;&amp; git checkout paso-4</b></p>
+        <div class="panel ev ck" data-step="2">
+          <span class="label">Checkpoint</span>
+          <p>Mano arriba si <code>romper drop</code> ya rechaza <code>secretos</code> y el DROP.</p>
+          <p>¿Atrasado? <code>git stash &amp;&amp; git checkout paso-4</code></p>
+        </div>
       </div>
     </div>
   </div>
@@ -1479,7 +1541,7 @@ without tool_result blocks immediately after</span></div>
 <span class="c"># opcional: comparar con otro modelo</span>
 <span class="a">$</span> uv run python -m taller.medir --vs claude-opus-5-5</div>
         <p class="lede" data-step="2">Tokens y costo <b style="color:var(--ink)">por tarea resuelta</b>, no por llamada: los intentos fallidos también cuestan.</p>
-        <p class="note-line" data-step="3">¿Atrás? <b style="color:var(--ink)">git stash &amp;&amp; git checkout paso-5</b></p>
+        <p class="note-line" data-step="3">¿Atrasado? <b style="color:var(--ink)">git stash &amp;&amp; git checkout paso-5</b></p>
       </div>
       <dl class="cats" data-step="1">
         <dt>wrong_tool</dt><dd>eligió otra herramienta, o una donde no hacía falta</dd>
@@ -1588,7 +1650,7 @@ without tool_result blocks immediately after</span></div>
   <aside class="overlay" id="sourcesPanel" role="dialog" aria-label="Fuentes y apéndice" tabindex="-1">
     <button class="close" type="button" data-act="sources">CERRAR</button>
 <!-- Fuentes y apéndice del deck (overlay #sourcesPanel, tecla S).
-     Cada hecho del deck se rastrea a FACTS.md (verificado 2026-10-18). Lo marcado NO VERIFICADO no entra al deck. -->
+     Cada hecho del deck se rastrea a una fuente (verificado 2026-10-18). Lo marcado NO VERIFICADO no entra al deck. -->
 <h3>La clase</h3>
 <ul>
   <li><strong>CMU 11-768 “AI Agents”, Fall 2026</strong> (Language Technologies Institute): profesores Graham Neubig y Daniel Fried. Lección 2, <em>Tool Use for Language Model Agents</em>, a cargo de Neubig; video subido el 2026-09-08: <a href="https://youtu.be/jXChFB4JSyw">youtu.be/jXChFB4JSyw</a>. Curso: <a href="https://www.cmu-agents.com/">cmu-agents.com</a>.</li>
