@@ -86,7 +86,7 @@
       particles: { shape: 'scatter', opacity: 0.2 },
       html: `
         <div class="t-label a2-kick">Julio 2023 · Un ejemplo mínimo</div>
-        <div class="a2-img" data-step-hide="1"><img src="assets/2023/ejemplo-minimo-diagrama.png" alt="Diagrama de 2023: de sistemas fuente a analytics"></div>
+        <div class="a2-img" data-step-hide="1"><img src="assets/2023/ejemplo-minimo-diagrama.webp" alt="Diagrama de 2023: de sistemas fuente a analytics"></div>
         <div class="a2-metrics">
           <div class="a2-m" data-step="1"><b>A</b><span>Frecuencia promedio en días de los clientes suscritos en el último año</span></div>
           <div class="a2-m" data-step="2"><b>B</b><span>Cuántas veces un cliente ha visitado la página de documentación del producto</span></div>
