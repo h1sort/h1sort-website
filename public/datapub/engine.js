@@ -49,7 +49,13 @@ window.Deck = (() => {
     addEventListener('resize', fit);
     addEventListener('keydown', onKey);
     addEventListener('hashchange', () => { const [i, s] = parseHash(); if (i !== idx || s !== step) go(i, s); });
-    $('#stage').addEventListener('click', (e) => { if (!e.target.closest('a,button,video,input')) next(); });
+    // Tap/click: left 30% of the screen goes back, the rest goes forward.
+    $('#stage').addEventListener('click', (e) => {
+      if (e.target.closest('a,button,video,input')) return;
+      if (e.clientX < innerWidth * 0.3) prev(); else next();
+    });
+    addSwipeNav();
+    if (PUBLIC) { addWheelNav(); showTouchHint(); } // not while presenting: a stray scroll mustn't skip
     hideCursorWhenIdle();
 
     const [i, s] = parseHash();
@@ -167,6 +173,46 @@ window.Deck = (() => {
     else if (k === 'n' || k === 'N') { $('#notes').classList.toggle('on'); renderNotes(); }
     else if (k === 'p' || k === 'P') openPresenter();
     else if (k === 't' || k === 'T') { clockStart = Date.now(); renderPresenter(); }
+  }
+
+  // Swipe left/up = next, right/down = prev (like scrolling a feed).
+  function addSwipeNav() {
+    let x0 = null, y0 = null;
+    addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; } else x0 = null;
+    }, { passive: true });
+    addEventListener('touchend', (e) => {
+      if (x0 === null) return;
+      const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+      x0 = null;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 40) return; // a tap: the click handler takes it
+      if (Math.abs(dx) > Math.abs(dy) ? dx < 0 : dy < 0) next(); else prev();
+    }, { passive: true });
+  }
+
+  // One step per wheel/trackpad gesture: a gesture ends after 250 ms without wheel events.
+  function addWheelNav() {
+    let acc = 0, last = 0, spent = false;
+    addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const now = Date.now();
+      if (now - last > 250) { acc = 0; spent = false; }
+      last = now;
+      if (spent) return;
+      acc += Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (Math.abs(acc) >= 50) { spent = true; if (acc > 0) next(); else prev(); }
+    }, { passive: false });
+  }
+
+  function showTouchHint() {
+    if (!matchMedia('(pointer: coarse)').matches || SHOT) return;
+    const h = document.createElement('div');
+    h.id = 'hint';
+    h.textContent = innerHeight > innerWidth ? 'Gira el teléfono · desliza o toca para avanzar' : 'Desliza o toca para avanzar';
+    document.body.appendChild(h);
+    const hide = () => h.classList.add('gone');
+    setTimeout(hide, 5000);
+    addEventListener('touchend', hide, { once: true });
   }
 
   function hideCursorWhenIdle() {

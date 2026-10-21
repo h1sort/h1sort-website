@@ -301,7 +301,7 @@
       html: head('Era 2026 · Post-AI <span class="faint">→ me llegó en 2026</span>', 'La primera flecha vertical') +
         stage(
           P([0], TL({ 0: 5 }, 4)) +
-          P([1], `<div class="a3-photo"><img src="assets/2026/avion-5-agentes.png" alt="Cinco agentes construyendo un deck en un vuelo"></div>
+          P([1], `<div class="a3-photo"><img src="assets/2026/avion-5-agentes.webp" alt="Cinco agentes construyendo un deck en un vuelo"></div>
             <div class="a3-cap">Cinco agentes.<br>Un deck. <em>Un vuelo.</em></div>
             <div class="a3-cap" style="top:280px;font-size:48px;font-weight:400;color:var(--dim)">Por primera vez, la era me llegó al mismo tiempo que a San Francisco.</div>`)) +
         lines(P([0], `<span class="dim">2013 → 5 años. 2016 → 5. 2020 → 1. <em>2026 → 0.</em></span>`)),
