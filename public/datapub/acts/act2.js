@@ -57,6 +57,8 @@
     /* slide 9 */
     #s-a2-2026 .a2-pipe { transition: opacity 0.8s var(--ease); }
     #s-a2-2026[data-at="4"] .a2-pipe { opacity: 0.18; }
+    #s-a2-2026 .a2-time { transition: opacity 0.8s var(--ease); }
+    #s-a2-2026[data-at="4"] .a2-time { opacity: 0; }
     #s-a2-2026 .a2-agent { transition: opacity 0.8s var(--ease); }
     #s-a2-2026[data-at="4"] .a2-agent { opacity: 0.2; }
     #s-a2-2026:is([data-at="2"],[data-at="3"],[data-at="4"]) .n0 rect { stroke: var(--accent); stroke-width: 3; }
