@@ -231,7 +231,7 @@ Deck.act(4, 'Acto 4 · El giro', [
           <div class="t-label accent" style="margin-bottom:24px">Lo mismo en software</div>
           <div class="big">La IA también escribe las pruebas.</div>
           <div class="big dim" style="margin-top:28px">Pero la proporción de tiempo en pruebas vs. código <em>no cambió.</em></div>
-          <div class="cite" style="margin-top:36px">Jarred Sumner, vía Gergely Orosz</div>
+          <div class="cite" style="margin-top:36px">Jarred Sumner, vía Gergely Orosz · LDX3 2026</div>
         </div>
         <div class="a4-final" data-step="4">
           <div class="big dim">La verificación no se abarató.</div>

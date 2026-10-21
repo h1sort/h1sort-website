@@ -140,7 +140,7 @@ Deck.act(5, 'Acto 5 · Valor real vs. hype', [
         ${LI('01', 'Un proveedor quiere que uses <em>su</em> agente', '', 1)}
         ${LI('02', 'Agentes conectados a datos crudos, <em>sin definiciones</em>', '', 2)}
         ${LI('03', '"Migra todo, <em>ahora hay IA</em>"', '', 3)}
-        ${LI('04', 'Zombie reviews: <em>todos aprueban, nadie lee</em>', 'Gergely Orosz', 4)}
+        ${LI('04', 'Zombie reviews: <em>todos aprueban, nadie lee</em>', 'Gergely Orosz · LDX3 2026', 4)}
         ${LI('05', 'Su gemelo de datos: <em>zombie dashboards</em>', '', 5)}
       </ul>`,
   },
@@ -153,9 +153,9 @@ Deck.act(5, 'Acto 5 · Valor real vs. hype', [
     html: `
       <div class="a5-head"><div class="t-label">Episodio 3 · 2029 · manos arriba</div><h2>Predicciones para <em>2029</em></h2></div>
       <ul class="a5-list focus-last">
-        ${LI('01', 'Aprender un lenguaje de programación seguirá siendo útil.', 'ref: Gergely Orosz', 1)}
+        ${LI('01', 'Aprender un lenguaje de programación seguirá siendo útil.', 'ref: Gergely Orosz · LDX3 2026', 1)}
         ${LI('02', 'Todos van a necesitar habilidades de ingeniería y ciencia de datos.', 'ref: swyx', 2)}
-        ${LI('03', 'La IA frenará temporalmente la contratación de talento nuevo, y se ajustará cuando quede claro que ser AI-native es una habilidad profunda.', 'ref: Gergely Orosz', 3)}
+        ${LI('03', 'La IA frenará temporalmente la contratación de talento nuevo, y se ajustará cuando quede claro que ser AI-native es una habilidad profunda.', 'ref: Gergely Orosz · LDX3 2026', 3)}
         ${LI('04', 'Los roles se reorganizan por arquetipo, no por función.', 'ref: Boris Cherny', 4)}
         ${LI('05', 'Democratización de stacks: competencia feroz y proveedores de datos convertidos en commodity.', '', 5)}
       </ul>
