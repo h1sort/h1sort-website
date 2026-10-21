@@ -58,7 +58,7 @@
           <div class="a1-row" data-step="2"><div class="a1-v good"><b>✓</b>Acerté</div>
             <div class="a1-t">DuckDB.<small>El “juguete” ya no es de juguete.</small></div></div>
           <div class="a1-row" data-step="3"><div class="a1-v bad"><b>✗</b>Fallé</div>
-            <div class="a1-t">dbt.<small>Tres años después, todavía no en algunos lugares.</small></div></div>
+            <div class="a1-t">dbt.<small>Tres años después, todavía no en producción en algunos lugares.</small></div></div>
           <div class="a1-row hot" data-step="4"><div class="a1-v accent"><b>↻</b>Ya no es cierto</div>
             <div class="a1-t">“Migrar cuesta años.”<small><s>años</s> &rarr; <em>meses</em></small></div></div>
           <div class="a1-row" data-step="5"><div class="a1-v accent"><b>!</b>No lo vi venir</div>
