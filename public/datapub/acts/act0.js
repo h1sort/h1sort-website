@@ -87,7 +87,7 @@
       html: `
         <div class="a0-wait" data-step-hide="1"><span class="t-label">Anteriormente en The Data Pub…</span></div>
         <div class="a0-video" data-step="1">
-          <video playsinline preload="auto" poster="media/poster.jpg" src="https://media.h1sort.com/datapub/anteriormente.mp4"></video>
+          <video playsinline preload="auto" poster="media/poster.jpg" src="https://media.h1sort.com/datapub/anteriormente-v3.mp4"></video>
         </div>
         <div class="a0-fb" data-n="0">
           <div class="a0-head t-label" data-step="1">Anteriormente en The Data Pub… · Julio 2023</div>
