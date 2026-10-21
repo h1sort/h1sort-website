@@ -269,7 +269,7 @@ function a4RenderGrid(el) {
   const M = window.METRIC_A;
   const vals = (M && M.definitions) ? M.definitions.map((d) => d.value) : [];
   const word = (k) => (typeof vals[k] === 'number' ? vals[k].toFixed(1)
-    : (M && M.defined && k === 9 ? a4fmt(M.defined) : ['a', 'b', 'c', 'd'][k]));
+    : (M && M.defined && k === 9 ? a4fmt(M.defined) : ['a', 'b', 'c', 'NULL'][k]));
   const agreed = (M && M.defined && typeof M.defined.value === 'number') ? M.defined.value.toFixed(1) : 'a';
   const s0 = [0, 1, 2, 1, 0, 3, 2, 3, 1];
   const s1 = [0, 1, 0, 1, 0, 1, 0, 1, 1];

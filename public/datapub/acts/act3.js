@@ -159,8 +159,9 @@
   .a3-row .v { position: relative; height: 72px; font-size: 62px; font-weight: 500; line-height: 72px; letter-spacing: -0.01em; }
   .a3-row .v span { position: absolute; left: 0; top: 0; white-space: nowrap; transition: opacity .7s var(--ease), filter .7s var(--ease), transform .7s var(--ease); transition-delay: calc(var(--i) * .35s); }
   .a3-row .v .new { opacity: 0; filter: blur(14px); color: var(--accent); transform: translateY(18px); }
-  #s-colapso[data-at="1"] .a3-row .v .old, #s-colapso[data-at="2"] .a3-row .v .old { opacity: 0; filter: blur(14px); transform: translateY(-18px); }
-  #s-colapso[data-at="1"] .a3-row .v .new, #s-colapso[data-at="2"] .a3-row .v .new { opacity: 1; filter: none; transform: none; }
+  #s-colapso .a3-row .v .old { transition-property: opacity, font-size, color, text-decoration-color; text-decoration: line-through 4px transparent; }
+  #s-colapso:is([data-at="1"],[data-at="2"]) .a3-row .v .old { font-size: 40px; color: var(--dim); text-decoration-color: var(--dim); }
+  #s-colapso:is([data-at="1"],[data-at="2"]) .a3-row .v .new { opacity: 1; filter: none; transform: none; left: auto; right: 0; }
 
   /* slide 18: tiny transformer */
   #s-caja-magica .a3-stage { top: 250px; height: 640px; }
@@ -258,7 +259,7 @@
 
     // ---- 13 ----------------------------------------------------------------
     {
-      id: 'era-2021', title: 'Eras 2016 + 2020 → 2021 · Accenture', time: 210, class: 'bleed', particles: 'one',
+      id: 'era-2021', title: 'Eras 2016 + 2020 → 2021 · Accenture', time: 210, class: 'bleed', particles: { shape: 'one', opacity: 0.15 },
       counter: 'jornadas de 18 horas', steps: 5,
       html: head('Eras 2016 + 2020 · <span class="faint">→ me llegaron juntas en 2021</span>', 'Todo en un lugar, y de reportero a operador') +
         stage(

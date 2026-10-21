@@ -119,10 +119,11 @@ Deck.act(5, 'Acto 5 · Valor real vs. hype', [
           <p class="cap" style="margin-top:8px;font-size:56px"><b>créditos</b></p>
         </div>
         <div class="panel" data-step-only="5">
-          <p class="pun">Un clasificador tipado hace el mismo trabajo por <em>centavos</em>.</p>
+          <p class="pun">Un clasificador tipado hace <em>casi</em> el mismo trabajo por <em>centavos</em>.</p>
           <div class="bench">
             <span><span class="k">4 mil títulos · Jev</span><span class="v accent">$0.16</span></span>
             <span><span class="k">el LLM</span><span class="v">$11–21</span></span>
+            <span><span class="k">coinciden (persona)</span><span class="v">88%</span></span>
           </div>
         </div>
       </div>
