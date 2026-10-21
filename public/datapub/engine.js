@@ -28,7 +28,8 @@ window.Deck = (() => {
 
   function start() {
     acts.sort((a, b) => a.n - b.n);
-    for (const a of acts) for (const s of a.list) slides.push({ ...s, actN: a.n, actLabel: a.label });
+    const skip = (document.documentElement.dataset.skip || '').split(/\s+/).filter(Boolean); // web copies can drop slides
+    for (const a of acts) for (const s of a.list) if (!skip.includes(s.id)) slides.push({ ...s, actN: a.n, actLabel: a.label });
 
     const stage = $('#stage');
     slides.forEach((s, k) => {
