@@ -17,6 +17,7 @@ Highlights: FRED, a structured fraud-analysis agent in production at Santander M
 - [AI en la banca](https://h1sort.com/gbm-ai/): an 18-slide Spanish talk for the GBM AI Experience on how banking analytics evolved from cheap analysis to judgment built into infrastructure, with live demos and a QR survey
 - [El futuro de los servicios financieros](https://h1sort.com/snowflake/): a 15-minute Spanish talk for Snowflake World Tour Mexico City 2026 on when to trust an agent: Confianza = Contexto × Evidencia × Control (if one factor is zero, trust is zero), with slides as PDF and an interactive isometric machine
 - [Tool use sin abstracciones](https://h1sort.com/claude4aieng/): a 40-minute hands-on Spanish workshop for the Claude Community CDMX (19 Oct 2026) on tool use at the wire level: chat templates, the tool_use and tool_result loop, constrained decoding, three deliberate breakages and how to fix them, and measuring tool-call error rates; code at github.com/h1sort/claude4aieng
+- [Post-AI Data Stack](https://h1sort.com/datapub/): a 45-minute Spanish talk for The Data Pub (CDMX, 21 Oct 2026), episode 2 of a series after "Modern Data Stack" (July 2023): producing analysis became cheap, agreeing on what is true did not; grades the 2023 bets, a double timeline of data eras, metric A computed three ways, and predictions for 2029; source at github.com/h1sort/datapub
 - [Contact](https://h1sort.com/contact/): email and socials
 
 ## Contact
