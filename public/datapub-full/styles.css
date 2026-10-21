@@ -1,0 +1,135 @@
+/* Post-AI Data Stack · Welch-style: black, thin white strokes, mono labels,
+   one accent for "inside the boundary". Stage is a fixed 1920×1080 canvas. */
+:root {
+  --bg: #000;
+  --fg: #fff;
+  --dim: #d6d6d6;    /* secondary text: ~84% white, readable from the back */
+  --faint: #a3a3a3;  /* tertiary: labels, credits, dim strokes */
+  --hair: rgba(255, 255, 255, 0.3);
+  --accent: #f5c542;
+  --accent-dim: rgba(245, 197, 66, 0.35);
+  --good: #7ee0a1;
+  --bad: #ff6b5f;
+  --sans: "Helvetica Neue", Helvetica, Inter, Arial, sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, "JetBrains Mono", monospace;
+  --stroke: 2px;
+  --pad-x: 120px;
+  --pad-y: 96px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); overflow: hidden; }
+body { font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+body.idle { cursor: none; }
+html, body { touch-action: manipulation; overscroll-behavior: none; } /* no double-tap zoom or pull-to-refresh */
+#hint { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 45; padding: 10px 18px; border-radius: 999px;
+        background: rgba(0, 0, 0, 0.8); border: 1px solid var(--faint); color: var(--fg); font: 15px/1.3 var(--mono);
+        white-space: nowrap; transition: opacity 0.6s; pointer-events: none; }
+#hint.gone { opacity: 0; }
+
+#field { position: fixed; inset: 0; z-index: 0; }
+#stage, #chrome { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+#stage { z-index: 1; }
+#chrome { z-index: 2; pointer-events: none; }
+#black { position: fixed; inset: 0; background: #000; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+#black.on { opacity: 1; }
+
+/* ---- slides --------------------------------------------------------------- */
+.slide {
+  position: absolute; inset: 0; padding: var(--pad-y) var(--pad-x);
+  opacity: 0; visibility: hidden; transition: opacity 0.6s var(--ease), visibility 0s 0.6s;
+  font-size: 36px; line-height: 1.35;
+}
+.slide.active { opacity: 1; visibility: visible; transition: opacity 0.6s var(--ease), visibility 0s; }
+.slide.center { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+.slide.middle { display: flex; flex-direction: column; justify-content: center; }
+.slide.bleed { padding: 0; }
+
+/* ---- type ----------------------------------------------------------------- */
+.t-hero  { font-size: 168px; font-weight: 500; line-height: 1; letter-spacing: -0.03em; margin: 0; }
+.t-title { font-size: 88px; font-weight: 500; line-height: 1.05; letter-spacing: -0.02em; margin: 0 0 40px; }
+.t-sub   { font-size: 48px; font-weight: 400; line-height: 1.2; margin: 0 0 28px; color: var(--dim); }
+.t-body  { font-size: 36px; line-height: 1.4; }
+.t-small { font-size: 28px; line-height: 1.4; }
+.t-label { font-family: var(--mono); font-size: 22px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--dim); }
+.mono { font-family: var(--mono); }
+.dim { color: var(--dim); }
+.faint { color: var(--faint); }
+.accent { color: var(--accent); }
+.good { color: var(--good); }
+.bad { color: var(--bad); }
+.quote { font-size: 56px; line-height: 1.25; font-weight: 400; max-width: 1500px; }
+.quote::before { content: "“"; } .quote::after { content: "”"; }
+.cite { font-family: var(--mono); font-size: 22px; color: var(--dim); letter-spacing: 0.06em; }
+.cite.foot { position: absolute; left: var(--pad-x); bottom: 110px; }
+strong { font-weight: 600; }
+em { font-style: normal; color: var(--accent); }
+
+/* ---- layout helpers ------------------------------------------------------- */
+.stack > * + * { margin-top: var(--gap, 28px); }
+.row { display: flex; gap: var(--gap, 48px); align-items: center; }
+.cols { display: grid; grid-template-columns: repeat(var(--n, 2), 1fr); gap: var(--gap, 64px); }
+.grow { flex: 1; }
+
+.bullets { list-style: none; padding: 0; margin: 0; }
+.bullets li { position: relative; padding-left: 56px; margin: 0 0 26px; }
+.bullets li::before { content: ""; position: absolute; left: 0; top: 0.68em; width: 28px; height: var(--stroke); background: var(--faint); }
+.bullets li .mark { position: absolute; left: 0; top: 0; width: 40px; font-family: var(--mono); }
+.bullets li:has(.mark)::before { display: none; }
+
+.box { border: var(--stroke) solid var(--faint); border-radius: 18px; padding: 28px 36px; }
+.box.accent { border-color: var(--accent); }
+.chip { display: inline-block; font-family: var(--mono); font-size: 22px; letter-spacing: 0.12em; text-transform: uppercase;
+        border: var(--stroke) solid var(--faint); border-radius: 999px; padding: 6px 18px; color: var(--dim); }
+
+.frame { border: var(--stroke) solid var(--hair); border-radius: 14px; overflow: hidden; background: #000; }
+.frame img, .frame video { display: block; width: 100%; height: 100%; object-fit: contain; }
+img.fit { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+
+pre, code { font-family: var(--mono); }
+pre.code { font-size: 24px; line-height: 1.45; margin: 0; padding: 24px 28px; border: var(--stroke) solid var(--hair); border-radius: 14px; white-space: pre; overflow: hidden; }
+
+/* ---- SVG primitives (use pathLength="1" with .draw) ----------------------- */
+svg { overflow: visible; }
+svg .ln     { fill: none; stroke: var(--fg); stroke-width: 2; }
+svg .ln-dim { fill: none; stroke: var(--faint); stroke-width: 2; }
+svg .ln-hair{ fill: none; stroke: var(--hair); stroke-width: 1.5; }
+svg .ln-acc { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+svg .fill-acc { fill: var(--accent); }
+svg .fill-fg  { fill: var(--fg); }
+svg .lbl { font-family: var(--mono); font-size: 22px; letter-spacing: 0.2em; fill: var(--dim); text-transform: uppercase; }
+svg .txt { font-family: var(--sans); font-size: 32px; fill: var(--fg); }
+svg .draw { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.4s var(--ease); }
+.slide.active svg .draw:not([data-step]), svg .draw.shown { stroke-dashoffset: 0; }
+
+/* ---- build steps ---------------------------------------------------------- */
+[data-step], [data-step-only] { opacity: 0; transform: translateY(14px); transition: opacity 0.5s var(--ease), transform 0.5s var(--ease); }
+[data-step].shown, [data-step-only].shown { opacity: 1; transform: none; }
+svg [data-step], svg [data-step-only] { transform: none; }
+[data-step-hide] { transition: opacity 0.4s var(--ease); }
+[data-step-hide].gone { opacity: 0; }
+/* .dim-after: earlier items fade back once later steps appear (use on lists) */
+.focus-last > .shown:not(:last-child):has(~ .shown) { opacity: 0.6; }
+
+/* ---- chrome --------------------------------------------------------------- */
+#label { position: absolute; left: var(--pad-x); bottom: 44px; font-family: var(--mono); font-size: 20px;
+         letter-spacing: 0.3em; text-transform: uppercase; color: var(--faint); }
+#progress { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--hair); transition: width 0.6s var(--ease); }
+#counter { position: absolute; right: 72px; bottom: 44px; min-width: 340px; padding: 18px 28px 20px;
+           border: var(--stroke) solid var(--faint); border-radius: 16px; background: rgba(0, 0, 0, 0.72);
+           opacity: 0; transform: translateY(10px); transition: opacity 0.5s var(--ease), transform 0.5s var(--ease); }
+#counter.on { opacity: 1; transform: none; }
+#counter .k { font-family: var(--mono); font-size: 18px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--dim); }
+#counter .value { display: block; margin-top: 6px; font-size: 40px; font-weight: 500; }
+#counter.flash { animation: counter-flash 1.2s var(--ease); }
+@keyframes counter-flash { 0% { border-color: var(--accent); box-shadow: 0 0 0 6px var(--accent-dim); } 100% { border-color: var(--faint); box-shadow: 0 0 0 0 transparent; } }
+
+#notes { position: fixed; left: 0; right: 0; bottom: 0; max-height: 42vh; overflow: auto; z-index: 40; display: none;
+         background: rgba(12, 12, 12, 0.94); border-top: 1px solid #333; padding: 18px 28px; font-size: 18px; line-height: 1.5; }
+#notes.on { display: block; }
+#notes .meta { font-family: var(--mono); color: #999; margin-bottom: 8px; }
+#notes p { margin: 0 0 0.6em; max-width: 90ch; }
+
+/* ---- screenshot mode: no transitions, final states ------------------------ */
+.shot *, .shot *::before, .shot *::after { transition: none !important; animation-duration: 0s !important; animation-delay: 0s !important; }

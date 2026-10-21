@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es" data-public>
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Post-AI Data Stack</title>
+  <meta name="description" content="Post-AI Data Stack: ¿Qué cambió en la era de GPT? · Carlos Haro · The Data Pub, 21 oct 2026">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <canvas id="field"></canvas>
+  <div id="stage"></div>
+  <div id="chrome">
+    <div id="label"></div>
+    <div id="counter"><span class="k">Cuánto me tardé</span><span class="value"></span></div>
+    <div id="progress"></div>
+  </div>
+  <div id="notes"></div>
+  <div id="black"></div>
+
+  <script src="particles.js"></script>
+  <script src="engine.js"></script>
+
+  <!-- shared components (custom elements) and data -->
+  <script src="components/boundary.js"></script>
+  <script src="components/timeline.js"></script>
+  <script src="data/metric-a.js"></script>
+
+  <!-- one file per act; order on screen comes from Deck.act(n, …) -->
+  <script src="acts/act0.js"></script>
+  <script src="acts/act1.js"></script>
+  <script src="acts/act2.js"></script>
+  <script src="acts/act3.js"></script>
+  <script src="acts/act4.js"></script>
+  <script src="acts/act5.js"></script>
+
+  <script>Deck.start();</script>
+</body>
+</html>
