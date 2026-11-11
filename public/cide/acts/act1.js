@@ -92,8 +92,8 @@
     #s-contexto .col.acc h3 { color: var(--accent); }
     #s-contexto .col ul { list-style: none; margin: 14px 0 0; padding: 0; }
     #s-contexto .col li { font-size: 32px; padding: 9px 0; border-top: 2px solid var(--hair); }
-    #s-contexto .trejo { position: absolute; left: var(--pad-x); right: 420px; top: 760px; font-size: 34px; line-height: 1.3; }
-    #s-contexto .trejo .dim { display: block; margin-top: 6px; }
+    #s-contexto .saying { position: absolute; left: var(--pad-x); right: 420px; top: 760px; font-size: 34px; line-height: 1.3; }
+    #s-contexto .saying .dim { display: block; margin-top: 6px; }
     #s-contexto .alt { position: absolute; left: var(--pad-x); right: var(--pad-x); top: 440px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
     #s-contexto .alt .c-box { min-height: 330px; }
     #s-contexto .memo { font-family: var(--mono); font-size: 26px; line-height: 1.4; margin-top: 16px; padding: 14px 18px; border: var(--stroke) dashed var(--bad); border-radius: 10px; color: var(--bad); }
@@ -346,7 +346,7 @@
           <div class="col acc"><h3>Contexto <small>inferencia</small></h3>
             <ul><li>Se arma en cada decisión</li><li>Datos del cliente, de hoy</li><li>Propio: distinto en cada institución</li></ul></div>
         </div>
-        <div class="trejo" data-step-hide="2"><div data-step="1">«El modelo se puede replicar. Los datos no.» <span class="mono-f faint" style="font-size:22px">A. Trejo</span>
+        <div class="saying" data-step-hide="2"><div data-step="1">Se suele decir: «el modelo se replica, los datos no».
           <span class="dim">Más preciso: se replican los <em>pesos</em>. No se replica el <em>contexto</em>.</span></div></div>
         <div class="alt" data-step="2">
           <div class="c-box"><div class="t-label">En el caso</div><div class="tx">Historial de transferencias, dispositivo, cambio de SIM, beneficiario. Quien no puede leerlos decide a ciegas.</div></div>
