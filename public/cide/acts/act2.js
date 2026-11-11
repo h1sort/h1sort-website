@@ -60,10 +60,10 @@
 
   const SCALE = `
     <div class="lab-scale">
-      <div class="lv"><div class="f">0</div><div class="nm">Sin agente</div><div class="d">Lo hace una persona</div></div>
-      <div class="lv"><div class="f">1</div><div class="nm">Propone</div><div class="d">Un humano aprueba antes</div></div>
-      <div class="lv"><div class="f">2</div><div class="nm">Ejecuta</div><div class="d">Un humano revisa después</div></div>
-      <div class="lv"><div class="f">3</div><div class="nm">Ejecuta solo</div><div class="d">Nadie revisa cada caso</div></div>
+      <div class="lv"><div class="f">0</div><div class="nm">Sin agente</div><div class="d">Sentados, manos abajo</div></div>
+      <div class="lv"><div class="f">1</div><div class="nm">Aprueba antes</div><div class="d">Mano al hombro</div></div>
+      <div class="lv"><div class="f">2</div><div class="nm">Revisa después</div><div class="d">Brazo arriba</div></div>
+      <div class="lv"><div class="f">3</div><div class="nm">Ejecuta solo</div><div class="d">De pie, brazo arriba</div></div>
     </div>`;
 
   const CASES = [
@@ -86,7 +86,7 @@
         <div class="t-label" style="margin-bottom:18px">Laboratorio · seis casos</div>
         <h2>¿Quién aprueba?</h2>
         ${SCALE}
-        <p class="hint" data-step="1">Voten con la mano: <span class="accent">puño = 0</span>, un dedo, dos o tres.</p>`,
+        <p class="hint" data-step="1">La altura es la autonomía. <span class="accent">La sala se vuelve un histograma.</span></p>`,
     },
     {
       id: 'lab-casos',
@@ -100,7 +100,7 @@
         <div class="cases">
           ${CASES.map(([tx, sm], i) => `<div class="cs" data-step-only="${i + 1}"><div class="n">Caso 0${i + 1} · de 06</div><div class="tx">${tx}</div><div class="sm">${sm}</div></div>`).join('')}
         </div>
-        <div class="mini"><div><span>0</span>Sin agente</div><div><span>1</span>Aprueba antes</div><div><span>2</span>Revisa después</div><div><span>3</span>Ejecuta solo</div></div>`,
+        <div class="mini"><div><span>0</span>Sentados</div><div><span>1</span>Mano al hombro</div><div><span>2</span>Brazo arriba</div><div><span>3</span>De pie</div></div>`,
     },
   ]);
 
@@ -140,7 +140,7 @@
           <li data-step="3"><span class="n">03</span><span class="tx">Si un banco y una fintech tuvieran exactamente los mismos datos, ¿quién construye el mejor producto y por qué?</span></li>
           <li data-step="4"><span class="n">04</span><span class="tx">¿Cuánto vale un dato que el cliente decide compartir, y qué tiene que recibir a cambio?</span></li>
         </ul>
-        <div class="cite src">Preguntas: Andrés Trejo, invitación a este taller</div>`,
+        <div class="cite src">Preguntas de la invitación a este taller</div>`,
     },
   ]);
 
@@ -201,7 +201,7 @@
           <li><b>Atribución de mensajes automáticos.</b> Código de Comercio, art. 90, fracc. III.</li>
           <li><b>Riesgo de modelos.</b> Fed, OCC y FDIC, SR 26-2 (17 abr. 2026), nota 3; sustituye a SR 11-7.</li>
           <li><b>Alto riesgo en crédito.</b> Reglamento (UE) 2024/1689, anexo III, punto 5(b).</li>
-          <li><b>El caso de $148,000</b> es ilustrativo. Las preguntas del debate son de Andrés Trejo.</li>
+          <li><b>El caso de $148,000</b> es ilustrativo. Las preguntas del debate vienen de la invitación al taller.</li>
         </ul>`,
     },
   ]);

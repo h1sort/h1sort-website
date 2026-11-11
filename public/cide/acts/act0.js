@@ -218,7 +218,7 @@
         <div class="steps">
           <div class="st on"><div class="n">01</div><h3>1 caso, 6 conceptos</h3><p>La misma transferencia, vista seis veces</p></div>
           <div class="st" data-step="1"><div class="n">02</div><h3>Laboratorio</h3><p>Ustedes deciden quién aprueba</p></div>
-          <div class="st" data-step="1"><div class="n">03</div><h3>Debate</h3><p>Con Christian, sin piedad</p></div>
+          <div class="st" data-step="1"><div class="n">03</div><h3>Debate</h3><p>Con Christian García</p></div>
         </div>
         <div class="tmpl" data-step="2">
           <div class="cell"><div class="t-label">Definición</div><div>Formal, sin adornos</div></div>
