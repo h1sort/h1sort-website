@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Experto en IA Agéntica para Datos · Temario</title>
+  <meta name="description" content="Temario del programa Experto en IA Agéntica para Datos de Código Facilito con Carlos Haro: 12 sesiones en vivo para construir y medir sistemas de IA sobre datos.">
+  <meta property="og:title" content="Experto en IA Agéntica para Datos · Temario">
+  <meta property="og:description" content="12 sesiones en vivo para construir y medir sistemas de IA sobre datos. Código Facilito · Carlos Haro.">
+  <meta property="og:url" content="https://h1sort.com/ai4data/">
+  <link rel="canonical" href="https://h1sort.com/ai4data/">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <canvas id="field" aria-hidden="true"></canvas>
+
+  <main>
+    <!-- ================================================================ hero -->
+    <header class="hero" data-shape="scatter">
+      <a class="brand" href="/">h1sort.com</a>
+      <p class="label accent">Código Facilito · Programa en vivo</p>
+      <h1 class="hero-title">Experto en IA Agéntica <span class="nb">para Datos</span></h1>
+      <p class="sub">Producir el análisis se volvió barato. Saber si es verdad, no. En 12 sesiones construyes un sistema de IA sobre datos y demuestras con números que se puede confiar en él.</p>
+      <ul class="facts">
+        <li><span class="big">12</span><span class="cap">sesiones en vivo</span></li>
+        <li><span class="big">3h</span><span class="cap">cada sábado</span></li>
+        <li><span class="big">6</span><span class="cap">módulos</span></li>
+        <li><span class="big">1</span><span class="cap">proyecto final</span></li>
+      </ul>
+      <p class="by"><span class="bar"></span>Con Carlos Haro</p>
+      <div class="ctas">
+        <a class="btn" href="https://codigofacilito.com/programas/ia-datos" target="_blank" rel="noopener noreferrer">Inscripción en Código Facilito <span aria-hidden="true">→</span></a>
+        <a class="btn ghost" href="https://github.com/h1sort/ai4data" target="_blank" rel="noopener noreferrer">Repositorio</a>
+      </div>
+    </header>
+
+    <!-- =========================================================== principle -->
+    <section class="block" data-shape="two">
+      <p class="label">Antes de empezar</p>
+      <h2 class="title">Construir y medir, <em>no mostrar y explicar</em></h2>
+      <p class="body dim">El curso gratuito de introducción (3 clases, septiembre 2026) explicó qué cambió en el rol de datos. Este programa empieza donde ese terminó: aquí cada sesión deja algo construido y medido.</p>
+
+      <div class="compare">
+        <div class="cmp-head"></div>
+        <div class="cmp-head faint">Curso introductorio</div>
+        <div class="cmp-head accent">Este programa</div>
+
+        <div class="cmp-k">Pregunta</div>
+        <div class="cmp-a">¿Qué cambió en el rol de datos?</div>
+        <div class="cmp-b">¿Cómo construyo algo confiable y cómo lo demuestro?</div>
+
+        <div class="cmp-k">Datos</div>
+        <div class="cmp-a">Encuestas en vivo, NYC Taxi</div>
+        <div class="cmp-b">Un caso nuevo con respuestas verificadas</div>
+
+        <div class="cmp-k">Formato</div>
+        <div class="cmp-a">Demo del profesor</div>
+        <div class="cmp-b">Laboratorio con entregable por sesión</div>
+
+        <div class="cmp-k">Medición</div>
+        <div class="cmp-a">"Se ve bien" o "está mal"</div>
+        <div class="cmp-b">Exactitud, varianza, costo y latencia</div>
+      </div>
+
+      <div class="box prereq">
+        <p class="label">Pre-requisito · grabaciones gratuitas</p>
+        <ul class="bullets small">
+          <li><a class="link" href="https://www.youtube.com/watch?v=JYEOL63z2uI" target="_blank" rel="noopener noreferrer">Clase 1</a> · el rol de datos en cuatro eras; contexto, tools y evals.</li>
+          <li><a class="link" href="https://github.com/h1sort/intro-ai4data-class" target="_blank" rel="noopener noreferrer">Clase 2</a> · OLTP vs OLAP, filas vs columnas, ETL.</li>
+          <li><a class="link" href="https://www.youtube.com/watch?v=VtTTsowFovk" target="_blank" rel="noopener noreferrer">Clase 3</a> · qué es un LLM, qué es un agente, capa semántica.</li>
+        </ul>
+        <p class="small faint">Se dan por vistas: cada tema se repasa en máximo 10 minutos.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ case -->
+    <section class="block" data-shape="grid">
+      <p class="label">El caso</p>
+      <h2 class="title">Un marketplace, <em>un marcador</em></h2>
+      <div class="cols">
+        <div>
+          <p class="body">Una empresa ficticia de comercio y pagos en LatAm, con datos sintéticos hechos para el curso:</p>
+          <ul class="bullets small">
+            <li>Tablas de clientes, pedidos, pagos, devoluciones y sucursales.</li>
+            <li>Tickets de soporte y reseñas en texto libre.</li>
+            <li>Un diccionario de métricas con definiciones que chocan entre áreas, a propósito.</li>
+            <li>Un <strong>set dorado</strong> de ~100 preguntas de negocio con respuesta verificada. Una parte queda oculta para calificar el proyecto final.</li>
+          </ul>
+        </div>
+        <div class="box accent scorecard">
+          <p class="label accent">Tu marcador</p>
+          <p class="small dim">Se crea en la sesión 1 y se actualiza en cada sesión.</p>
+          <ul class="metrics">
+            <li><span>Exactitud</span><span class="mono faint">sobre el set dorado</span></li>
+            <li><span>Varianza</span><span class="mono faint">entre corridas</span></li>
+            <li><span>Costo</span><span class="mono faint">por respuesta</span></li>
+            <li><span>Latencia</span><span class="mono faint">por respuesta</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================= modules -->
+    <section class="block module" data-shape="grid" id="m1">
+      <p class="label"><span class="accent">Módulo 01</span> · Sesiones 1–2</p>
+      <h2 class="title">Fundamentos de LLMs para Análisis de Datos</h2>
+      <p class="body dim">No es cómo funciona un transformer: es lo que necesitas saber del modelo cuando lo que sale es un número.</p>
+      <div class="sessions">
+        <article class="session">
+          <p class="num">01</p>
+          <h3>El LLM como instrumento de medición en datos</h3>
+          <ul class="bullets small">
+            <li><strong>Lab nanoGPT:</strong> entrenas en CPU un modelo de caracteres mínimo, basado en nanoGPT de Andrej Karpathy, con sumas (<code>23+45=68</code>) y descripciones de transacciones. Acierta las sumas que vio, falla las nuevas e inventa filas creíbles. Aprendió cómo se ven los datos, no qué es verdad.</li>
+            <li>Tokens aplicados a números, fechas y tablas; cuántas filas caben y cuánto cuesta.</li>
+            <li>No determinismo medido: la misma pregunta 20 veces.</li>
+            <li>Salidas estructuradas como contrato con el pipeline.</li>
+          </ul>
+          <p class="deliv"><span class="label">Entregable</span> mini-modelo entrenado + marcador v0</p>
+        </article>
+        <article class="session">
+          <p class="num">02</p>
+          <h3>Elegir modelo para datos: costo, contexto y exactitud</h3>
+          <ul class="bullets small">
+            <li>Tres familias: modelos de frontera, pequeños u open-weights, y <strong>modelos de decisión (System One)</strong> como <em>Jev</em> de TypeSafe, que responden con una etiqueta, un puntaje o una probabilidad, no con texto.</li>
+            <li>Regla práctica: juicio con categorías fijas, modelo de decisión; aritmética, conteos o fechas, código.</li>
+            <li>API, dentro del warehouse o local; privacidad en industrias reguladas.</li>
+            <li>El benchmark público no responde tu pregunta: tu set dorado sí.</li>
+          </ul>
+          <p class="deliv"><span class="label">Entregable</span> memo de selección de modelo con números</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="block module" data-shape="ring" id="m2">
+      <p class="label"><span class="accent">Módulo 02</span> · Sesiones 3–4</p>
+      <h2 class="title">LLMs vía Chat y RAG para Datos</h2>
+      <div class="sessions">
+        <article class="session">
+          <p class="num">03</p>
+          <h3>Chat e ingeniería de prompts para datos</h3>
+          <ul class="bullets small">
+            <li>El prompt como artefacto versionado y medido.</li>
+            <li>Esquema, diccionario y ejemplos como contexto para text-to-SQL.</li>
+            <li>Ante dos definiciones de "cliente activo", el modelo pregunta en vez de escoger.</li>
+          </ul>
+          <p class="deliv"><span class="label">Entregable</span> prompt v1 medido en el marcador</p>
+        </article>
+        <article class="session">
+          <p class="num">04</p>
+          <h3>Introducción a RAG para datos</h3>
+          <ul class="bullets small">
+            <li>RAG recupera definiciones y documentos, nunca totales.</li>
+            <li>Chunking, embeddings y búsqueda híbrida sobre diccionarios y tickets.</li>
+            <li>Medir la recuperación antes que la respuesta.</li>
+          </ul>
+          <p class="deliv"><span class="label">Entregable</span> índice + tasa de acierto de recuperación</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="block module" data-shape="swarm" id="m3">
+      <p class="label"><span class="accent">Módulo 03</span> · Sesiones 5–6</p>
+      <h2 class="title">LLMs vía Copilotos y CLIs para Datos</h2>
+      <div class="sessions">
+        <article class="session">
+          <p class="num">05</p>
+          <h3>Copilotos en entornos de datos</h3>
+          <ul class="bullets small">
+            <li>Notebooks, editores SQL y modelos de transformación.</li>
+            <li>Revisar un diff generado por IA y los tests que atrapan sus errores.</li>
+            <li>Cuándo el copiloto acelera y cuándo te frena.</li>
+          </ul>
+          <p class="deliv"><span class="label">Entregable</span> capa de modelos con tests en verde</p>
+        </article>
+        <article class="session">
+          <p class="num">06</p>
+          <h3>CLIs y agentes para datos</h3>
+          <ul class="bullets small">
+            <li>Ya no usar un agente: configurarlo. AGENTS.md por directorio, skills y comandos.</li>
+            <li>Tu propio servidor MCP: solo lectura, límite de filas, enmascarado de PII, frescura de datos.</li>
+            <li>Permisos y hooks: qué ejecuta solo y qué requiere aprobación.</li>
+          </ul>
+          <p class="deliv"><span class="label">Entregable</span> agente + servidor MCP propios</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="block module" data-shape="one" id="m4">
+      <p class="label"><span class="accent">Módulo 04</span> · Sesiones 7–8</p>
+      <h2 class="title">LLMs vía APIs y Productos en Data Warehouses</h2>
+      <div class="sessions">
+        <article class="session">
+          <p class="num">07</p>
+          <h3>LLMs vía APIs</h3>
+          <ul class="bullets small">
+            <li>Lotes, concurrencia, salidas estructuradas y reintentos con tope de gasto.</li>
+            <li><strong>LLM vs modelo de decisión:</strong> la misma clasificación de tickets con un LLM y con Jev. Exactitud, salidas inválidas, varianza y costo por 1,000 filas.</li>
+            <li>Lo que advierten sus propios autores, puesto a prueba: el orden de las opciones y la aritmética.</li>
+          </ul>
+          <p class="deliv"><span class="label">Entregable</span> pipeline de enriquecimiento con reporte de costo</p>
+        </article>
+        <article class="session">
+          <p class="num">08</p>
+          <h3>Productos en data warehouses</h3>
+          <ul class="bullets small">
+            <li>Funciones de IA en SQL dentro del warehouse.</li>
+            <li>Text-to-SQL como producto, configurado con un modelo semántico y medido.</li>
+            <li>Comparación honesta: producto del vendor vs lo que construiste.</li>
+          </ul>
+          <p class="deliv"><span class="label">Entregable</span> comparativa producto vs propio</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="block module" data-shape="split" id="m5">
+      <p class="label"><span class="accent">Módulo 05</span> · Sesiones 9–10</p>
+      <h2 class="title">Evaluaciones (Evals) para Sistemas de IA en Datos</h2>
+      <div class="sessions">
+        <article class="session">
+          <p class="num">09</p>
+          <h3>Introducción a evals</h3>
+          <ul class="bullets small">
+            <li>Del marcador a una suite de evals.</li>
+            <li>Evaluar SQL ejecutándolo: se comparan resultados, no texto.</li>
+            <li>Leer trazas y armar una taxonomía de errores.</li>
+          </ul>
+          <p class="deliv"><span class="label">Entregable</span> suite de evals + taxonomía de errores</p>
+        </article>
+        <article class="session">
+          <p class="num">10</p>
+          <h3>Evals avanzadas y Human-Model Eval</h3>
+          <ul class="bullets small">
+            <li>LLM como juez, calibrado contra etiquetas humanas.</li>
+            <li>Prueba de consenso: varios modelos, una pregunta, ¿cuántas respuestas?</li>
+            <li>Evals de regresión en CI.</li>
+          </ul>
+          <p class="deliv"><span class="label">Entregable</span> juez calibrado + suite en CI</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="block module" data-shape="timeline" id="m6">
+      <p class="label"><span class="accent">Módulo 06</span> · Sesiones 11–12</p>
+      <h2 class="title">Flujos Avanzados, Equipos</h2>
+      <div class="sessions">
+        <article class="session">
+          <p class="num">11</p>
+          <h3>IA en equipos de datos y warehouses avanzados</h3>
+          <ul class="bullets small">
+            <li>La capa semántica como código: métricas con dueño, versión y pruebas.</li>
+            <li>Gobierno, linaje y auditoría de lo que hizo el agente.</li>
+            <li>Producción: frescura, costo, calidad y cambios de versión del modelo.</li>
+          </ul>
+          <p class="deliv"><span class="label">Entregable</span> sistema listo para el proyecto final</p>
+        </article>
+        <article class="session">
+          <p class="num">12</p>
+          <h3>Proyecto final y futuro de IA en datos</h3>
+          <ul class="bullets small">
+            <li>Presentaciones de proyectos.</li>
+            <li>Calificación sobre la parte oculta del set dorado.</li>
+            <li>Predicciones del grupo, por escrito, para revisarlas después.</li>
+          </ul>
+          <p class="deliv"><span class="label">Entregable</span> tu proyecto final, presentado</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================= project -->
+    <section class="block" data-shape="converge">
+      <p class="label accent">Proyecto final</p>
+      <h2 class="title">Un analista agéntico <em>verificable</em></h2>
+      <ol class="steps">
+        <li><span class="mono faint">M1</span> Modelo elegido con números.</li>
+        <li><span class="mono faint">M2</span> Prompting y RAG sobre definiciones.</li>
+        <li><span class="mono faint">M3</span> Agente con herramientas y permisos propios.</li>
+        <li><span class="mono faint">M4</span> Enriquecimiento con costo controlado: modelo de decisión, LLM o SQL, justificado por tarea.</li>
+        <li><span class="mono faint">M5</span> Evals en CI y juez calibrado.</li>
+        <li><span class="mono faint">M6</span> Capa semántica y monitoreo.</li>
+      </ol>
+      <p class="body dim">Se califica con exactitud sobre preguntas que nadie vio, varianza, costo por respuesta y la calidad del análisis de errores.</p>
+      <div class="ctas">
+        <a class="btn" href="https://codigofacilito.com/programas/ia-datos" target="_blank" rel="noopener noreferrer">Inscripción en Código Facilito <span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <a class="link" href="/">h1sort.com</a>
+      <span class="faint">·</span>
+      <a class="link" href="https://github.com/h1sort" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a class="link" href="https://www.linkedin.com/in/h1sort" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+      <a class="link" href="https://x.com/h1sort" target="_blank" rel="noopener noreferrer">X</a>
+    </footer>
+  </main>
+
+  <script src="particles.js"></script>
+  <script src="page.js"></script>
+</body>
+</html>
