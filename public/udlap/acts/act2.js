@@ -73,7 +73,7 @@
           <li><b>Hechos estilizados.</b> Kaldor, N. (1961), «Capital Accumulation and Economic Growth», en Lutz y Hague (eds.), The Theory of Capital.</li>
           <li><b>01 · Usuarios de ChatGPT.</b> OpenAI: 900 M semanales y 50 M+ suscriptores (feb. 2026); 1,000 M semanales (ago. 2026).</li>
           <li><b>01 · Usuarios que pagan.</b> Menlo Ventures, 2025: The State of Consumer AI (≈3%; encuesta a 5,031 adultos en EE. UU., extrapolada). 50 M / 900 M ≈ 6% para ChatGPT.</li>
-          <li><b>02 y 03 · Empleo.</b> Brynjolfsson, E., Chandar, B. y Chen, R. (2025), «Canaries in the Coal Mine? Six Facts about the Recent Employment Effects of Artificial Intelligence», Stanford Digital Economy Lab. Datos de nómina de ADP, EE. UU.</li>
+          <li><b>02 y 03 · Empleo.</b> Brynjolfsson, E., Chandar, B. y Chen, R. (2025), «Canaries in the Coal Mine? Six Facts about the Recent Employment Effects of Artificial Intelligence», Stanford Digital Economy Lab. Datos de nómina de ADP, EE. UU. Incluye el crecimiento del empleo donde la IA aumenta en vez de automatizar.</li>
           <li><b>02 · Puesto de análisis.</b> Descomposición en tareas ilustrativa.</li>
           <li><b>04.</b> Observación propia del autor.</li>
           <li><b>05 · Ramp Glass.</b> Anuncio de E. Glyman (13 oct. 2026): 323 empleados, 6,500+ ediciones, 350+ skills. Cifras reportadas por la empresa.</li>
