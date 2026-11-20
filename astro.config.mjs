@@ -8,7 +8,7 @@ export default defineConfig({
   trailingSlash: 'always',
   integrations: [
     // Decks mounted verbatim under public/ are not Astro pages, so list them here.
-    sitemap({ customPages: ['https://h1sort.com/gbm-ai/', 'https://h1sort.com/claude4aieng/', 'https://h1sort.com/datapub/', 'https://h1sort.com/cide/'] }),
+    sitemap({ customPages: ['https://h1sort.com/gbm-ai/', 'https://h1sort.com/claude4aieng/', 'https://h1sort.com/datapub/', 'https://h1sort.com/cide/', 'https://h1sort.com/ai4data/'] }),
   ],
   build: {
     inlineStylesheets: 'auto',
