@@ -71,13 +71,18 @@
 
     /* 05 construir */
     #s-h5 .f-head h2 { font-size: 76px; }
-    #s-h5 .f-read { top: 790px; }
+    #s-h5 .f-read { top: 826px; }
     #s-h5 .two { position: absolute; left: var(--pad-x); right: var(--pad-x); top: 318px; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; }
     #s-h5 .two .t-label { display: block; font-size: 20px; margin-bottom: 14px; }
-    #s-h5 pre.code { font-size: 23px; line-height: 1.42; border-color: var(--faint); }
+    #s-h5 pre.code { font-size: 21px; line-height: 1.36; padding-top: 14px; padding-bottom: 14px; border-color: var(--faint); }
     #s-h5 pre.code .c { color: var(--faint); }
     #s-h5 pre.code .warn { color: var(--bad); font-weight: 700; }
     #s-h5 .right .t-label { color: var(--accent); }
+    #s-h5 .pyr { margin-top: 16px; display: grid; gap: 5px; }
+    #s-h5 .pyr div { justify-self: center; text-align: center; font-family: var(--mono); font-size: 21px; letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 0; border: var(--stroke) solid var(--faint); }
+    #s-h5 .pyr .l1 { width: 100%; border-color: var(--good); color: var(--good); }
+    #s-h5 .pyr .l2 { width: 70%; }
+    #s-h5 .pyr .l3 { width: 40%; color: var(--faint); border-style: dashed; }
     #s-h5 .glass { border: var(--stroke) solid var(--accent); border-radius: 14px; padding: 18px 28px 22px; }
     #s-h5 .glass .nm { font-size: 36px; font-weight: 500; }
     #s-h5 .glass .nm small { font-size: 26px; color: var(--dim); font-weight: 400; }
@@ -228,17 +233,18 @@
 ...
 <span class="warn">8. ⚠ CUIDADO CON EL PASO 8.
    NUNCA ENVÍES SIN REVISAR.</span></pre>
-            <p style="font-size:30px;margin:14px 0 0;line-height:1.22" data-step="1">Las mayúsculas no son un control. Son la confesión de que <em>el control no existe</em>.</p>
+            <p style="font-size:29px;margin:14px 0 0;line-height:1.22" data-step="1">Las mayúsculas no son un control: confiesan que <em>no existe</em>.</p>
+            <div class="pyr" data-step="2"><div class="l1">código · tipos · reglas que se verifican</div><div class="l2">verificación</div><div class="l3">prosa</div></div>
           </div>
-          <div class="right" data-step="2">
+          <div class="right" data-step="3">
             <span class="t-label">Lo que construye la empresa</span>
             <div class="glass"><div class="nm">Ramp · Glass <small>espacio interno de IA, abierto en oct. 2026</small></div>
               <div class="st"><div><b>323</b><span>personas</span></div><div><b>6,500+</b><span>ediciones</span></div><div><b>350+</b><span>skills</span></div></div>
               <div class="quote">Glyman: cuando alguien encuentra un mejor flujo, todo su equipo lo obtiene.</div></div>
           </div>
         </div>
-        ${read('Tu mejor flujo de trabajo es de la empresa en cuanto lo compartes. El valor se mueve al equipo que construye la plataforma.', 3)}
-        <div class="f-src">Cifras reportadas por Ramp (E. Glyman, oct. 2026), sin auditoría externa · Ejemplo de skill: ilustrativo</div>`,
+        ${read('Tu mejor flujo de trabajo es de la empresa en cuanto lo compartes. El valor se mueve al equipo que construye la plataforma.', 4)}
+        <div class="f-src">Pirámide: Lauren Tan (@poteto), SpaceX AI, charla 2026 · Ramp: cifras de la empresa (oct. 2026) · Skill: ilustrativa</div>`,
     },
     {
       id: 'h6',
