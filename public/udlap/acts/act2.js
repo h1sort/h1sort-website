@@ -77,6 +77,7 @@
           <li><b>02 · Puesto de análisis.</b> Descomposición en tareas ilustrativa.</li>
           <li><b>04.</b> Observación propia del autor.</li>
           <li><b>05 · Ramp Glass.</b> Anuncio de E. Glyman (13 oct. 2026): 323 empleados, 6,500+ ediciones, 350+ skills. Cifras reportadas por la empresa.</li>
+          <li><b>05 · Pirámide de control.</b> Lauren Tan (@poteto), SpaceX AI, charla sobre código con agentes (2026): primero código y reglas deterministas, luego verificación, al final prosa.</li>
           <li><b>06 · OCR.</b> CodeSOTA, OCR capabilities (texto impreso &lt;1% CER; escaneos degradados 5–20% CER); Kargaran et al. (2026), GlotOCR Bench: todos los modelos caen con imágenes degradadas.</li>
         </ul>`,
     },
