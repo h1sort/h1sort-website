@@ -39,7 +39,7 @@
     #s-gracias .g-qr .url { margin-top: 12px; font-family: var(--mono); font-size: 20px; }
 
     #s-fuentes ol { margin: 0; padding-left: 36px; columns: 2; column-gap: 72px; }
-    #s-fuentes li { font-size: 22px; line-height: 1.4; color: var(--dim); margin: 0 0 16px; break-inside: avoid; }
+    #s-fuentes li { font-size: 21px; line-height: 1.4; color: var(--dim); margin: 0 0 16px; break-inside: avoid; }
     #s-fuentes li b { color: var(--fg); font-weight: 500; }
   `);
 
@@ -73,19 +73,17 @@
       label: 'Lab · 15 min',
       particles: { shape: 'swarm', opacity: 0.12 },
       html: `
+        ${Timer.html(15)}
         <div class="t-label">Lab · 15 minutos</div>
         <h2 class="t-title">Primera corrida contra el set dorado</h2>
         <div class="lab2">
-<pre class="code"><span class="c"># la tabla completa (500 filas ≈ 18 mil tokens)
-# va en el prompt de cada pregunta</span>
-cd ai4data/sesiones/01/lab-marcador
-python marcador.py \\
-  --precio-entrada 0.15 \\
-  --precio-salida 0.60 \\
-  --k 3
+<pre class="code"><span class="c"># la tabla completa (500 filas ≈ 18 mil
+# tokens) va en el prompt de cada pregunta</span>
+uv run sesiones/01/lab-marcador/marcador.py
 
-<span class="c"># precios en USD por millón de tokens:
-# los de tu proveedor y tu modelo</span></pre>
+<span class="c"># antes, en .env: LLM_PRECIO_ENTRADA y
+# LLM_PRECIO_SALIDA (USD por millón de
+# tokens); 0 y 0 si usas Ollama</span></pre>
           <div class="r">
             <p class="t-small">10 preguntas × 3 corridas = 30 llamadas.</p>
             <p class="t-small">Sale <span class="mono accent">marcador_v0.json</span> con tus cuatro números. Súbelo a tu fork: es tu entregable.</p>
@@ -170,10 +168,13 @@ python marcador.py \\
         <ol>
           <li><b>nanoGPT</b>, Andrej Karpathy, github.com/karpathy/nanoGPT (MIT). Su README recomienda nanochat desde nov 2025.</li>
           <li><b>Resultados del lab de nanoGPT</b>: corrida propia, 21 nov 2026, CPU de 2 núcleos, semillas fijas. Scripts en sesiones/01/lab-nanogpt.</li>
-          <li><b>Tokenización</b>: medición propia con gpt-tokenizer (npm), codificaciones o200k_base y cl100k_base. sesiones/01/lab-tokens.</li>
-          <li><b>Filas que caben</b>: aritmética propia con 37.3 tokens por fila del caso (200,000 / 37.3 y 1,000,000 / 37.3), sin instrucciones ni respuesta.</li>
+          <li><b>Tokenización</b>: medición propia con tiktoken (OpenAI), codificaciones o200k_base y cl100k_base. sesiones/01/lab-tokens.</li>
+          <li><b>Filas que caben</b>: aritmética propia con 36.7 tokens por fila del caso (200,000 / 36.7 y 1,000,000 / 36.7), sin instrucciones ni respuesta.</li>
+          <li><b>DDIA</b>: Martin Kleppmann, Designing Data-Intensive Applications, O'Reilly, 2017, 616 páginas. Tokens por libro: estimación con ~3 páginas por cada mil tokens.</li>
           <li><b>No determinismo a temperatura 0</b>: Horace He y Thinking Machines Lab, "Defeating Nondeterminism in LLM Inference", 10 sep 2025. thinkingmachines.ai</li>
           <li><b>Salidas estructuradas</b>: OpenAI, "Introducing Structured Outputs in the API", 6 ago 2024; JSON Schema, json-schema.org.</li>
+          <li><b>Inkling 2 Mini</b>: Thinking Machines Lab, "Introducing Inkling 2 Mini", 20 nov 2026; ficha en Hugging Face (thinkingmachines/Inkling-2-Mini) y en OpenRouter (thinkingmachines/inkling-2-mini).</li>
+          <li><b>Modelos locales</b>: Ollama, ollama.com/library (qwen3, inkling-2-mini).</li>
           <li><b>Caso y set dorado</b>: datos sintéticos generados para el programa. caso/generar_caso.py.</li>
           <li><b>Jev</b>: TypeSafe; detalle y fuentes en la sesión 02.</li>
         </ol>`,

@@ -55,7 +55,8 @@
     #s-lab-nanogpt pre.code { font-size: 23px; line-height: 1.55; }
     #s-lab-nanogpt pre.code .c { color: var(--faint); }
     #s-lab-nanogpt .lb-r .t-small { color: var(--dim); }
-    #s-lab-nanogpt .lb-r .big { font-size: 96px; font-weight: 500; letter-spacing: -0.03em; line-height: 1; margin: 12px 0 6px; }
+    #s-lab-nanogpt .lb-r .big { font-size: 80px; font-weight: 500; letter-spacing: -0.03em; line-height: 1; margin: 10px 0 6px; }
+    #s-lab-nanogpt .lb-m { border-top: 3px solid var(--fg); padding-top: 18px; margin-bottom: 30px; }
 
     #s-perdida .p-chart { position: absolute; left: 230px; top: 250px; }
     #s-perdida .p-r { position: absolute; left: 1330px; top: 260px; width: 480px; }
@@ -72,6 +73,10 @@
     #s-sumas .su-num { margin-top: 54px; font-size: 44px; font-weight: 500; letter-spacing: -0.01em; }
 
     #s-filas .fi { display: grid; grid-template-columns: 560px 1fr; gap: 70px; }
+    #s-filas .pipe { display: flex; align-items: center; gap: 18px; margin: 6px 0 22px; flex-wrap: wrap; }
+    #s-filas .pipe span { font-size: 26px; border: 2px solid var(--faint); border-radius: 999px; padding: 8px 22px; }
+    #s-filas .pipe span.acc { border-color: var(--accent); color: var(--accent); }
+    #s-filas .pipe i { font-style: normal; color: var(--faint); font-size: 30px; }
     #s-filas .fi-m { list-style: none; padding: 0; margin: 0; }
     #s-filas .fi-m li { display: flex; justify-content: space-between; padding: 14px 0; border-top: 2px solid var(--hair); font-size: 30px; }
     #s-filas .fi-m li .v { font-family: var(--mono); }
@@ -111,10 +116,10 @@
       particles: { shape: 'split', opacity: 0.16 },
       html: `
         <div class="t-label">El experimento</div>
-        <h2 class="t-title">Dos datasets, generados para el curso</h2>
+        <h2 class="t-title">Dos modelos, dos datasets generados para el curso</h2>
         <div class="e-cols">
           <div class="e-c">
-            <div class="t-label accent">01 · Sumas</div>
+            <div class="t-label accent">Modelo 1 · Sumas</div>
             <h3>a + b, entre 0 y 99</h3>
 <pre class="code">23+45=68
 7+90=97
@@ -122,7 +127,7 @@
             <p>8,000 pares para entrenar. 2,000 pares <strong>escondidos</strong>: nunca los ve.</p>
           </div>
           <div class="e-c" data-step="1">
-            <div class="t-label accent">02 · Transacciones</div>
+            <div class="t-label accent">Modelo 2 · Transacciones</div>
             <h3>Filas de un comercio ficticio</h3>
 <pre class="code">2026-01-31,CLI-0164,Tortillería Lupita,
   TDC,2,58.00,116.00</pre>
@@ -152,27 +157,25 @@
       particles: { shape: 'swarm', opacity: 0.14 },
       html: `
         <div class="t-label">Lab · 25 minutos</div>
-        <h2 class="t-title" style="margin-bottom:32px">Prepara, entrena, evalúa</h2>
+        <h2 class="t-title" style="margin-bottom:32px">Dos modelos: entrena e inferencia</h2>
+        ${Timer.html(25)}
         <div class="lb">
-<pre class="code"><span class="c"># una vez, en la misma carpeta</span>
-git clone https://github.com/h1sort/ai4data
-git clone https://github.com/karpathy/nanoGPT
-pip install torch numpy
-L=$PWD/ai4data/sesiones/01/lab-nanogpt
+<pre class="code"><span class="c"># antes de clase: clonar ai4data y nanoGPT
+# en la misma carpeta, y correr uv sync</span>
+cd ai4data
+uv run sesiones/01/lab-nanogpt/preparar_datos.py
 
-<span class="c"># datos (semilla fija)</span>
-python $L/preparar_datos.py nanoGPT
+<span class="c"># modelo 1 · sumas</span>
+uv run sesiones/01/lab-nanogpt/entrenar.py sumas
+uv run sesiones/01/lab-nanogpt/evaluar_sumas.py
 
-<span class="c"># entrenar y evaluar</span>
-cd nanoGPT
-python train.py $L/config_sumas.py
-python $L/evaluar_sumas.py .</pre>
+<span class="c"># modelo 2 · transacciones</span>
+uv run sesiones/01/lab-nanogpt/entrenar.py transacciones
+uv run sesiones/01/lab-nanogpt/evaluar_transacciones.py</pre>
           <div class="lb-r">
-            <div class="t-label">Referencia</div>
-            <div class="big">4 min 19 s</div>
-            <div class="t-small">entrenando sumas en una CPU de 2 núcleos. Tu laptop probablemente tarda menos.</div>
-            <div class="t-small" style="margin-top:36px">Mientras entrena, abre <span class="mono accent">model.py</span> y busca dónde se predice el siguiente carácter.</div>
-            <div class="t-small" style="margin-top:28px">¿Terminaste? Repite con <span class="mono">config_transacciones.py</span> y <span class="mono">evaluar_transacciones.py</span>.</div>
+            <div class="lb-m"><div class="t-label accent">Modelo 1 · sumas</div><div class="big">~4 min</div><div class="t-small">entrenar en una CPU de 2 núcleos</div></div>
+            <div class="lb-m"><div class="t-label accent">Modelo 2 · transacciones</div><div class="big">~9 min</div><div class="t-small">déjalo corriendo mientras vemos el modelo 1</div></div>
+            <div class="t-small" style="margin-top:22px">¿Laptop lenta? <span class="mono accent">usar_respaldo.py</span> copia pesos ya entrenados.</div>
           </div>
         </div>`,
     },
@@ -205,7 +208,7 @@ python $L/evaluar_sumas.py .</pre>
       time: 360,
       particles: { shape: 'two', opacity: 0.12 },
       html: `
-        <div class="t-label">Resultado · 500 sumas por grupo</div>
+        <div class="t-label">Modelo 1 · sumas · inferencia con 500 sumas por grupo</div>
         <h2 class="t-title">¿Aprendió a sumar?</h2>
         <div class="su">
           <div><div class="k">Vistas</div><div class="big">92.8%</div><div class="d">pares del entrenamiento</div><div class="eg">16+70=<span class="bad">76</span></div></div>
@@ -220,7 +223,8 @@ python $L/evaluar_sumas.py .</pre>
       time: 360,
       particles: { shape: 'grid', opacity: 0.12 },
       html: () => `
-        <div class="t-label">Resultado · ${TX.n} filas generadas</div>
+        <div class="t-label">Modelo 2 · transacciones</div>
+        <div class="pipe"><span>Entrenamos con 13,000 filas</span><i>→</i><span>Inferencia: le pedimos ${TX.n} filas nuevas</span><i>→</i><span class="acc">Revisamos cada una con código</span></div>
         <h2 class="t-title">Se ven bien. ¿Pasan las reglas del negocio?</h2>
         <div class="fi">
           <ul class="fi-m">
@@ -250,7 +254,7 @@ python $L/evaluar_sumas.py .</pre>
       class: 'center',
       label: 'Pausa',
       particles: { shape: 'ring', opacity: 0.3 },
-      html: `<h2 class="pa">10 min</h2><p class="t-sub" style="margin-top:36px">Si tu entrenamiento de transacciones sigue corriendo, déjalo.</p>`,
+      html: `${Timer.html(10)}<h2 class="pa">10 min</h2><p class="t-sub" style="margin-top:36px">Si tu modelo de transacciones sigue entrenando, déjalo.</p>`,
     },
   ]);
 

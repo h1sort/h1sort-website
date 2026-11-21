@@ -62,6 +62,15 @@
     #s-pregunta .q-seq { font-family: var(--mono); font-size: 64px; margin-top: 70px; color: var(--dim); }
     #s-pregunta .q-seq .tk { display: inline-block; border: 2px solid var(--faint); border-radius: 10px; padding: 4px 18px; margin-right: 10px; }
     #s-pregunta .q-seq .tk.next { border-color: var(--accent); color: var(--accent); }
+
+    #s-instrumento .in { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 10px; border-top: 2px solid var(--hair); }
+    #s-instrumento .in > div { padding: 18px 0; border-bottom: 2px solid var(--hair); font-size: 34px; line-height: 1.25; }
+    #s-instrumento .in .h { font-family: var(--mono); font-size: 22px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); padding: 16px 0; }
+    #s-instrumento .in .a { padding-right: 48px; color: var(--dim); }
+    #s-instrumento .in .a b { color: var(--fg); font-weight: 500; }
+    #s-instrumento .in .b { padding-left: 48px; border-left: 2px solid var(--hair); }
+    #s-instrumento .in .b b { color: var(--accent); font-weight: 500; }
+    #s-instrumento .in-foot { margin-top: 40px; font-size: 36px; max-width: 1560px; line-height: 1.3; }
   `);
 
   Deck.act(0, 'Apertura', [
@@ -182,6 +191,23 @@
       html: `
         <h2 class="q">Si un LLM predice el siguiente token… ¿qué pasa cuando el token es <em>un número</em>?</h2>
         <div class="q-seq" data-step="1"><span class="tk">El</span><span class="tk">total</span><span class="tk">es</span><span class="tk next">¿ ?</span></div>`,
+    },
+    {
+      id: 'instrumento',
+      title: 'Un instrumento de medición',
+      time: 180,
+      particles: { shape: 's1-four', opacity: 0.22 },
+      html: `
+        <div class="t-label">Por qué se llama así la sesión</div>
+        <h2 class="t-title">Un LLM que te da un número es un <em>instrumento de medición</em></h2>
+        <div class="in">
+          <div class="h">Un termómetro</div><div class="h b">Un LLM</div>
+          <div class="a" data-step="1"><b>Exactitud</b> · ¿marca la temperatura real?</div><div class="b" data-step="1"><b>Exactitud</b> · ¿la respuesta es la verdad?</div>
+          <div class="a" data-step="2"><b>Precisión</b> · ¿marca lo mismo dos veces?</div><div class="b" data-step="2"><b>Varianza</b> · ¿contesta lo mismo dos veces?</div>
+          <div class="a" data-step="3"><b>Rango</b> · ¿de cuántos a cuántos grados sirve?</div><div class="b" data-step="3"><b>Rango</b> · ¿con qué preguntas sí funciona?</div>
+          <div class="a" data-step="4"><b>Costo</b> · ¿cuánto cuesta cada lectura?</div><div class="b" data-step="4"><b>Costo y latencia</b> · ¿cuánto pagas y esperas?</div>
+        </div>
+        <p class="in-foot" data-step="5">Nadie usa un termómetro sin su ficha técnica. Hoy le hacemos la ficha al LLM: <em>tu marcador</em>.</p>`,
     },
   ]);
 })();
