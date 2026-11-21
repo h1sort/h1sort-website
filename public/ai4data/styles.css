@@ -95,6 +95,7 @@ code { font-family: var(--mono); font-size: 0.92em; color: var(--accent); white-
 .session .bullets { flex: 1; }
 .deliv { margin: 8px 0 0; padding-top: 16px; border-top: 1px solid var(--hair); font-size: 16px; }
 .deliv .label { display: block; margin: 0 0 6px; font-size: 11px; color: var(--accent); }
+.deck-link { margin: 14px 0 0; font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; }
 
 /* final project */
 .steps { list-style: none; padding: 0; margin: 0 0 32px; counter-reset: none; max-width: 760px; }
