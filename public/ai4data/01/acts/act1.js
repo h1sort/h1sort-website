@@ -52,6 +52,9 @@
     #s-apuesta .ap .q { font-size: 110px; font-weight: 500; color: var(--faint); margin-top: 18px; letter-spacing: -0.03em; }
 
     #s-lab-nanogpt .lb { display: grid; grid-template-columns: 1.3fr 1fr; gap: 56px; }
+    #s-preparar .pp { display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; align-items: start; }
+    #s-preparar .pp pre.code { font-size: 28px; }
+    #s-preparar .tree { font-size: 30px; line-height: 1.5; margin: 14px 0 26px; white-space: pre; }
     #s-lab-nanogpt pre.code { font-size: 23px; line-height: 1.55; }
     #s-lab-nanogpt pre.code .c { color: var(--faint); }
     #s-lab-nanogpt .lb-r .t-small { color: var(--dim); }
@@ -150,6 +153,33 @@
         </div>`,
     },
     {
+      id: 'preparar',
+      title: 'Prepara tu carpeta',
+      time: 300,
+      label: 'Lab · preparación',
+      particles: { shape: 'swarm', opacity: 0.12 },
+      html: `
+        <div class="t-label">Antes del lab · una sola vez</div>
+        <h2 class="t-title" style="margin-bottom:32px">Prepara tu carpeta</h2>
+        ${Timer.html(5)}
+        <div class="pp">
+<pre class="code">mkdir AI4DATA
+cd AI4DATA
+git clone https://github.com/h1sort/ai4data
+git clone https://github.com/karpathy/nanoGPT
+cd ai4data
+uv sync</pre>
+          <div class="pp-r">
+            <div class="t-label accent">Así debe quedar</div>
+<pre class="tree mono">AI4DATA/
+├── ai4data/    ← aquí corres todo
+└── nanoGPT/</pre>
+            <div class="t-small"><span class="mono accent">uv sync</span> instala Python 3.14 y PyTorch. Tarda unos minutos la primera vez.</div>
+            <div class="t-small" style="margin-top:18px">¿Sin uv o git? docs.astral.sh/uv · git-scm.com</div>
+          </div>
+        </div>`,
+    },
+    {
       id: 'lab-nanogpt',
       title: 'Lab · nanoGPT',
       time: 1680,
@@ -160,9 +190,7 @@
         <h2 class="t-title" style="margin-bottom:32px">Dos modelos: entrena e inferencia</h2>
         ${Timer.html(25)}
         <div class="lb">
-<pre class="code"><span class="c"># antes de clase: clonar ai4data y nanoGPT
-# en la misma carpeta, y correr uv sync</span>
-cd ai4data
+<pre class="code"><span class="c"># desde AI4DATA/ai4data (lámina anterior)</span>
 uv run sesiones/01/lab-nanogpt/preparar_datos.py
 
 <span class="c"># modelo 1 · sumas</span>
