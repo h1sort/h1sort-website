@@ -47,9 +47,9 @@
     .lab2 pre.code .c { color: var(--faint); }
     .lab2 .r .t-small { color: var(--dim); }
 
-    #s-modelos-de-otros .mo { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; margin-top: 10px; }
+    #s-modelos-de-otros .mo { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 48px; margin-top: 10px; }
     #s-modelos-de-otros .mo > div { border-top: 3px solid var(--fg); padding-top: 20px; }
-    #s-modelos-de-otros .mo .big { font-size: 130px; font-weight: 500; letter-spacing: -0.04em; line-height: 1; margin: 16px 0 12px; }
+    #s-modelos-de-otros .mo .big { font-size: 110px; font-weight: 500; letter-spacing: -0.04em; line-height: 1; margin: 16px 0 12px; }
     #s-modelos-de-otros .mo p { font-size: 30px; color: var(--dim); line-height: 1.35; margin: 0; }
     #s-modelos-de-otros .mo-foot { margin-top: 50px; font-size: 36px; max-width: 1560px; line-height: 1.3; }
     #s-donde-corre .dc { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; }
@@ -199,35 +199,39 @@ uv run sesiones/01/lab-tokens/tokens.py ruta/a/tu.csv</pre>
         <div class="t-label">De tu modelo a los de otros</div>
         <h2 class="t-title">Mismo objetivo, otra escala</h2>
         <div class="mo">
-          <div><div class="t-label">Tu modelo de sumas</div><div class="big">0.79 M</div><p>parámetros · entrenado en 4 minutos en tu laptop · <span class="mono">out-sumas/ckpt.pt</span>, 3 MB</p></div>
-          <div data-step="1"><div class="t-label accent">Inkling 2 Mini · Thinking Machines</div><div class="big">26.4 B</div><p>parámetros (3.4 B activos por token) · pesos abiertos, publicado el 20 nov 2026 · ~20 GB</p></div>
+          <div><div class="t-label">Tu modelo de sumas</div><div class="big">0.79 M</div><p>parámetros · lo entrenaste tú · <span class="mono">ckpt.pt</span> de 3 MB</p></div>
+          <div data-step="1"><div class="t-label accent">qwen3:1.7b · en tu laptop</div><div class="big">1.7 B</div><p>parámetros · pesos abiertos, cuantizado a 4 bits · 1.4 GB</p></div>
+          <div data-step="2"><div class="t-label">Por API · con tu llave</div><div class="big">¿?</div><p>gpt-6-luna, claude-haiku-5-5 · tamaño no público · pagas por token</p></div>
         </div>
-        <p class="mo-foot" data-step="2">"Pesos abiertos" es eso: el mismo tipo de archivo que tu <span class="mono">ckpt.pt</span>, que cualquiera puede descargar y correr.</p>
-        <div class="cite foot">Thinking Machines Lab, "Introducing Inkling 2 Mini" · ficha en Hugging Face: thinkingmachines/Inkling-2-Mini</div>`,
+        <p class="mo-foot" data-step="3"><em>Cuantizar</em>: guardar cada peso en 4 bits en vez de 16. Cabe en tu laptop y pierde algo de calidad. Va a ser un mal modelo, y eso está bien: lo vamos a medir.</p>
+        <div class="cite foot">ollama.com/library/qwen3 · tamaños de descarga de Ollama</div>`,
     },
     {
       id: 'donde-corre',
-      title: 'Remoto o local',
+      title: 'Local o con tu llave',
       time: 240,
       particles: { shape: 'split', opacity: 0.14 },
       html: `
-        <div class="t-label">Dónde corre el modelo · copia .env.ejemplo a .env y elige una opción</div>
-        <h2 class="t-title" style="margin-bottom:28px">Remoto o en tu laptop</h2>
+        <div class="t-label">Dónde corre el modelo · copia .env.example a .env y elige una opción</div>
+        <h2 class="t-title" style="margin-bottom:28px">En tu laptop, o con tu llave</h2>
         <div class="dc">
           <div>
-            <div class="t-label accent">A · Remoto · OpenRouter</div>
-<pre class="code">LLM_BASE_URL=https://openrouter.ai/api/v1
-LLM_MODEL=thinkingmachines/inkling-2-mini
-LLM_API_KEY=tu-llave</pre>
-            <ul class="bullets t-small"><li>Llave en openrouter.ai; pagas por token.</li><li>Tus datos salen de tu máquina.</li></ul>
+            <div class="t-label accent">A · Local · Ollama · por defecto</div>
+<pre class="code">ollama pull qwen3:1.7b
+<span class="c"># .env</span>
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=qwen3:1.7b</pre>
+            <ul class="bullets t-small"><li>Gratis y tus datos no salen de tu laptop. ollama.com/download</li><li>¿Poca memoria? <span class="mono">qwen3:0.6b</span>, 523 MB.</li></ul>
           </div>
           <div data-step="1">
-            <div class="t-label accent">B · Local · Ollama</div>
-<pre class="code">ollama pull qwen3:4b
-<span class="c"># y en .env:</span>
-LLM_BASE_URL=http://localhost:11434/v1
-LLM_MODEL=qwen3:4b</pre>
-            <ul class="bullets t-small"><li>Gratis y privado; ollama.com/download.</li><li>8 GB RAM: <span class="mono">qwen3:1.7b</span> · 16 GB: <span class="mono">qwen3:4b</span> · Mac de 32 GB: <span class="mono">inkling-2-mini</span></li></ul>
+            <div class="t-label accent">B · OpenAI · C · Anthropic · tu llave</div>
+<pre class="code"><span class="c"># B</span>
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-6-luna
+<span class="c"># C</span>
+LLM_BASE_URL=https://api.anthropic.com/v1
+LLM_MODEL=claude-haiku-5-5</pre>
+            <ul class="bullets t-small"><li>Más capaces; pagas por token.</li><li>Tus datos salen de tu máquina.</li></ul>
           </div>
         </div>`,
     },
@@ -283,8 +287,8 @@ LLM_MODEL=qwen3:4b</pre>
         <h2 class="t-title">Tres fuentes de variación</h2>
         <div class="pv">
           <div><div class="k">01 · Muestreo</div><h3>La temperatura</h3><p>Con temperatura mayor a 0, el modelo <em>elige al azar</em> entre los tokens probables. Igual que nuestro modelo de transacciones, a 0.8.</p></div>
-          <div data-step="1"><div class="k">02 · El servidor</div><h3>El lote compartido</h3><p>Remoto, tu petición se procesa junto con las de otros. Que un laboratorio sepa arreglarlo no significa que el servicio lo tenga activado.</p></div>
-          <div data-step="2"><div class="k">03 · El razonamiento</div><h3>Piensa antes de contestar</h3><p>Inkling 2 Mini genera cientos de tokens antes de la respuesta. Un token distinto al principio cambia todo el camino.</p></div>
+          <div data-step="1"><div class="k">02 · El servidor</div><h3>El lote compartido</h3><p>Por API, tu petición se procesa junto con las de otros. Y algunos modelos ya ni aceptan temperatura 0.</p></div>
+          <div data-step="2"><div class="k">03 · El razonamiento</div><h3>Piensa antes de contestar</h3><p>qwen3 y los modelos de API generan cientos de tokens antes de la respuesta. Un token distinto al principio cambia todo el camino.</p></div>
         </div>
         <p class="pv-foot" data-step="3">En tu laptop, a temperatura 0 y sin nadie más, suele repetirse. <em>Suele</em>: pruébalo, no lo supongas.</p>`,
     },
@@ -299,15 +303,15 @@ LLM_MODEL=qwen3:4b</pre>
         <div class="t-label">Lab · 8 minutos</div>
         <h2 class="t-title">Corre tus 20</h2>
         <div class="lab2">
-<pre class="code"><span class="c"># .env listo: opción A (Inkling 2 Mini en
-# OpenRouter) u opción B (Ollama local)</span>
+<pre class="code"><span class="c"># .env listo: A (qwen3 local), B (OpenAI)
+# o C (Anthropic)</span>
 uv run sesiones/01/lab-veinte/veinte.py --n 20
 
 <span class="c"># ¿y a temperatura 0?</span>
 uv run sesiones/01/lab-veinte/veinte.py --n 20 --temperatura 0</pre>
           <div class="r">
-            <p class="t-small">Anota en el chat: modelo, remoto o local, distintas, consenso y exactitud.</p>
-            <p class="t-small">¿A temperatura 0 quedó en una sola respuesta? ¿Remoto y local se comportan igual?</p>
+            <p class="t-small">Anota en el chat: modelo, local o API, distintas, consenso y exactitud.</p>
+            <p class="t-small">¿A temperatura 0 quedó en una sola respuesta? ¿Tu qwen3 local y el modelo de API se comportan igual?</p>
           </div>
         </div>`,
     },
