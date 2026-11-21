@@ -66,9 +66,11 @@ window.Deck = (() => {
     addEventListener('hashchange', () => { const [i, s] = parseHash(); if (i !== idx || s !== step) go(i, s); });
     // Tap/click: left 30% of the screen goes back, the rest goes forward.
     $('#stage').addEventListener('click', (e) => {
-      if (e.target.closest('a,button,video,input')) return;
+      if (e.target.closest('a,button,video,input,pre.code')) return;   // a code block is for selecting and copying
+      if (String(getSelection())) return;                                   // ending a text selection is not a click
       if (e.clientX < innerWidth * 0.3) prev(); else next();
     });
+    addCopyButtons();
     addSwipeNav();
     if (PUBLIC) { addWheelNav(); showTouchHint(); } // not while presenting: a stray scroll mustn't skip
     hideCursorWhenIdle();
@@ -190,6 +192,27 @@ window.Deck = (() => {
     else if ((k === 'p' || k === 'P') && !MIRROR) openMirror();
     else if (k === 'o' || k === 'O') openPresenter();                       // old text-only presenter
     else if (k === 't' || k === 'T') { clockStart = Date.now(); renderPresenter(); }
+  }
+
+  // A "Copiar" button on every code block: copying with the mouse + Ctrl+C was changing slides.
+  function addCopyButtons() {
+    document.querySelectorAll('pre.code').forEach((pre) => {
+      const btn = document.createElement('button');
+      btn.className = 'copy'; btn.type = 'button'; btn.textContent = 'Copiar';
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const clone = pre.cloneNode(true); clone.querySelector('.copy').remove();
+        const text = clone.textContent.replace(/^\n+|\s+$/g, '') + '\n';
+        try { await navigator.clipboard.writeText(text); }
+        catch (_) {                                     // file:// or an old browser
+          const ta = document.createElement('textarea'); ta.value = text; document.body.append(ta);
+          ta.select(); document.execCommand('copy'); ta.remove();
+        }
+        btn.textContent = '¡Copiado!'; btn.classList.add('ok');
+        setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('ok'); }, 1500);
+      });
+      pre.append(btn);
+    });
   }
 
   // Swipe left/up = next, right/down = prev (like scrolling a feed).
