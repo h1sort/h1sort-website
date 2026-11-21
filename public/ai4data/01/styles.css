@@ -88,7 +88,10 @@ em { font-style: normal; color: var(--accent); }
 img.fit { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
 
 pre, code { font-family: var(--mono); }
-pre.code { font-size: 24px; line-height: 1.45; margin: 0; padding: 24px 28px; border: var(--stroke) solid var(--hair); border-radius: 14px; white-space: pre; overflow: hidden; }
+pre.code { font-size: 24px; line-height: 1.45; margin: 0; padding: 24px 28px; border: var(--stroke) solid var(--hair); border-radius: 14px; white-space: pre; overflow: visible; position: relative; user-select: text; cursor: text; }
+pre.code .copy { position: absolute; top: 0; right: 20px; transform: translateY(-50%); font: 500 20px/1 var(--mono, monospace); letter-spacing: .04em; color: var(--fg, #fff); background: #000; border: var(--stroke) solid var(--hair); border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+pre.code .copy:hover { border-color: var(--accent, #f5c242); color: var(--accent, #f5c242); }
+pre.code .copy.ok { border-color: var(--accent, #f5c242); color: var(--accent, #f5c242); }
 
 /* ---- SVG primitives (use pathLength="1" with .draw) ----------------------- */
 svg { overflow: visible; }
