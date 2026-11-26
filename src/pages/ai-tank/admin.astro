@@ -244,7 +244,9 @@ import '../../styles/tank.css';
         <div class="ad-podium" aria-label="Podio">
           ${order.map((i) => {
             const r = podium[i];
-            return `<div class="ad-pod ad-pod--${medal[i]}" style="--h:${[150, 112, 84][i]}px">
+            // Color and height follow the API rank, so ties share a step.
+            const step = Math.min(Math.max(r.rank, 1), 3) - 1;
+            return `<div class="ad-pod ad-pod--${medal[step]}" style="--h:${[150, 112, 84][step]}px">
               <span class="ad-pod-name">${esc(r.project.name)}</span>
               <span class="ad-pod-team px-dim">${esc(r.project.team)}</span>
               <span class="ad-pod-score">${num(r.score)}</span>
