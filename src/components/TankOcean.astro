@@ -1,0 +1,22 @@
+---
+// PLACEHOLDER — the real 8-bit ocean canvas is built by the judge-view task.
+// Contract (keep stable): fixed full-viewport background behind content.
+//   dim?: boolean  -> darker, calmer variant for the admin dashboard
+export interface Props {
+  dim?: boolean;
+}
+const { dim = false } = Astro.props;
+---
+
+<div class:list={['tank-ocean', { 'tank-ocean--dim': dim }]} aria-hidden="true"></div>
+
+<style>
+  .tank-ocean {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(#1f7fc4, #0a2858 45%, #050f2e);
+  }
+  .tank-ocean--dim { filter: brightness(0.55); }
+</style>

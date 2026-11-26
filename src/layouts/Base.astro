@@ -8,6 +8,10 @@ export interface Props {
   /** Path for canonical/OG url, e.g. "/cv" */
   path?: string;
   assistant?: boolean;
+  /** Document language, defaults to "en". */
+  lang?: string;
+  /** Keep private tools (AI Tank) out of search engines. */
+  noindex?: boolean;
 }
 
 const {
@@ -15,6 +19,8 @@ const {
   description = 'Carlos Alberto Haro López, AI Engineer & Technical Product Manager. 8+ years designing and shipping end-to-end data & AI solutions across AWS, Azure and GCP.',
   path = '/',
   assistant = true,
+  lang = 'en',
+  noindex = false,
 } = Astro.props;
 
 // Pages are served as directories, so canonical URLs always end in a slash.
@@ -39,7 +45,7 @@ const person = {
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -51,6 +57,7 @@ const person = {
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
