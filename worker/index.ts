@@ -1,10 +1,13 @@
 // Worker entry for h1sort-website (git-connected Workers Builds).
-// The assets layer serves static files, while API and poll short-link routes
-// run through this script first as configured in wrangler.jsonc.
+// The assets layer serves static files, while API, poll short-link and AI Tank
+// judge-link routes run through this script first as configured in
+// wrangler.jsonc. AI Tank lives in ./tank.ts and reuses the helpers exported
+// here (admin session, body parsing, cookies).
 // POST /api/chat proxies the site assistant to the Anthropic API (Claude
 // Haiku) and streams the SSE response through. Its API key stays in a Worker
 // secret and never reaches client code.
 import { SITE_CONTEXT } from './site-context';
+import { handleTankApi, handleTankLink } from './tank';
 
 export interface Env {
   ANTHROPIC_API_KEY: string;
@@ -16,7 +19,7 @@ export interface Env {
 }
 
 // Minimal D1 surface for this Worker, without a broad Worker types dependency.
-interface D1Database {
+export interface D1Database {
   prepare(query: string): D1PreparedStatement;
   batch(statements: D1PreparedStatement[]): Promise<unknown>;
 }
@@ -24,7 +27,7 @@ interface D1Result<T = unknown> {
   results?: T[];
   meta?: { changes?: number };
 }
-interface D1PreparedStatement {
+export interface D1PreparedStatement {
   bind(...values: unknown[]): D1PreparedStatement;
   run(): Promise<D1Result>;
   first<T>(): Promise<T | null>;
@@ -110,6 +113,22 @@ export default {
     }
     if (url.pathname.startsWith('/p/')) {
       return handlePollShortUrl(request, url);
+    }
+    if (url.pathname.startsWith('/api/tank/')) {
+      try {
+        return await handleTankApi(request, env, url);
+      } catch (error) {
+        console.error('tank request failed', error instanceof Error ? error.name : 'unknown error');
+        return json({ error: 'internal error' }, 500);
+      }
+    }
+    if (url.pathname.startsWith('/tank/')) {
+      try {
+        return await handleTankLink(request, env, url);
+      } catch (error) {
+        console.error('tank link failed', error instanceof Error ? error.name : 'unknown error');
+        return json({ error: 'internal error' }, 500);
+      }
     }
     if (url.pathname.startsWith('/api/')) {
       return json({ error: 'not found' }, 404);
@@ -819,7 +838,7 @@ class BodyReadError extends Error {
   }
 }
 
-async function readBoundedJsonObject(
+export async function readBoundedJsonObject(
   request: Request,
   maxBytes: number,
 ): Promise<Record<string, unknown>> {
@@ -869,7 +888,7 @@ async function readBoundedJsonObject(
   return parsed as Record<string, unknown>;
 }
 
-function bodyErrorResponse(error: unknown): Response {
+export function bodyErrorResponse(error: unknown): Response {
   if (error instanceof BodyReadError) return json({ error: error.publicMessage }, error.status);
   throw error;
 }
@@ -879,7 +898,7 @@ function boundedRawString(value: unknown, maxLength: number): string | null {
   return value;
 }
 
-function boundedText(value: unknown, maxLength: number): string | null {
+export function boundedText(value: unknown, maxLength: number): string | null {
   if (typeof value !== 'string') return null;
   const text = value.normalize('NFKC').trim();
   if (!text || text.length > maxLength || /[\u0000-\u001f\u007f]/.test(text)) return null;
@@ -907,7 +926,7 @@ function parseMaxLength(value: unknown): number | null {
   return value;
 }
 
-function requireSameOrigin(request: Request, url: URL): Response | null {
+export function requireSameOrigin(request: Request, url: URL): Response | null {
   const origin = request.headers.get('origin');
   if (!origin) return json({ error: 'origin required' }, 403);
   try {
@@ -918,7 +937,7 @@ function requireSameOrigin(request: Request, url: URL): Response | null {
   return null;
 }
 
-function methodNotAllowed(allow: string): Response {
+export function methodNotAllowed(allow: string): Response {
   return json({ error: 'method not allowed' }, 405, { allow });
 }
 
@@ -935,7 +954,7 @@ function adminAuthConfigured(env: Env): boolean {
     && env.POLLS_ADMIN_PASSWORD.length > 0;
 }
 
-async function requireAdmin(request: Request, env: Env, url: URL): Promise<Response | null> {
+export async function requireAdmin(request: Request, env: Env, url: URL): Promise<Response | null> {
   if (!adminAuthConfigured(env)) return json({ error: 'polls unavailable' }, 503);
   if (!(await hasValidAdminSession(request, env, url))) {
     return json({ error: 'authentication required' }, 401);
@@ -1016,7 +1035,7 @@ function timingSafeBytesEqual(left: Uint8Array, right: Uint8Array): boolean {
   return difference === 0;
 }
 
-function isLocalDevelopment(url: URL): boolean {
+export function isLocalDevelopment(url: URL): boolean {
   return url.hostname === 'localhost'
     || url.hostname.endsWith('.localhost')
     || url.hostname === '127.0.0.1'
@@ -1031,16 +1050,16 @@ function voterCookieName(url: URL): string {
   return isLocalDevelopment(url) ? 'polls_voter_dev' : '__Host-polls_voter';
 }
 
-function serializeCookie(name: string, value: string, maxAge: number, url: URL): string {
+export function serializeCookie(name: string, value: string, maxAge: number, url: URL): string {
   const secure = isLocalDevelopment(url) ? '' : '; Secure';
   return `${name}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
 }
 
-function clearCookie(name: string, url: URL): string {
+export function clearCookie(name: string, url: URL): string {
   return serializeCookie(name, '', 0, url);
 }
 
-function getCookie(request: Request, name: string): string | null {
+export function getCookie(request: Request, name: string): string | null {
   const header = request.headers.get('cookie');
   if (!header) return null;
   for (const part of header.split(';')) {
@@ -1051,7 +1070,7 @@ function getCookie(request: Request, name: string): string | null {
   return null;
 }
 
-function randomToken(bytes: number): string {
+export function randomToken(bytes: number): string {
   const value = new Uint8Array(bytes);
   crypto.getRandomValues(value);
   return encodeBase64Url(value);
@@ -1461,7 +1480,7 @@ async function logTurn(
   await db.batch(statements);
 }
 
-function json(data: unknown, status: number, extraHeaders?: HeadersInit): Response {
+export function json(data: unknown, status: number, extraHeaders?: HeadersInit): Response {
   const headers = new Headers(extraHeaders);
   headers.set('content-type', 'application/json; charset=utf-8');
   headers.set('cache-control', 'no-store');
