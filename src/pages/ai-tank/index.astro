@@ -53,9 +53,8 @@ const finH = FIN.length;
             <span class="logo__ai">AI</span><span class="logo__tank">TANK</span>
           </h1>
         </div>
-        <p class="tagline">Las ideas de IA frente a los tiburones</p>
         <button class="px-btn start-btn" id="startBtn" type="button">START</button>
-        <p class="px-label px-blink press">PRESIONA START</p>
+        <p class="px-label px-blink press">PRESS START</p>
         <p class="notice notice--error" id="titleError" role="alert" hidden></p>
       </section>
 
@@ -167,7 +166,6 @@ const finH = FIN.length;
   .judge .logo__text { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 52px; line-height: 1; letter-spacing: 0.04em; }
   .judge .logo__ai { color: var(--tank-foam); text-shadow: 4px 4px 0 var(--tank-ink), 8px 8px 0 var(--tank-mid); }
   .judge .logo__tank { color: var(--tank-gold); text-shadow: 4px 4px 0 #b8860b, 8px 8px 0 var(--tank-ink); }
-  .judge .tagline { font-size: 26px; color: var(--tank-foam); text-shadow: 2px 2px 0 var(--tank-ink); max-width: 20em; }
   .judge .start-btn { font-size: 18px; padding: 18px 40px; min-width: 220px; }
   .judge .press { margin-top: 4px; color: var(--tank-foam); }
 
@@ -281,7 +279,6 @@ const finH = FIN.length;
   @media (min-width: 760px) {
     .judge .logo__text { font-size: 84px; flex-direction: row; gap: 22px; }
     .judge .logo__fin { width: 140px; }
-    .judge .tagline { font-size: 32px; }
     .judge .card-head { grid-template-columns: auto 1fr auto; }
     .judge .card-head__meta { flex-direction: column; align-items: flex-end; }
     .judge .q__prompt { font-size: 30px; }
