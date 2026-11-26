@@ -1,0 +1,928 @@
+---
+import Base from '../../layouts/Base.astro';
+import TankOcean from '../../components/TankOcean.astro';
+import '../../styles/tank.css';
+---
+
+<Base
+  title="AI Tank · Panel"
+  description="Panel privado de organización de AI Tank."
+  path="/ai-tank/admin"
+  assistant={false}
+  lang="es"
+  noindex
+>
+  <TankOcean dim />
+  <main class="tank ad-page" id="adRoot">
+    <div class="ad-wrap" id="adApp">
+      <p class="ad-loading px-title">CARGANDO<span class="px-blink">_</span></p>
+    </div>
+  </main>
+
+  <script>
+    import QRCode from 'qrcode';
+    import {
+      tankFetch, TankApiError, maxPoints,
+      type TankEventDetail, type TankEventSummary, type TankLeaderboard,
+      type TankLevel, type TankStatus, type TankRankingRow, type TankQuestion,
+    } from '../../lib/tank';
+
+
+
+    type Tab = 'ranking' | 'rubrica' | 'proyectos' | 'jueces' | 'ajustes';
+    const TABS: Array<[Tab, string]> = [
+      ['ranking', 'RANKING'], ['rubrica', 'RÚBRICA'], ['proyectos', 'PROYECTOS'],
+      ['jueces', 'JUECES'], ['ajustes', 'AJUSTES'],
+    ];
+    const STATUS_LABEL: Record<TankStatus, string> = { draft: 'BORRADOR', open: 'ABIERTA', closed: 'CERRADA' };
+    const STATUS_HELP: Record<TankStatus, string> = {
+      draft: 'Los jueces ven "aún no empieza" y no pueden calificar.',
+      open: 'Los jueces pueden calificar y ajustar sus calificaciones.',
+      closed: 'Las calificaciones quedan bloqueadas. El ranking sigue disponible.',
+    };
+
+    interface LevelDraft { label: string; points: string }
+    interface QDraft { prompt: string; levels: LevelDraft[] }
+
+    const app = document.getElementById('adApp') as HTMLElement;
+    const root = document.getElementById('adRoot') as HTMLElement;
+
+    const state = {
+      view: 'loading' as 'loading' | 'login' | 'list' | 'event',
+      events: [] as TankEventSummary[],
+      event: null as TankEventDetail | null,
+      board: null as TankLeaderboard | null,
+      boardAt: null as Date | null,
+      tab: 'ranking' as Tab,
+      msg: '' as string,
+      msgKind: 'error' as 'error' | 'ok',
+      expanded: new Set<string>(),
+      qrOpen: new Set<string>(),
+      qrCache: new Map<string, string>(),
+      drafts: new Map<string, QDraft>(),
+      busy: false,
+    };
+
+    // ---------- helpers ----------
+    const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+    const num = (n: number | null | undefined, d = 1) =>
+      n == null ? '–' : n.toLocaleString('es-MX', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const pct = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(1)}%`;
+    const when = (iso: string | null) => {
+      if (!iso) return null;
+      const d = new Date(iso.includes('T') || iso.endsWith('Z') ? iso : iso.replace(' ', 'T') + 'Z');
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    };
+    const chip = (s: TankStatus) => `<span class="px-chip px-chip--${s}">${STATUS_LABEL[s]}</span>`;
+    const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+    function setMsg(text: string, kind: 'error' | 'ok' = 'error') {
+      state.msg = text; state.msgKind = kind;
+      const el = document.getElementById('adMsg');
+      if (el) { el.textContent = text; el.className = `ad-msg ad-msg--${kind}`; el.hidden = !text; }
+    }
+    const msgBar = () => `<p class="ad-msg ad-msg--${state.msgKind}" id="adMsg" role="alert" ${state.msg ? '' : 'hidden'}>${esc(state.msg)}</p>`;
+
+    async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+      return tankFetch<T>(path, {
+        method,
+        ...(body !== undefined ? { body: JSON.stringify(body) } : method !== 'GET' ? { body: '{}' } : {}),
+      });
+    }
+
+    /** Runs an async action with global busy state and error display. */
+    async function run(fn: () => Promise<void>): Promise<boolean> {
+      if (state.busy) return false;
+      state.busy = true; root.classList.add('ad-busy');
+      setMsg('');
+      try { await fn(); return true; }
+      catch (e) {
+        if (e instanceof TankApiError && e.status === 401 && state.view !== 'login') { goLogin('Tu sesión expiró. Entra de nuevo.'); return false; }
+        setMsg(e instanceof Error ? e.message : 'Algo salió mal');
+        return false;
+      } finally {
+        state.busy = false; root.classList.remove('ad-busy');
+      }
+    }
+
+    // ---------- views ----------
+    function render() {
+      if (state.view === 'login') app.innerHTML = loginView();
+      else if (state.view === 'list') app.innerHTML = listView();
+      else if (state.view === 'event' && state.event) app.innerHTML = eventView();
+      void paintQrs();
+    }
+
+    function goLogin(message = '') {
+      state.view = 'login'; state.event = null;
+      history.replaceState(null, '', location.pathname);
+      render(); setMsg(message);
+    }
+
+    function loginView() {
+      return `
+        <section class="ad-login px-panel">
+          <h1 class="px-title ad-h1">PANEL DE TIBURONES</h1>
+          <p class="px-dim">Acceso exclusivo para organizadores de AI Tank.</p>
+          <form data-form="login" class="ad-form">
+            <label class="px-label" for="adUser">Usuario</label>
+            <input class="px-input" id="adUser" name="username" value="h1sort" autocomplete="username" required />
+            <label class="px-label" for="adPass">Contraseña</label>
+            <input class="px-input" id="adPass" name="password" type="password" autocomplete="current-password" required />
+            ${msgBar()}
+            <button class="px-btn" type="submit">ENTRAR</button>
+          </form>
+        </section>`;
+    }
+
+    function topbar(sub: string, extra = '') {
+      return `
+        <header class="ad-top">
+          <div>
+            <p class="px-label">AI TANK · PANEL</p>
+            ${sub}
+          </div>
+          <div class="ad-top-actions">
+            ${extra}
+            <button class="px-btn px-btn--ghost px-btn--small" data-action="logout">SALIR</button>
+          </div>
+        </header>`;
+    }
+
+    function listView() {
+      const items = state.events.map((e) => `
+        <li>
+          <button class="ad-event-row" data-action="open" data-id="${esc(e.id)}">
+            <span class="ad-event-title">${esc(e.title)}</span>
+            ${chip(e.status)}
+            <span class="ad-event-counts px-dim">${plural(e.projects, 'proyecto', 'proyectos')} · ${plural(e.judges, 'juez', 'jueces')} · ${plural(e.categories, 'categoría', 'categorías')}</span>
+          </button>
+        </li>`).join('');
+      return `
+        ${topbar('<h1 class="px-title ad-h1">EDICIONES</h1>')}
+        ${msgBar()}
+        <section class="px-panel ad-section">
+          <h2 class="px-label">NUEVA EDICIÓN</h2>
+          <form data-form="newEvent" class="ad-inline-form">
+            <input class="px-input" name="title" placeholder="Título (ej. AI Tank 2027)" maxlength="120" required aria-label="Título de la edición" />
+            <label class="ad-check"><input type="checkbox" name="seedRubric" checked /> Incluir rúbrica sugerida</label>
+            <button class="px-btn" type="submit">CREAR</button>
+          </form>
+        </section>
+        <section class="px-panel ad-section">
+          <h2 class="px-label">TUS EDICIONES</h2>
+          ${items ? `<ul class="ad-events">${items}</ul>` : '<p class="px-dim">Aún no hay ediciones. Crea la primera arriba.</p>'}
+        </section>`;
+    }
+
+    function eventView() {
+      const ev = state.event!;
+      const switcher = (['draft', 'open', 'closed'] as TankStatus[]).map((s) =>
+        `<button class="px-btn px-btn--small ${ev.status === s ? (s === 'open' ? 'px-btn--ok' : s === 'closed' ? 'px-btn--danger' : '') : 'px-btn--ghost'}" data-action="status" data-status="${s}" aria-pressed="${ev.status === s}">${STATUS_LABEL[s]}</button>`).join('');
+      const tabs = TABS.map(([id, label]) =>
+        `<button role="tab" class="ad-tab" id="tab-${id}" aria-selected="${state.tab === id}" aria-controls="adPanel" tabindex="${state.tab === id ? 0 : -1}" data-action="tab" data-tab="${id}">${label}</button>`).join('');
+      return `
+        ${topbar(`<div class="ad-titlebar"><h1 class="px-title ad-h1">${esc(ev.title)}</h1>${chip(ev.status)}</div>`,
+          `<button class="px-btn px-btn--ghost px-btn--small" data-action="back">◄ EDICIONES</button>`)}
+        <div class="ad-status-switch" role="group" aria-label="Estado de la edición"><span class="px-label">ESTADO</span>${switcher}</div>
+        ${msgBar()}
+        <div class="ad-tabs" role="tablist" aria-label="Secciones">${tabs}</div>
+        <section class="ad-panel" id="adPanel" role="tabpanel" aria-labelledby="tab-${state.tab}">${tabBody()}</section>`;
+    }
+
+    function tabBody(): string {
+      const ev = state.event!;
+      switch (state.tab) {
+        case 'ranking': return rankingView();
+        case 'rubrica': return rubricView(ev);
+        case 'proyectos': return projectsView(ev);
+        case 'jueces': return judgesView(ev);
+        default: return settingsView(ev);
+      }
+    }
+    function paintTab() {
+      const p = document.getElementById('adPanel');
+      if (!p) return render();
+      p.setAttribute('aria-labelledby', `tab-${state.tab}`);
+      p.innerHTML = tabBody();
+      document.querySelectorAll<HTMLElement>('.ad-tab').forEach((t) => {
+        const on = t.dataset.tab === state.tab;
+        t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
+      });
+      void paintQrs();
+    }
+
+    /** Two-step confirm control. `attrs` are data-* attributes for the final button. */
+    function confirmBtn(label: string, yesAction: string, attrs: string, cls = 'px-btn--danger') {
+      return `<span class="ad-cf">
+        <button class="px-btn px-btn--small ${cls}" data-action="ask">${label}</button>
+        <span class="ad-cf-yes" hidden><span class="px-label">¿SEGURO?</span>
+          <button class="px-btn px-btn--small ${cls}" data-action="${yesAction}" ${attrs}>SÍ</button>
+          <button class="px-btn px-btn--small px-btn--ghost" data-action="unask">NO</button></span></span>`;
+    }
+
+    // ---------- RANKING ----------
+    function rankingView() {
+      const b = state.board;
+      if (!b) return '<p class="px-dim">Cargando ranking<span class="px-blink">_</span></p>';
+      const scored = b.ranking.filter((r) => r.score != null);
+      const unscored = b.ranking.filter((r) => r.score == null);
+      const toolbar = `
+        <div class="ad-toolbar">
+          <button class="px-btn px-btn--small" data-action="refresh">ACTUALIZAR</button>
+          <button class="px-btn px-btn--small px-btn--ghost" data-action="csv" ${b.ranking.length ? '' : 'disabled'}>EXPORTAR CSV</button>
+          <span class="px-dim ad-stamp">${state.boardAt ? `Actualizado ${state.boardAt.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · se refresca solo cada 15 s` : ''}</span>
+        </div>`;
+      if (!b.ranking.length) return `${toolbar}<p class="px-dim">Aún no hay proyectos. Agrégalos en la pestaña PROYECTOS.</p>`;
+
+      const podium = scored.slice(0, 3);
+      const order = podium.length === 3 ? [1, 0, 2] : podium.map((_, i) => i);
+      const medal = ['gold', 'silver', 'bronze'];
+      const podiumHtml = podium.length ? `
+        <div class="ad-podium" aria-label="Podio">
+          ${order.map((i) => {
+            const r = podium[i];
+            return `<div class="ad-pod ad-pod--${medal[i]}" style="--h:${[150, 112, 84][i]}px">
+              <span class="ad-pod-name">${esc(r.project.name)}</span>
+              <span class="ad-pod-team px-dim">${esc(r.project.team)}</span>
+              <span class="ad-pod-score">${num(r.score)}</span>
+              <span class="ad-pod-block"><span class="px-title">${r.rank}</span></span>
+            </div>`;
+          }).join('')}
+        </div>` : '';
+
+      const catHead = b.categories.map((c) => `<th class="ad-num" title="${esc(c.name)}">${esc(c.name)}<br><span class="px-dim">${pct(c.weightPct)}</span></th>`).join('');
+      const cols = 6 + b.categories.length;
+      const row = (r: TankRankingRow) => {
+        const open = state.expanded.has(r.project.id);
+        const hasData = r.score != null;
+        const cats = b.categories.map((c) => `<td class="ad-num">${r.categoryScores[c.id] == null ? '–' : Math.round(r.categoryScores[c.id]!) + '%'}</td>`).join('');
+        const main = `
+          <tr class="ad-row ${hasData ? '' : 'ad-row--none'}" data-action="toggle-row" data-id="${esc(r.project.id)}" tabindex="0" aria-expanded="${open}">
+            <td class="ad-rank">${hasData ? r.rank : '–'}</td>
+            <td><strong>${esc(r.project.name)}</strong><br><span class="px-dim">${esc(r.project.team)}</span></td>
+            <td class="ad-num ad-score">${hasData ? `<strong>${num(r.score)}</strong><div class="px-progress ad-mini"><span style="width:${Math.max(0, Math.min(100, r.score!))}%"></span></div>` : '<span class="px-chip">Sin votos</span>'}</td>
+            ${cats}
+            <td class="ad-num">${hasData ? `${num(r.avgPoints)} / ${r.maxPoints}` : `– / ${r.maxPoints}`}</td>
+            <td class="ad-num">${r.judgesSubmitted}/${b.judgesTotal}${r.judgesStarted > r.judgesSubmitted ? `<br><span class="px-dim">+${r.judgesStarted - r.judgesSubmitted} en curso</span>` : ''}</td>
+            <td class="ad-caret" aria-hidden="true">${open ? '▲' : '▼'}</td>
+          </tr>`;
+        if (!open) return main;
+        const detail = r.perJudge.length ? `
+          <table class="ad-sub"><thead><tr><th>Juez</th><th class="ad-num">Puntaje</th><th class="ad-num">Puntos</th>
+            ${b.categories.map((c) => `<th class="ad-num">${esc(c.name)}</th>`).join('')}<th>Enviada</th><th>Notas</th></tr></thead><tbody>
+            ${r.perJudge.map((j) => `<tr><td>${esc(j.judgeName)}</td><td class="ad-num">${num(j.score)}</td><td class="ad-num">${num(j.points)}</td>
+              ${b.categories.map((c) => `<td class="ad-num">${j.categoryScores[c.id] == null ? '–' : Math.round(j.categoryScores[c.id]!) + '%'}</td>`).join('')}
+              <td>${esc(when(j.submittedAt) ?? '–')}</td><td class="ad-notes">${j.notes ? esc(j.notes) : '<span class="px-dim">Sin notas</span>'}</td></tr>`).join('')}
+          </tbody></table>` : '<p class="px-dim">Ningún juez ha enviado calificación para este proyecto.</p>';
+        return main + `<tr class="ad-detail"><td colspan="${cols}">${detail}</td></tr>`;
+      };
+
+      return `${toolbar}${podiumHtml}
+        <div class="ad-tablewrap"><table class="ad-table">
+          <thead><tr><th>#</th><th>Proyecto</th><th class="ad-num">Puntaje</th>${catHead}<th class="ad-num">Puntos prom.</th><th class="ad-num">Jueces</th><th></th></tr></thead>
+          <tbody>${[...scored, ...unscored].map(row).join('')}</tbody>
+        </table></div>
+        <p class="px-dim ad-foot">Puntaje: 0 a 100, ponderado por categoría y promediado entre calificaciones enviadas. Haz clic en una fila para ver el detalle por juez.</p>`;
+    }
+
+    function paintRanking() {
+      if (state.tab !== 'ranking') return;
+      const p = document.getElementById('adPanel');
+      if (p) p.innerHTML = rankingView();
+    }
+
+    async function loadBoard() {
+      if (!state.event) return;
+      state.board = await api<TankLeaderboard>(`/api/tank/admin/events/${state.event.id}/leaderboard`);
+      state.boardAt = new Date();
+      paintRanking();
+    }
+
+    function csvCell(v: unknown) {
+      let s = String(v ?? '');
+      if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+      return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }
+    function exportCsv() {
+      const b = state.board; if (!b) return;
+      const head = ['Posición', 'Proyecto', 'Equipo', 'Puntaje (0-100)',
+        ...b.categories.map((c) => `${c.name} (%)`), 'Puntos promedio', 'Puntos máximos', 'Jueces enviados', 'Jueces iniciados', 'Jueces totales'];
+      const lines = [head, ...b.ranking.map((r) => [
+        r.score == null ? '' : r.rank, r.project.name, r.project.team, r.score == null ? '' : num(r.score, 1).replace(/,/g, ''),
+        ...b.categories.map((c) => r.categoryScores[c.id] == null ? '' : Math.round(r.categoryScores[c.id]!)),
+        r.avgPoints == null ? '' : r.avgPoints, r.maxPoints, r.judgesSubmitted, r.judgesStarted, b.judgesTotal,
+      ])].map((l) => l.map(csvCell).join(','));
+      const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      const slug = b.event.title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'ai-tank';
+      a.href = URL.createObjectURL(blob); a.download = `ranking-${slug}.csv`;
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    // ---------- RÚBRICA ----------
+    const draftOf = (q: TankQuestion): QDraft => {
+      let d = state.drafts.get(q.id);
+      if (!d) {
+        d = { prompt: q.prompt, levels: q.levels.map((l) => ({ label: l.label, points: String(l.points) })) };
+        state.drafts.set(q.id, d);
+      }
+      return d;
+    };
+
+    function validateLevels(levels: LevelDraft[]): { errors: string[]; parsed: TankLevel[] } {
+      const errors: string[] = [];
+      if (levels.length < 2 || levels.length > 5) errors.push('Debe haber entre 2 y 5 niveles.');
+      const parsed: TankLevel[] = [];
+      levels.forEach((l, i) => {
+        const raw = l.points.trim();
+        const n = Number(raw);
+        if (raw === '' || !Number.isInteger(n) || n < 0 || n > 1000) errors.push(`Nivel ${i + 1}: los puntos deben ser un entero de 0 a 1000.`);
+        if (l.label.length > 40) errors.push(`Nivel ${i + 1}: la etiqueta admite hasta 40 caracteres.`);
+        parsed.push({ label: l.label.trim(), points: n });
+      });
+      if (!errors.length) for (let i = 1; i < parsed.length; i++)
+        if (parsed[i].points <= parsed[i - 1].points) { errors.push(`Los puntos deben ir en orden ascendente (nivel ${i + 1} debe ser mayor que el ${i}).`); break; }
+      return { errors, parsed };
+    }
+
+    function previewHtml(levels: LevelDraft[], idx = 0) {
+      const stops = levels.map((l, i) => `<span class="ad-stop ${i === idx ? 'is-on' : ''}"><i></i><b>${esc(l.label.trim() || '·')}</b><em>${esc(l.points || '0')}</em></span>`).join('');
+      return `<div class="ad-prev-stops" style="--n:${levels.length}">${stops}</div>
+        <input type="range" class="ad-range" min="0" max="${Math.max(0, levels.length - 1)}" step="1" value="${idx}" data-action-input="preview" aria-label="Vista previa del deslizador" />`;
+    }
+
+    function questionHtml(q: TankQuestion, qi: number, qn: number) {
+      const d = draftOf(q);
+      const { errors } = validateLevels(d.levels);
+      const rows = d.levels.map((l, i) => `
+        <div class="ad-level">
+          <span class="px-label">${i + 1}</span>
+          <input class="px-input" data-field="label" data-i="${i}" value="${esc(l.label)}" maxlength="60" placeholder="Etiqueta (opcional)" aria-label="Etiqueta del nivel ${i + 1}" />
+          <input class="px-input ad-pts" data-field="points" data-i="${i}" value="${esc(l.points)}" inputmode="numeric" placeholder="Pts" aria-label="Puntos del nivel ${i + 1}" />
+          <button class="px-btn px-btn--small px-btn--ghost" data-action="lvl-del" data-i="${i}" ${d.levels.length <= 2 ? 'disabled' : ''} aria-label="Quitar nivel ${i + 1}">✕</button>
+        </div>`).join('');
+      return `
+        <div class="ad-question" data-qid="${esc(q.id)}">
+          <div class="ad-q-head">
+            <span class="px-label">PREGUNTA ${qi + 1} · máx. ${maxPoints(q)} pts</span>
+            <span class="ad-q-tools">
+              <button class="px-btn px-btn--small px-btn--ghost" data-action="q-move" data-dir="up" data-id="${esc(q.id)}" ${qi === 0 ? 'disabled' : ''} aria-label="Subir pregunta">▲</button>
+              <button class="px-btn px-btn--small px-btn--ghost" data-action="q-move" data-dir="down" data-id="${esc(q.id)}" ${qi === qn - 1 ? 'disabled' : ''} aria-label="Bajar pregunta">▼</button>
+              ${confirmBtn('ELIMINAR', 'q-del', `data-id="${esc(q.id)}"`)}
+            </span>
+          </div>
+          <textarea class="px-textarea" data-field="prompt" maxlength="300" aria-label="Texto de la pregunta">${esc(d.prompt)}</textarea>
+          <div class="ad-levels">
+            <div class="ad-levels-head"><span class="px-label">NIVELES DEL DESLIZADOR</span><span class="px-dim">Etiqueta y puntos, de menor a mayor</span></div>
+            ${rows}
+            <button class="px-btn px-btn--small px-btn--ghost" data-action="lvl-add" ${d.levels.length >= 5 ? 'disabled' : ''}>+ NIVEL</button>
+          </div>
+          <div class="ad-preview"><span class="px-label">VISTA PREVIA</span><div class="ad-prev" data-prev>${previewHtml(d.levels)}</div></div>
+          <div class="ad-errs" data-errs ${errors.length ? '' : 'hidden'}>${errors.map((e) => `<p>${esc(e)}</p>`).join('')}</div>
+          <button class="px-btn px-btn--small" data-action="q-save" data-id="${esc(q.id)}">GUARDAR PREGUNTA</button>
+        </div>`;
+    }
+
+    function rubricView(ev: TankEventDetail) {
+      const total = ev.categories.reduce((s, c) => s + c.weight, 0);
+      const cats = ev.categories.map((c, ci) => `
+        <article class="px-panel ad-cat">
+          <div class="ad-cat-head">
+            <div class="ad-cat-fields">
+              <label class="px-label" for="cn-${esc(c.id)}">Categoría</label>
+              <input class="px-input" id="cn-${esc(c.id)}" data-cat="${esc(c.id)}" data-cfield="name" value="${esc(c.name)}" maxlength="60" />
+            </div>
+            <div class="ad-cat-weight">
+              <label class="px-label" for="cw-${esc(c.id)}">Peso 0-100</label>
+              <input class="px-input" id="cw-${esc(c.id)}" type="number" min="0" max="100" step="1" data-cat="${esc(c.id)}" data-cfield="weight" value="${c.weight}" />
+            </div>
+            <div class="ad-cat-share" title="Parte del total">
+              <span class="px-label">PARTE DEL TOTAL</span>
+              <div class="px-progress"><span style="width:${Math.max(0, Math.min(100, c.weightPct))}%"></span></div>
+              <strong class="ad-share-num">${pct(c.weightPct)}</strong>
+            </div>
+            <div class="ad-q-tools">
+              <button class="px-btn px-btn--small px-btn--ghost" data-action="c-move" data-dir="up" data-id="${esc(c.id)}" ${ci === 0 ? 'disabled' : ''} aria-label="Subir categoría">▲</button>
+              <button class="px-btn px-btn--small px-btn--ghost" data-action="c-move" data-dir="down" data-id="${esc(c.id)}" ${ci === ev.categories.length - 1 ? 'disabled' : ''} aria-label="Bajar categoría">▼</button>
+              ${confirmBtn('ELIMINAR', 'c-del', `data-id="${esc(c.id)}"`)}
+            </div>
+          </div>
+          ${c.questions.map((q, qi) => questionHtml(q, qi, c.questions.length)).join('') || '<p class="px-dim">Sin preguntas todavía.</p>'}
+          <button class="px-btn px-btn--small px-btn--ghost" data-action="q-add" data-id="${esc(c.id)}">+ PREGUNTA</button>
+        </article>`).join('');
+      return `
+        <p class="ad-note">Los pesos se normalizan: con un total de ${total}, cada categoría aporta su peso dividido entre ese total. <strong>Si cambias puntos, niveles o pesos, el ranking se recalcula</strong> con las calificaciones ya enviadas.</p>
+        ${ev.categories.length ? `<div class="ad-weights" aria-label="Reparto de pesos">${ev.categories.map((c, i) => `<span class="ad-w ad-w--${i % 6}" style="flex:${Math.max(c.weightPct, 0.5)}" title="${esc(c.name)} ${pct(c.weightPct)}">${c.weightPct >= 8 ? esc(c.name) : ''}</span>`).join('')}</div>` : ''}
+        ${cats || '<p class="px-dim">Sin categorías. Agrega la primera.</p>'}
+        <form data-form="newCategory" class="px-panel ad-section ad-inline-form">
+          <input class="px-input" name="name" placeholder="Nueva categoría (ej. VIABILIDAD)" maxlength="60" required aria-label="Nombre de la categoría" />
+          <input class="px-input ad-pts" name="weight" type="number" min="0" max="100" value="25" aria-label="Peso" />
+          <button class="px-btn" type="submit">+ CATEGORÍA</button>
+        </form>`;
+    }
+
+    // ---------- PROYECTOS ----------
+    function projectsView(ev: TankEventDetail) {
+      const items = ev.projects.map((p, i) => `
+        <article class="px-panel ad-item" data-pid="${esc(p.id)}">
+          <div class="ad-grid2">
+            <div><label class="px-label">Nombre</label><input class="px-input" data-pf="name" value="${esc(p.name)}" maxlength="120" /></div>
+            <div><label class="px-label">Equipo</label><input class="px-input" data-pf="team" value="${esc(p.team)}" maxlength="120" /></div>
+          </div>
+          <label class="px-label">Resumen</label>
+          <textarea class="px-textarea" data-pf="summary" maxlength="1000">${esc(p.summary)}</textarea>
+          <div class="ad-actions">
+            <button class="px-btn px-btn--small" data-action="p-save" data-id="${esc(p.id)}">GUARDAR</button>
+            <button class="px-btn px-btn--small px-btn--ghost" data-action="p-move" data-dir="up" data-id="${esc(p.id)}" ${i === 0 ? 'disabled' : ''} aria-label="Subir">▲</button>
+            <button class="px-btn px-btn--small px-btn--ghost" data-action="p-move" data-dir="down" data-id="${esc(p.id)}" ${i === ev.projects.length - 1 ? 'disabled' : ''} aria-label="Bajar">▼</button>
+            ${confirmBtn('ELIMINAR', 'p-del', `data-id="${esc(p.id)}"`)}
+          </div>
+        </article>`).join('');
+      return `
+        <form data-form="newProject" class="px-panel ad-section ad-form">
+          <h2 class="px-label">AGREGAR PROYECTO</h2>
+          <div class="ad-grid2">
+            <input class="px-input" name="name" placeholder="Nombre del proyecto" maxlength="120" required aria-label="Nombre" />
+            <input class="px-input" name="team" placeholder="Equipo" maxlength="120" aria-label="Equipo" />
+          </div>
+          <textarea class="px-textarea" name="summary" placeholder="Resumen (opcional)" maxlength="1000" aria-label="Resumen"></textarea>
+          <div><button class="px-btn" type="submit">+ AGREGAR</button></div>
+        </form>
+        <p class="px-dim">${plural(ev.projects.length, 'proyecto', 'proyectos')}. El orden aquí es el que ven los jueces.</p>
+        ${items}`;
+    }
+
+    // ---------- JUECES ----------
+    function judgesView(ev: TankEventDetail) {
+      const N = ev.projects.length;
+      const items = ev.judges.map((j) => {
+        const seen = when(j.lastSeenAt);
+        const qr = state.qrOpen.has(j.id);
+        return `
+        <article class="px-panel ad-item ad-judge" data-jid="${esc(j.id)}">
+          <div class="ad-judge-top">
+            <input class="px-input ad-judge-name" data-jname value="${esc(j.name)}" maxlength="80" aria-label="Nombre del juez" />
+            <button class="px-btn px-btn--small px-btn--ghost" data-action="j-rename" data-id="${esc(j.id)}">RENOMBRAR</button>
+          </div>
+          <div class="ad-link"><code>${esc(j.link)}</code></div>
+          <p class="px-dim">${seen ? `Última visita: ${esc(seen)}` : 'Aún no ha entrado'} · Enviados: <strong>${j.submitted}/${N}</strong> proyectos</p>
+          <div class="ad-actions">
+            <button class="px-btn px-btn--small" data-action="copy" data-text="${esc(j.link)}">COPIAR</button>
+            <button class="px-btn px-btn--small px-btn--ghost" data-action="qr" data-id="${esc(j.id)}" aria-expanded="${qr}">${qr ? 'OCULTAR QR' : 'MOSTRAR QR'}</button>
+            ${confirmBtn('ROTAR ENLACE', 'j-rotate', `data-id="${esc(j.id)}"`, 'px-btn--ghost')}
+            ${confirmBtn('ELIMINAR', 'j-del', `data-id="${esc(j.id)}"`)}
+          </div>
+          <p class="ad-warn" hidden>Rotar crea un enlace nuevo y el anterior deja de funcionar de inmediato.</p>
+          ${qr ? `<div class="ad-qr"><img data-qr="${esc(j.link)}" alt="Código QR del enlace de ${esc(j.name)}" width="280" height="280" /><span class="px-dim">${esc(j.name)}</span></div>` : ''}
+        </article>`;
+      }).join('');
+      return `
+        <form data-form="newJudge" class="px-panel ad-section ad-inline-form">
+          <input class="px-input" name="name" placeholder="Nombre del juez o jueza" maxlength="80" required aria-label="Nombre del juez" />
+          <button class="px-btn" type="submit">+ AGREGAR JUEZ</button>
+        </form>
+        <div class="ad-toolbar">
+          <span class="px-dim">${plural(ev.judges.length, 'juez', 'jueces')}. Cada enlace es personal: no se comparte.</span>
+          <button class="px-btn px-btn--small px-btn--ghost" data-action="copy-all" ${ev.judges.length ? '' : 'disabled'}>COPIAR TODOS LOS ENLACES</button>
+        </div>
+        ${items}`;
+    }
+
+    // ---------- AJUSTES ----------
+    function settingsView(ev: TankEventDetail) {
+      const opts = (['draft', 'open', 'closed'] as TankStatus[]).map((s) => `
+        <div class="ad-status-opt ${ev.status === s ? 'is-on' : ''}">
+          ${chip(s)} <span>${STATUS_HELP[s]}</span>
+          <button class="px-btn px-btn--small ${ev.status === s ? 'px-btn--ghost' : ''}" data-action="status" data-status="${s}" ${ev.status === s ? 'disabled' : ''}>${ev.status === s ? 'ACTUAL' : 'CAMBIAR'}</button>
+        </div>`).join('');
+      return `
+        <form data-form="rename" class="px-panel ad-section ad-inline-form">
+          <div class="ad-grow"><label class="px-label" for="adTitle">Título</label>
+          <input class="px-input" id="adTitle" name="title" value="${esc(ev.title)}" maxlength="120" required /></div>
+          <button class="px-btn" type="submit">GUARDAR</button>
+        </form>
+        <section class="px-panel ad-section"><h2 class="px-label">ESTADO</h2>${opts}</section>
+        <section class="px-panel ad-section ad-danger">
+          <h2 class="px-label">ZONA DE PELIGRO</h2>
+          <p>Eliminar la edición borra proyectos, jueces, rúbrica y todas las calificaciones. No se puede deshacer.</p>
+          <form data-form="deleteEvent" class="ad-inline-form">
+            <input class="px-input" name="confirm" placeholder="Escribe: ${esc(ev.title)}" autocomplete="off" aria-label="Escribe el título para confirmar" />
+            <button class="px-btn px-btn--danger" type="submit">ELIMINAR EDICIÓN</button>
+          </form>
+        </section>`;
+    }
+
+    // ---------- QR ----------
+    async function paintQrs() {
+      const imgs = Array.from(document.querySelectorAll<HTMLImageElement>('img[data-qr]'));
+      await Promise.all(imgs.map(async (img) => {
+        const url = img.dataset.qr!;
+        let src = state.qrCache.get(url);
+        if (!src) {
+          src = await QRCode.toDataURL(url, { width: 280, margin: 2, errorCorrectionLevel: 'M' });
+          state.qrCache.set(url, src);
+        }
+        img.src = src;
+      }));
+    }
+
+    // ---------- data flow ----------
+    function setEvent(ev: TankEventDetail) {
+      state.event = ev;
+      const ids = new Set(ev.categories.flatMap((c) => c.questions.map((q) => q.id)));
+      for (const k of state.drafts.keys()) if (!ids.has(k)) state.drafts.delete(k);
+      // Server is the source of truth after a mutation: reset drafts.
+      state.drafts.clear();
+    }
+    const evPath = (suffix = '') => `/api/tank/admin/events/${state.event!.id}${suffix}`;
+    async function mutate(path: string, method: string, body?: unknown, okMsg = '') {
+      const r = await api<{ event: TankEventDetail }>(path, method, body);
+      setEvent(r.event);
+      if (okMsg) setMsg(okMsg, 'ok');
+      render();
+      if (okMsg) setMsg(okMsg, 'ok');
+    }
+
+    async function loadList() {
+      const r = await api<{ events: TankEventSummary[] }>('/api/tank/admin/events');
+      state.events = r.events; state.view = 'list'; state.event = null; state.board = null;
+      history.replaceState(null, '', location.pathname);
+      render();
+    }
+
+    async function openEvent(id: string) {
+      const [r, board] = await Promise.all([
+        api<{ event: TankEventDetail }>(`/api/tank/admin/events/${id}`),
+        api<TankLeaderboard>(`/api/tank/admin/events/${id}/leaderboard`).catch(() => null),
+      ]);
+      setEvent(r.event); state.board = board; state.boardAt = board ? new Date() : null;
+      state.expanded.clear(); state.qrOpen.clear();
+      const hasScores = !!board?.ranking.some((x) => x.judgesStarted > 0);
+      state.tab = hasScores ? 'ranking' : r.event.projects.length === 0 ? 'proyectos' : 'jueces';
+      state.view = 'event';
+      history.replaceState(null, '', `${location.pathname}?event=${encodeURIComponent(id)}`);
+      render();
+    }
+
+    async function copyText(text: string) {
+      try { await navigator.clipboard.writeText(text); }
+      catch {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.append(ta); ta.select();
+        const ok = document.execCommand('copy'); ta.remove();
+        if (!ok) throw new Error('No se pudo copiar. Selecciona el enlace y cópialo a mano.');
+      }
+    }
+
+    // ---------- events ----------
+    const fval = (form: HTMLFormElement, name: string) => (form.elements.namedItem(name) as HTMLInputElement | null);
+
+    app.addEventListener('submit', (e) => {
+      const form = e.target as HTMLFormElement;
+      const kind = form.dataset.form; if (!kind) return;
+      e.preventDefault();
+      const f = (n: string) => fval(form, n)?.value.trim() ?? '';
+      void run(async () => {
+        switch (kind) {
+          case 'login': {
+            try {
+              await api('/api/polls/auth/login', 'POST', { username: f('username'), password: fval(form, 'password')!.value });
+            } catch (err) {
+              if (err instanceof TankApiError && err.status === 401) throw new Error('Usuario o contraseña incorrectos.');
+              if (err instanceof TankApiError && err.status === 429) throw new Error('Demasiados intentos. Espera unos minutos e inténtalo otra vez.');
+              throw err;
+            }
+            await start(); break;
+          }
+          case 'newEvent': {
+            const r = await api<{ event: TankEventDetail }>('/api/tank/admin/events', 'POST', { title: f('title'), seedRubric: fval(form, 'seedRubric')!.checked });
+            await openEvent(r.event.id); break;
+          }
+          case 'newCategory':
+            await mutate(evPath('/categories'), 'POST', { name: f('name'), weight: Number(f('weight')) || 0 }); break;
+          case 'newProject':
+            await mutate(evPath('/projects'), 'POST', { name: f('name'), team: f('team'), summary: f('summary') }); break;
+          case 'newJudge':
+            await mutate(evPath('/judges'), 'POST', { name: f('name') }); break;
+          case 'rename':
+            await mutate(evPath(), 'PATCH', { title: f('title') }, 'Título actualizado.'); break;
+          case 'deleteEvent': {
+            if (f('confirm') !== state.event!.title) throw new Error('El título no coincide. Escríbelo exactamente para confirmar.');
+            await api(evPath(), 'DELETE'); await loadList(); break;
+          }
+        }
+      });
+    });
+
+    app.addEventListener('input', (e) => {
+      const t = e.target as HTMLInputElement;
+      const qEl = t.closest<HTMLElement>('[data-qid]');
+      if (t.dataset.actionInput === 'preview') {
+        const d = state.drafts.get(qEl!.dataset.qid!)!;
+        t.parentElement!.querySelectorAll('.ad-stop').forEach((s, i) => s.classList.toggle('is-on', i === Number(t.value)));
+        void d; return;
+      }
+      if (!qEl || !t.dataset.field) return;
+      const d = state.drafts.get(qEl.dataset.qid!); if (!d) return;
+      if (t.dataset.field === 'prompt') { d.prompt = t.value; return; }
+      d.levels[Number(t.dataset.i)][t.dataset.field as 'label' | 'points'] = t.value;
+      refreshQuestionAux(qEl, d);
+    });
+
+    function refreshQuestionAux(qEl: HTMLElement, d: QDraft) {
+      const errs = qEl.querySelector<HTMLElement>('[data-errs]')!;
+      const { errors } = validateLevels(d.levels);
+      errs.hidden = !errors.length;
+      errs.innerHTML = errors.map((x) => `<p>${esc(x)}</p>`).join('');
+      const prev = qEl.querySelector<HTMLElement>('[data-prev]')!;
+      const cur = Number(prev.querySelector<HTMLInputElement>('input')?.value ?? 0);
+      prev.innerHTML = previewHtml(d.levels, Math.min(cur, d.levels.length - 1));
+    }
+
+    app.addEventListener('change', (e) => {
+      const t = e.target as HTMLInputElement;
+      if (t.dataset.cat) {
+        const field = t.dataset.cfield as 'name' | 'weight';
+        const value = field === 'weight' ? Math.max(0, Math.min(100, Number(t.value) || 0)) : t.value.trim();
+        void run(() => mutate(`/api/tank/admin/categories/${t.dataset.cat}`, 'PATCH', { [field]: value }));
+      }
+    });
+
+    app.addEventListener('keydown', (e) => {
+      const t = e.target as HTMLElement;
+      if ((e.key === 'Enter' || e.key === ' ') && t.matches('tr[data-action="toggle-row"]')) { e.preventDefault(); t.click(); }
+      if (t.matches('[role="tab"]') && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+        const ids = TABS.map((x) => x[0]); const i = ids.indexOf(state.tab);
+        state.tab = ids[(i + (e.key === 'ArrowRight' ? 1 : ids.length - 1)) % ids.length];
+        paintTab(); void ensureBoard(); document.getElementById(`tab-${state.tab}`)?.focus();
+      }
+    });
+
+    async function ensureBoard() {
+      if (state.tab === 'ranking') await run(loadBoard);
+    }
+
+    function patchQuestion(qid: string) {
+      const d = state.drafts.get(qid)!;
+      const { errors, parsed } = validateLevels(d.levels);
+      if (errors.length) throw new Error(errors[0]);
+      if (!d.prompt.trim()) throw new Error('La pregunta no puede estar vacía.');
+      return mutate(`/api/tank/admin/questions/${qid}`, 'PATCH', { prompt: d.prompt.trim(), levels: parsed }, 'Pregunta guardada. El ranking se recalcula con los nuevos puntos.');
+    }
+
+    app.addEventListener('click', (e) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
+      if (!el || (el as HTMLButtonElement).disabled) return;
+      const a = el.dataset.action!; const id = el.dataset.id ?? '';
+      const q = el.closest<HTMLElement>('[data-qid]');
+
+      // local-only actions
+      if (a === 'ask') {
+        const cf = el.closest('.ad-cf')!; el.hidden = true;
+        cf.querySelector<HTMLElement>('.ad-cf-yes')!.hidden = false;
+        if (el.textContent === 'ROTAR ENLACE') el.closest('.ad-judge')?.querySelector<HTMLElement>('.ad-warn')?.removeAttribute('hidden');
+        return;
+      }
+      if (a === 'unask') {
+        const cf = el.closest('.ad-cf')!;
+        cf.querySelector<HTMLElement>('.ad-cf-yes')!.hidden = true;
+        cf.querySelector<HTMLElement>('[data-action="ask"]')!.hidden = false;
+        el.closest('.ad-judge')?.querySelector<HTMLElement>('.ad-warn')?.setAttribute('hidden', '');
+        return;
+      }
+      if (a === 'toggle-row') {
+        state.expanded.has(id) ? state.expanded.delete(id) : state.expanded.add(id);
+        paintRanking(); return;
+      }
+      if (a === 'qr') {
+        state.qrOpen.has(id) ? state.qrOpen.delete(id) : state.qrOpen.add(id);
+        paintTab(); return;
+      }
+      if (a === 'lvl-add' || a === 'lvl-del') {
+        const d = state.drafts.get(q!.dataset.qid!)!;
+        if (a === 'lvl-del') d.levels.splice(Number(el.dataset.i), 1);
+        else {
+          const last = Number(d.levels[d.levels.length - 1]?.points);
+          d.levels.push({ label: '', points: String(Number.isFinite(last) ? last + 5 : 0) });
+        }
+        const scroll = window.scrollY; paintTab(); window.scrollTo(0, scroll); return;
+      }
+      if (a === 'tab') {
+        state.tab = el.dataset.tab as Tab; setMsg(''); paintTab(); void ensureBoard(); return;
+      }
+
+      void run(async () => {
+        switch (a) {
+          case 'logout': await api('/api/polls/auth/logout', 'POST'); goLogin(); break;
+          case 'back': await loadList(); break;
+          case 'open': await openEvent(id); break;
+          case 'refresh': await loadBoard(); break;
+          case 'csv': exportCsv(); break;
+          case 'status': await mutate(evPath(), 'PATCH', { status: el.dataset.status }); await loadBoard().catch(() => {}); paintTab(); break;
+          case 'c-move': await mutate(`/api/tank/admin/categories/${id}`, 'PATCH', { move: el.dataset.dir }); break;
+          case 'c-del': await mutate(`/api/tank/admin/categories/${id}`, 'DELETE'); break;
+          case 'q-add': await mutate(`/api/tank/admin/categories/${id}/questions`, 'POST', {
+            prompt: 'Nueva pregunta', levels: [{ label: 'No', points: 0 }, { label: 'Parcial', points: 5 }, { label: 'Sí', points: 10 }] }); break;
+          case 'q-move': await mutate(`/api/tank/admin/questions/${id}`, 'PATCH', { move: el.dataset.dir }); break;
+          case 'q-del': await mutate(`/api/tank/admin/questions/${id}`, 'DELETE'); break;
+          case 'q-save': await patchQuestion(id); break;
+          case 'p-save': {
+            const card = el.closest<HTMLElement>('[data-pid]')!;
+            const g = (k: string) => (card.querySelector<HTMLInputElement>(`[data-pf="${k}"]`)!).value.trim();
+            if (!g('name')) throw new Error('El nombre del proyecto es obligatorio.');
+            await mutate(`/api/tank/admin/projects/${id}`, 'PATCH', { name: g('name'), team: g('team'), summary: g('summary') }, 'Proyecto guardado.'); break;
+          }
+          case 'p-move': await mutate(`/api/tank/admin/projects/${id}`, 'PATCH', { move: el.dataset.dir }); break;
+          case 'p-del': await mutate(`/api/tank/admin/projects/${id}`, 'DELETE'); break;
+          case 'j-rename': {
+            const name = el.closest<HTMLElement>('[data-jid]')!.querySelector<HTMLInputElement>('[data-jname]')!.value.trim();
+            if (!name) throw new Error('El nombre del juez es obligatorio.');
+            await mutate(`/api/tank/admin/judges/${id}`, 'PATCH', { name }, 'Nombre actualizado.'); break;
+          }
+          case 'j-rotate': await mutate(`/api/tank/admin/judges/${id}`, 'PATCH', { rotateToken: true }, 'Enlace rotado. El anterior ya no funciona.'); state.qrOpen.delete(id); break;
+          case 'j-del': await mutate(`/api/tank/admin/judges/${id}`, 'DELETE'); break;
+          case 'copy': await copyText(el.dataset.text ?? ''); flash(el, 'COPIADO'); break;
+          case 'copy-all':
+            await copyText(state.event!.judges.map((j) => `${j.name}: ${j.link}`).join('\n')); flash(el, 'COPIADOS'); break;
+        }
+      });
+    });
+
+    function flash(el: HTMLElement, text: string) {
+      const old = el.textContent; el.textContent = text;
+      setTimeout(() => { if (el.isConnected) el.textContent = old; }, 1400);
+    }
+
+    // auto refresh of the leaderboard
+    setInterval(() => {
+      if (state.view === 'event' && state.tab === 'ranking' && !document.hidden && !state.busy) {
+        loadBoard().catch(() => {});
+      }
+    }, 15000);
+
+    async function start() {
+      const session = await api<{ authenticated: boolean }>('/api/polls/auth/session').catch(() => ({ authenticated: false }));
+      if (!session.authenticated) { goLogin(); return; }
+      const id = new URLSearchParams(location.search).get('event');
+      if (id) {
+        try { await openEvent(id); return; }
+        catch { /* fall through to list */ }
+      }
+      await loadList();
+    }
+
+    void start().catch((e) => { goLogin(e instanceof Error ? e.message : ''); });
+  </script>
+</Base>
+
+<style is:global>
+  .ad-page [hidden] { display: none !important; }
+  .ad-page { position: relative; z-index: 1; min-height: 100svh; background: transparent; padding: 28px 20px 80px; }
+  .ad-wrap { max-width: 1200px; margin: 0 auto; }
+  .ad-page.ad-busy { cursor: progress; }
+  .ad-page.ad-busy .px-btn { opacity: 0.6; pointer-events: none; }
+  .ad-h1 { font-size: clamp(14px, 2.2vw, 22px); margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .ad-loading { padding-top: 20vh; text-align: center; font-size: 14px; }
+  .ad-page label.px-label { display: block; margin: 8px 0 6px; }
+  .ad-page code { font-family: var(--tank-font-body); font-size: 20px; word-break: break-all; }
+
+  .ad-page .ad-login { max-width: 480px; margin: 12vh auto 0; }
+  .ad-login > .px-dim { margin: 0 0 12px; }
+  .ad-form { display: flex; flex-direction: column; gap: 8px; }
+  .ad-form .px-btn { align-self: flex-start; margin-top: 12px; }
+
+  .ad-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  .ad-top-actions { display: flex; gap: 8px; align-items: center; }
+  .ad-titlebar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .ad-status-switch { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .ad-status-switch .px-label { margin-right: 8px; }
+
+  .ad-msg { padding: 10px 14px; margin: 8px 4px; background: var(--tank-ink); border-left: 8px solid var(--tank-coral); color: var(--tank-text); }
+  .ad-msg--ok { border-color: var(--tank-mint); }
+  .ad-note { background: rgba(5,15,46,.7); padding: 10px 14px; border-left: 8px solid var(--tank-gold); margin: 0 4px 14px; }
+
+  .ad-section { margin-bottom: 20px; }
+  .ad-inline-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .ad-inline-form .px-input { flex: 1 1 260px; width: auto; }
+  .ad-inline-form .ad-pts { flex: 0 0 110px; }
+  .ad-grow { flex: 1 1 300px; }
+  .ad-check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .ad-check input { width: 20px; height: 20px; accent-color: var(--tank-gold); }
+
+  .ad-events { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+  .ad-event-row { width: 100%; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; text-align: left; font: inherit; color: var(--tank-text); background: var(--tank-ink); border: 0; padding: 14px 16px; cursor: pointer; box-shadow: inset 0 0 0 4px var(--tank-line); }
+  .ad-event-row:hover, .ad-event-row:focus-visible { box-shadow: inset 0 0 0 4px var(--tank-gold); outline: none; }
+  .ad-event-title { font-size: 26px; flex: 1 1 240px; }
+
+  .ad-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; border-bottom: 4px solid var(--tank-line); }
+  .ad-tab { font-family: var(--tank-font-pixel); font-size: 11px; color: var(--tank-text-dim); background: var(--tank-deep); border: 0; padding: 14px 16px; cursor: pointer; }
+  .ad-tab[aria-selected="true"] { background: var(--tank-gold); color: var(--tank-ink); }
+  .ad-tab:focus-visible { outline: 4px dashed var(--tank-foam); outline-offset: 2px; }
+  .ad-panel { padding: 0 4px; }
+
+  .ad-toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 16px; }
+  .ad-stamp { margin-left: 8px; }
+
+  .ad-podium { display: flex; justify-content: center; align-items: flex-end; gap: 14px; margin: 10px 0 28px; flex-wrap: wrap; }
+  .ad-pod { width: min(250px, 30%); min-width: 150px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
+  .ad-pod-name { font-size: 24px; line-height: 1; overflow-wrap: anywhere; }
+  .ad-pod-score { font-family: var(--tank-font-pixel); font-size: 18px; margin: 6px 0; }
+  .ad-pod-block { width: 100%; height: var(--h); display: flex; align-items: flex-start; justify-content: center; padding-top: 12px; box-shadow: 0 -4px 0 0 var(--tank-ink), 4px 0 0 0 var(--tank-ink), -4px 0 0 0 var(--tank-ink); }
+  .ad-pod-block .px-title { font-size: 22px; color: var(--tank-ink); text-shadow: none; }
+  .ad-pod--gold .ad-pod-block { background: var(--tank-gold); box-shadow: inset 0 -8px 0 #b8860b, 0 -4px 0 0 var(--tank-ink), 4px 0 0 0 var(--tank-ink), -4px 0 0 0 var(--tank-ink); }
+  .ad-pod--gold .ad-pod-score, .ad-pod--gold .ad-pod-name { color: var(--tank-gold); }
+  .ad-pod--silver .ad-pod-block { background: #cfd8e3; box-shadow: inset 0 -8px 0 #8795a6, 0 -4px 0 0 var(--tank-ink), 4px 0 0 0 var(--tank-ink), -4px 0 0 0 var(--tank-ink); }
+  .ad-pod--bronze .ad-pod-block { background: #d18a4a; box-shadow: inset 0 -8px 0 #8a5522, 0 -4px 0 0 var(--tank-ink), 4px 0 0 0 var(--tank-ink), -4px 0 0 0 var(--tank-ink); }
+
+  .ad-tablewrap { overflow-x: auto; background: var(--tank-panel); box-shadow: 0 0 0 4px var(--tank-line), 0 8px 0 0 var(--tank-ink); }
+  .ad-table, .ad-sub { width: 100%; border-collapse: collapse; }
+  .ad-table th { font-family: var(--tank-font-pixel); font-size: 9px; text-transform: uppercase; text-align: left; color: var(--tank-text-dim); padding: 12px 10px; background: var(--tank-ink); line-height: 1.5; vertical-align: bottom; }
+  .ad-table th .px-dim { font-family: var(--tank-font-body); font-size: 18px; }
+  .ad-table td { padding: 10px; border-top: 2px solid rgba(63,143,209,.35); vertical-align: middle; }
+  .ad-num { text-align: right !important; white-space: nowrap; }
+  .ad-rank { font-family: var(--tank-font-pixel); font-size: 14px; color: var(--tank-gold); width: 50px; }
+  .ad-row { cursor: pointer; }
+  .ad-row:hover, .ad-row:focus-visible { background: rgba(111,211,255,.1); outline: none; }
+  .ad-row--none { opacity: .75; }
+  .ad-score strong { font-size: 26px; }
+  .ad-mini { height: 14px; padding: 2px; margin-top: 4px; min-width: 90px; box-shadow: inset 0 0 0 2px var(--tank-line); }
+  .ad-caret { color: var(--tank-text-dim); width: 24px; }
+  .ad-detail td { background: rgba(2,7,26,.6); padding: 12px 16px 18px; }
+  .ad-sub th { font-family: var(--tank-font-pixel); font-size: 8px; padding: 6px; text-align: left; color: var(--tank-text-dim); background: none; }
+  .ad-sub td { padding: 6px; border-top: 1px solid rgba(63,143,209,.3) !important; background: none; }
+  .ad-notes { max-width: 340px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ad-foot { margin-top: 12px; }
+
+  .ad-weights { display: flex; height: 34px; margin: 0 4px 18px; gap: 4px; }
+  .ad-w { display: flex; align-items: center; justify-content: center; font-family: var(--tank-font-pixel); font-size: 8px; color: var(--tank-ink); overflow: hidden; white-space: nowrap; padding: 0 4px; }
+  .ad-w--0 { background: var(--tank-gold); } .ad-w--1 { background: var(--tank-mint); } .ad-w--2 { background: var(--tank-surface); }
+  .ad-w--3 { background: var(--tank-coral); } .ad-w--4 { background: #c9a6ff; } .ad-w--5 { background: var(--tank-sand); }
+
+  .ad-cat { margin-bottom: 26px; }
+  .ad-cat-head { display: grid; grid-template-columns: minmax(180px, 1.4fr) 190px minmax(180px, 1fr) auto; gap: 14px; align-items: end; margin-bottom: 14px; }
+  .ad-page .px-btn[aria-label] { font-family: var(--tank-font-body); font-size: 20px; padding: 6px 12px; }
+  .ad-question .px-textarea { min-height: 3em; }
+  .ad-levels { max-width: 640px; }
+  .ad-share-num { font-family: var(--tank-font-pixel); font-size: 14px; color: var(--tank-gold); }
+  .ad-cat-share .px-progress { margin: 6px 0 4px; }
+  .ad-cat-share .px-progress > span { background: repeating-linear-gradient(90deg, var(--tank-gold) 0 9px, transparent 9px 12px); }
+  .ad-q-tools { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .ad-question { background: rgba(2,7,26,.55); padding: 14px; margin: 0 0 16px; box-shadow: inset 0 0 0 2px rgba(63,143,209,.5); }
+  .ad-q-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .ad-levels { margin: 12px 0; }
+  .ad-levels-head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
+  .ad-level { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .ad-level .px-input { flex: 1 1 auto; width: auto; min-width: 0; }
+  .ad-level .px-btn { flex: 0 0 auto; }
+  .ad-w { min-width: 0; }
+  .ad-cat-head > *, .ad-grid2 > * { min-width: 0; }
+  .ad-level .ad-pts { flex: 0 0 90px; text-align: right; }
+  .ad-level .px-label { width: 18px; }
+  .ad-preview { margin: 12px 0; }
+  .ad-prev { padding: 8px 6px 0; max-width: 560px; }
+  .ad-prev-stops { display: grid; grid-template-columns: repeat(var(--n), 1fr); text-align: center; }
+  .ad-stop { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--tank-text-dim); min-width: 0; }
+  .ad-stop i { width: 12px; height: 12px; background: var(--tank-line); display: block; }
+  .ad-stop b { font-weight: 400; overflow-wrap: anywhere; line-height: 1; }
+  .ad-stop em { font-style: normal; font-size: 18px; opacity: .8; }
+  .ad-stop.is-on { color: var(--tank-gold); }
+  .ad-stop.is-on i { background: var(--tank-gold); }
+  .ad-range { width: calc(100% - 100% / var(--n, 3)); margin: 4px calc(50% / var(--n, 3)); display: block; accent-color: var(--tank-gold); height: 24px; }
+  .ad-errs { color: var(--tank-coral); margin: 6px 0 10px; }
+  .ad-errs p { margin: 2px 0; }
+
+  .ad-item { margin-bottom: 20px; }
+  .ad-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .ad-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 10px; }
+  .ad-cf { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .ad-cf-yes { display: inline-flex; align-items: center; gap: 4px; }
+  .ad-judge-top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .ad-judge-name { flex: 1 1 240px; width: auto; font-size: 26px; }
+  .ad-link { background: var(--tank-ink); padding: 8px 12px; margin: 10px 0; box-shadow: inset 0 0 0 2px rgba(63,143,209,.5); }
+  .ad-warn { color: var(--tank-gold); margin: 8px 4px 0; }
+  .ad-qr { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 14px; }
+  .ad-qr img { background: #fff; padding: 8px; image-rendering: pixelated; max-width: 100%; height: auto; }
+
+  .ad-status-opt { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-top: 2px solid rgba(63,143,209,.3); }
+  .ad-status-opt span:not(.px-chip) { flex: 1 1 280px; }
+  .ad-status-opt.is-on { background: rgba(255,210,63,.07); }
+  .ad-danger { box-shadow: 0 -4px 0 0 var(--tank-coral), 0 4px 0 0 var(--tank-coral), -4px 0 0 0 var(--tank-coral), 4px 0 0 0 var(--tank-coral), 0 8px 0 0 var(--tank-ink), 8px 0 0 0 var(--tank-ink); }
+
+  @media (max-width: 900px) {
+    .ad-cat-head { grid-template-columns: 1fr 1fr; }
+    .ad-cat-fields, .ad-q-tools { grid-column: 1 / -1; }
+  }
+  @media (max-width: 640px) {
+    .ad-page { padding: 16px 10px 60px; }
+    .ad-grid2, .ad-cat-head { grid-template-columns: 1fr; }
+    .ad-tab { font-size: 9px; padding: 10px; flex: 1 1 auto; }
+    .ad-pod { width: 100%; }
+    .ad-level .ad-pts { flex-basis: 64px; }
+    .ad-panel { padding: 0; }
+  }
+</style>
