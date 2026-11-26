@@ -10,7 +10,7 @@ The personal website for **Carlos Alberto Haro** at **h1sort.com** — an Astro 
 
 ```bash
 npm run dev      # dev server (http://localhost:4321)
-npm run build    # prebuild: src/data/cv.md -> public/cv.pdf, then static build -> dist/  (MUST pass; 10 pages + sitemap)
+npm run build    # prebuild: src/data/cv.md -> public/cv.pdf, then static build -> dist/  (MUST pass; 14 pages + sitemap)
 npm run preview  # preview the production build
 ```
 
@@ -18,7 +18,7 @@ Always run `npm run build` after changes to verify the site still generates.
 
 ## Golden rules
 
-- **Stay on-theme.** Use the design tokens and utilities in `src/styles/global.css`. Do not introduce new colors, fonts, or a CSS framework. Re-skinning happens through `:root` variables only.
+- **Stay on-theme.** Use the design tokens and utilities in `src/styles/global.css`. Do not introduce new colors, fonts, or a CSS framework. Re-skinning happens through `:root` variables only. The one sanctioned exception is **AI Tank** (`/ai-tank/`), which has its own 8-bit deep-sea theme in `src/styles/tank.css` (tokens scoped to `.tank`, Press Start 2P + VT323 self-hosted) and must not leak into the rest of the site.
 - **Fonts are self-hosted** (`public/fonts/` + `src/styles/fonts.css`, imported by `global.css`) — no Google Fonts links in layouts. To change families/weights, edit the URL inside `scripts/mirror-fonts.mjs` and re-run it.
 - **No client frameworks.** Keep interactivity in vanilla TS `<script>` blocks inside `.astro` files.
 - **Respect motion prefs.** Any animation must degrade under `prefers-reduced-motion` (global CSS already dampens transitions/animations; canvas/JS effects must check `matchMedia('(prefers-reduced-motion: reduce)')`).
@@ -38,6 +38,7 @@ Always run `npm run build` after changes to verify the site still generates.
 - `src/styles/global.css` — design tokens (`:root`) + shared utilities.
 - `src/components/AskWidget.astro` — "Ask Assistant" pill fixed top-center that opens a right lateral chat panel (rendered by Base unless `assistant={false}`). Talks to `/api/chat`, handled by `worker/index.ts` — a Cloudflare Worker route that streams Claude Haiku (`claude-haiku-4-5`) answers. Grounding context is generated into `worker/site-context.ts` (gitignored) from `src/data/cv.md` by `scripts/build-chat-context.mjs` (prebuild). The `ANTHROPIC_API_KEY` secret lives on the Worker / `.dev.vars` locally — NEVER in client code or the repo. Test with `npm run build && npx wrangler dev` (the Astro dev server does **not** serve `/api/chat`).
 - `src/pages/polls.astro` — private poll control room and public voting surface. Admins create groups of multiple-choice questions; each group shares one short code and QR code at `/p/<group-code>`. Voters progress through open questions in order, then see results after the host closes the group. Admin auth, group and poll CRUD, status changes, one-vote-per-browser enforcement, and closed-only public results are handled by `/api/polls/*` in `worker/index.ts`; `/p/<code>` redirects to the voter view. Poll data shares the `h1sort-chat` D1 binding and is defined by `migrations/0002_poll_tables.sql`, `migrations/0003_poll_auth_rate_limits.sql`, and `migrations/0004_poll_group_codes.sql`. QR codes are generated locally in the browser.
+- `src/pages/ai-tank/index.astro` + `src/pages/ai-tank/admin.astro` — **AI Tank**, a Shark Tank style judging room for AI project pitches at Santander (Spanish UI, noindex, excluded from the sitemap). Executives judge through a personal link `/tank/<token>` (the Worker sets an HttpOnly judge cookie and redirects to `/ai-tank/`), pick a project and score each question with a snapping slider whose stops carry points (e.g. 0 / 10 / 15). `/ai-tank/admin/` is the organizer dashboard (same credentials as `/polls`): events, weighted categories, questions and their point stops, projects, judges (links + QR) and the leaderboard. Ranking: per judge, each category's earned/max points %, weighted by category weight; project score = average over submitted scorecards (0 to 100). API in `worker/tank.ts` (`/api/tank/*`), shared client contract + types in `src/lib/tank.ts`, background canvas in `src/components/TankOcean.astro`, schema in `migrations/0006_ai_tank.sql`. Scores store the chosen stop index, so editing a question's points re-scores everything.
 - **Conversations are logged to D1** (database `h1sort-chat`, binding `DB` in `wrangler.jsonc`). The widget sends a per-tab `conversationId` (sessionStorage UUID); the worker tees the SSE stream and persists each user/assistant turn via `ctx.waitUntil`, fail-open (a D1 error never breaks the chat; no `conversationId` = no logging). Schema lives in `migrations/` — apply with `npx wrangler d1 migrations apply h1sort-chat --local` (dev) and `--remote` (prod).
 
 ## Assistant conversation analytics
@@ -75,7 +76,8 @@ Useful angles: volume over time (`strftime('%Y-%m-%d', created_at)` group-bys), 
    ├── /teaching           Real-Time Data Processing course
    ├── /cv                 (renders <CvDeck/>)
    ├── /contact
-   └── /polls              private control room + public voter view
+   ├── /polls              private control room + public voter view
+   └── /ai-tank            AI Tank judge view (+ /ai-tank/admin dashboard, /tank/<token> judge links)
 ```
 
 Landing nav = **Talking · Writing · Teaching · CV · Contact** (01–05; inner-page headers carry the number). Blog & Research sit under Writing and link back to `/writing`. The `real-time-data-processing-class` belongs to **Teaching**, not Research. The landing footer is a social strip (GitHub · LinkedIn · X + email), not a signature.
@@ -106,12 +108,13 @@ Page-scoped styles go in the page's own `<style>` block. Reuse tokens; don't har
 | Teaching | `src/pages/teaching.astro` · `pipeline`, `stack`, `stats`, `repo` |
 | Contact | `src/pages/contact.astro` · `channels` |
 | Polls | `src/pages/polls.astro` + `worker/index.ts` + `migrations/0002_poll_tables.sql` + `migrations/0003_poll_auth_rate_limits.sql` |
+| AI Tank | `src/pages/ai-tank/*` + `src/lib/tank.ts` + `src/styles/tank.css` + `src/components/TankOcean.astro` + `worker/tank.ts` + `migrations/0006_ai_tank.sql`. Events, rubric, projects and judges are data in D1, edited from `/ai-tank/admin/`; the suggested starter rubric is `DEFAULT_RUBRIC` in `worker/tank.ts` |
 | CV PDF | `src/data/cv.md` — rendered to `public/cv.pdf` by `scripts/cv-pdf.mjs` (prebuild) |
 | Agent-facing summary | `public/llms.txt` — hand-maintained markdown summary of the site for AI agents; update it when pages, roles, or contact info change. `public/robots.txt` carries the `Content-Signal` line (ai-train/search/ai-input all yes) |
 
 ## Deployment
 
-Git-connected **Cloudflare Worker** `h1sort-website` (Workers Builds), production branch `main` — pushing to `main` triggers CI (`npm run build`, then `wrangler deploy` per `wrangler.jsonc`). Static assets are served from `dist/`; `/api/*` and `/p/*` invoke `worker/index.ts` (`run_worker_first`). Manual fallback:
+Git-connected **Cloudflare Worker** `h1sort-website` (Workers Builds), production branch `main` — pushing to `main` triggers CI (`npm run build`, then `wrangler deploy` per `wrangler.jsonc`). Static assets are served from `dist/`; `/api/*`, `/p/*` and `/tank/*` invoke `worker/index.ts` (`run_worker_first`). Manual fallback:
 
 ```bash
 npm run build
@@ -122,13 +125,13 @@ Gotchas:
 - **`main` is protected** (GitHub ruleset: no direct pushes, no force-pushes, no deletion). Work on a branch and merge via PR.
 - **CI has no Chrome** — `scripts/cv-pdf.mjs` skips PDF generation there and the committed `public/cv.pdf` ships. Any change to `src/data/cv.md` must be accompanied by a locally regenerated, committed `public/cv.pdf` (a local `npm run build` does it).
 - The assistant secret lives on the Worker: `npx wrangler versions secret put ANTHROPIC_API_KEY --name h1sort-website`. Locally, `.dev.vars` (gitignored).
-- Poll administration requires Worker secrets `POLLS_ADMIN_PASSWORD` and `POLLS_SESSION_SECRET` (at least 32 high-entropy bytes). Set both interactively with `npx wrangler versions secret put <NAME> --name h1sort-website`; never put their values in config or docs. Apply D1 migrations remotely before deploying poll code.
+- Poll administration requires Worker secrets `POLLS_ADMIN_PASSWORD` and `POLLS_SESSION_SECRET` (at least 32 high-entropy bytes). Set both interactively with `npx wrangler versions secret put <NAME> --name h1sort-website`; never put their values in config or docs. Apply D1 migrations remotely before deploying poll code. AI Tank reuses these same secrets and needs `migrations/0006_ai_tank.sql` applied remotely (`npx wrangler d1 migrations apply h1sort-chat --remote`) before its code ships.
 - `h1sort.com` + `www.h1sort.com` are attached to the Worker (dashboard → h1sort-website → Settings → Domains & Routes); DNS + SSL auto-provision because the zone is in the same Cloudflare account.
 - The account/zone IDs are in the Cloudflare dashboard — do not hardcode them in the repo.
 
 ## Definition of done
 
-- `npm run build` passes with no errors (10 pages + sitemap).
+- `npm run build` passes with no errors (14 pages + sitemap).
 - Layout fits the viewport where intended and reflows cleanly at mobile widths.
 - Animations are subtle and reduced-motion-safe.
 - No secrets, no phone number, no brief/screenshot committed.

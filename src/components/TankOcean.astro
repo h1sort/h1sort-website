@@ -1,0 +1,587 @@
+---
+// AI Tank 8-bit ocean: a fixed, full-viewport canvas scene seen from the sea
+// floor looking up. Contract (keep stable):
+//   dim?: boolean  -> darker, calmer variant for the admin dashboard
+export interface Props {
+  dim?: boolean;
+}
+const { dim = false } = Astro.props;
+---
+
+<div class:list={['tank-ocean', { 'tank-ocean--dim': dim }]} data-dim={dim ? '1' : '0'} aria-hidden="true">
+  <canvas class="tank-ocean__canvas"></canvas>
+</div>
+
+<style>
+  .tank-ocean {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    background: #050f2e;
+  }
+  .tank-ocean__canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+  }
+</style>
+
+<script>
+  type Sprite = { w: number; h: number; right: HTMLCanvasElement; left: HTMLCanvasElement };
+
+  const host = document.querySelector<HTMLElement>('.tank-ocean');
+  const canvas = host?.querySelector<HTMLCanvasElement>('.tank-ocean__canvas') ?? null;
+  const ctx = canvas?.getContext('2d', { alpha: false }) ?? null;
+
+  if (host && canvas && ctx) {
+    const dim = host.dataset.dim === '1';
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    /* ---------- palette (mirrors --tank-* tokens) ---------- */
+    const BANDS = [
+      '#8fe0ff', '#6fd3ff', '#4aa9e6', '#1f7fc4', '#1a68ad',
+      '#114a8a', '#0d3a74', '#0a2858', '#071a42', '#050f2e',
+    ].map(hexToRgb);
+    const FOAM = '#d8f6ff';
+    const SURFACE = '#6fd3ff';
+    const KELP = '#2f9e5b';
+    const KELP_DARK = '#1c6b3c';
+    const SAND = '#c9a46a';
+    const SAND_DARK = '#8a6a3c';
+
+    function hexToRgb(hex: string): [number, number, number] {
+      const n = parseInt(hex.slice(1), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+
+    /* ---------- sprites (char maps) ---------- */
+    const SHARK = [
+      '...................dd...................',
+      '..................ddd...................',
+      '.................dddd...................',
+      '................ddddd...................',
+      '...d............dddddd..................',
+      '...dd.........ddddddddddddd.............',
+      '....ddd.....dddddddddddddddddd..........',
+      '.....dddd.dddddddddddddddddddddddd......',
+      '......dddddddddddddddddddddddddkdddddd..',
+      '......ddddddddddddddddddddddddddddddddd.',
+      '.....ddddgggggggggggggggggggggggggggggg.',
+      '....ddd...ggwwwwwwwwwwwwwwwwwwwwwwwwwg..',
+      '....dd.....gwwwwwwwwwwwwwwwwwwwwwwgg....',
+      '...dd.......ggwwxwxwxwwwwwwwwwwgg.......',
+      '..dd...........dd.gggwwwwwwggg..........',
+      '..d............ddd....dd.....dd.........',
+    ];
+    const SHARK_PAL: Record<string, string> = {
+      d: '#3f4d63', g: '#6c7f99', w: '#c3d6e6', k: '#02071a', x: '#8da2ba',
+    };
+    const SHARK_PAL_DIM: Record<string, string> = {
+      d: '#2a3547', g: '#4c5c74', w: '#8ea3b8', k: '#02071a', x: '#62758c',
+    };
+
+    const FISH_A = [
+      '...bb....',
+      'f.bbbbb..',
+      'ffbbbbbk.',
+      'f.lllll..',
+      '...ll....',
+    ];
+    const FISH_B = [
+      'f.bbb.',
+      'fbbbbk',
+      'f.lll.',
+    ];
+    const FISH_C = [
+      '..ff.....',
+      '.fbbbb.f.',
+      'bbbbbbbbf',
+      'bbbbbbkbf',
+      '.llllll.f',
+      '..ll.....',
+    ];
+    const FISH_PALS: Record<string, string>[] = [
+      { b: '#3d6f9e', l: '#a9d7f0', f: '#274b6e', k: '#02071a' }, // silver blue
+      { b: '#c98b1e', l: '#ffe58a', f: '#8c5a0e', k: '#02071a' }, // gold
+      { b: '#b33447', l: '#ffb3bf', f: '#7d1f2e', k: '#02071a' }, // coral
+      { b: '#2f9e8a', l: '#b4f0dd', f: '#1c6b5c', k: '#02071a' }, // teal
+    ];
+
+    const ROCK_A = [
+      '....dddd......',
+      '..ddggggdd....',
+      '.dggggggggd...',
+      'ddgggggggggdd.',
+      'dddddddddddddd',
+    ];
+    const ROCK_B = [
+      '..ddd..',
+      '.dgggd.',
+      'dggggdd',
+      'ddddddd',
+    ];
+    const ROCK_PAL = { d: '#1d2a40', g: '#3f4d63' };
+
+    function buildSprite(rows: string[], pal: Record<string, string>): Sprite {
+      const h = rows.length;
+      const w = rows.reduce((m, r) => Math.max(m, r.length), 0);
+      const mk = (flip: boolean) => {
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const g = c.getContext('2d')!;
+        rows.forEach((row, y) => {
+          for (let x = 0; x < row.length; x++) {
+            const color = pal[row[x]];
+            if (!color) continue;
+            g.fillStyle = color;
+            g.fillRect(flip ? w - 1 - x : x, y, 1, 1);
+          }
+        });
+        return c;
+      };
+      // "right" = facing right (sprites are authored facing right).
+      return { w, h, right: mk(false), left: mk(true) };
+    }
+
+    /* ---------- scene state ---------- */
+    let W = 0;
+    let H = 0;
+    let scale = 2;
+    let SURF = 8; // base y of the surface line
+    let bg: HTMLCanvasElement | null = null;
+
+    interface Fish { sprite: Sprite; dx: number; dy: number; phase: number }
+    interface School { x: number; y: number; dir: number; speed: number; fish: Fish[]; width: number }
+    interface Shark { x: number; y: number; dir: number; speed: number; phase: number; sprite: Sprite }
+    interface Bubble { x: number; y: number; speed: number; r: number; phase: number }
+    interface Kelp { x: number; h: number; phase: number; seg: number }
+    interface Glint { x: number; y: number; phase: number; speed: number }
+    interface Ray { x0: number; slope: number; width: number; phase: number; speed: number; alpha: number }
+
+    let schools: School[] = [];
+    let sharks: Shark[] = [];
+    let bubbles: Bubble[] = [];
+    let kelps: Kelp[] = [];
+    let glints: Glint[] = [];
+    let rays: Ray[] = [];
+    let sharkSprite: Sprite;
+    let fishSprites: Sprite[][] = [];
+
+    const rand = (a: number, b: number) => a + Math.random() * (b - a);
+    const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+    function ensureSprites() {
+      if (sharkSprite) return;
+      sharkSprite = buildSprite(SHARK, dim ? SHARK_PAL_DIM : SHARK_PAL);
+      fishSprites = FISH_PALS.map((pal) => [
+        buildSprite(FISH_A, pal),
+        buildSprite(FISH_B, pal),
+        buildSprite(FISH_C, pal),
+      ]);
+    }
+
+    function buildBackground() {
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      const g = c.getContext('2d')!;
+      const img = g.createImageData(W, H);
+      const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+      const n = BANDS.length - 1;
+      for (let y = 0; y < H; y++) {
+        const f = Math.min(1, Math.max(0, (y - SURF) / (H - SURF)));
+        const p = Math.pow(f, 0.8) * n;
+        const idx = Math.min(n - 1, Math.floor(p));
+        const frac = p - idx;
+        const t = Math.max(0, (frac - 0.55) / 0.45);
+        for (let x = 0; x < W; x++) {
+          const thr = (bayer[(y & 3) * 4 + (x & 3)] + 0.5) / 16;
+          const col = BANDS[t > thr ? idx + 1 : idx];
+          const o = (y * W + x) * 4;
+          img.data[o] = col[0];
+          img.data[o + 1] = col[1];
+          img.data[o + 2] = col[2];
+          img.data[o + 3] = 255;
+        }
+      }
+      g.putImageData(img, 0, 0);
+
+      // Sand floor with a ragged top edge.
+      const floorH = Math.max(9, Math.round(H * 0.04));
+      for (let x = 0; x < W; x++) {
+        const top = H - floorH + Math.round(Math.sin(x * 0.21) * 1.2 + Math.sin(x * 0.053) * 1.5);
+        for (let y = top; y < H; y++) {
+          const depth = y - top;
+          const speck = ((x * 7 + y * 13) % 11) === 0;
+          g.fillStyle = depth < 1 ? SAND : speck ? SAND : depth > floorH - 4 ? SAND_DARK : (x + y) % 3 === 0 ? SAND_DARK : SAND;
+          if (depth === 0) g.fillStyle = '#e1c58d';
+          g.fillRect(x, y, 1, 1);
+        }
+      }
+      // Dark shade over the sand so it reads as dim sea floor.
+      g.fillStyle = 'rgba(5, 15, 46, 0.35)';
+      g.fillRect(0, H - floorH + 2, W, floorH);
+
+      // Rocks.
+      const rockA = buildSprite(ROCK_A, ROCK_PAL);
+      const rockB = buildSprite(ROCK_B, ROCK_PAL);
+      g.drawImage(rockA.right, Math.round(W * 0.28), H - floorH - rockA.h + 4);
+      g.drawImage(rockB.right, Math.round(W * 0.7), H - floorH - rockB.h + 4);
+      g.drawImage(rockB.left, Math.round(W * 0.52), H - floorH - rockB.h + 6);
+
+      bg = c;
+    }
+
+    function initScene() {
+      ensureSprites();
+      SURF = Math.max(7, Math.round(H * 0.025));
+
+      const floorH = Math.max(9, Math.round(H * 0.04));
+      const waterTop = SURF + 10;
+      const waterBot = H - floorH - 10;
+
+      // Schools.
+      schools = [];
+      const schoolCount = dim ? 2 : W > 260 ? 4 : 3;
+      for (let i = 0; i < schoolCount; i++) {
+        const variant = Math.floor(Math.random() * FISH_PALS.length);
+        const kind = Math.floor(Math.random() * 3);
+        const count = dim ? 4 + Math.floor(Math.random() * 3) : 5 + Math.floor(Math.random() * 5);
+        const fish: Fish[] = [];
+        for (let k = 0; k < count; k++) {
+          fish.push({
+            sprite: fishSprites[variant][Math.random() < 0.7 ? kind : (kind + 1) % 3],
+            dx: rand(0, 30),
+            dy: rand(-9, 9),
+            phase: rand(0, 6.28),
+          });
+        }
+        const dir = Math.random() < 0.5 ? 1 : -1;
+        const width = 48;
+        schools.push({
+          x: rand(-width, W),
+          y: rand(waterTop + 12, waterBot * 0.8),
+          dir,
+          speed: rand(12, 24),
+          fish,
+          width,
+        });
+      }
+
+      // Sharks.
+      sharks = [];
+      const sharkCount = dim ? 1 : W > 260 ? 3 : 2;
+      for (let i = 0; i < sharkCount; i++) {
+        sharks.push({
+          x: (W / sharkCount) * i + rand(0, W / sharkCount) - sharkSprite.w / 2,
+          y: rand(waterTop + 8, Math.max(waterTop + 20, H * 0.55)),
+          dir: Math.random() < 0.5 ? 1 : -1,
+          speed: rand(5, 9),
+          phase: rand(0, 6.28),
+          sprite: sharkSprite,
+        });
+      }
+
+      // Bubbles.
+      bubbles = [];
+      const bubbleCount = Math.round((dim ? 10 : 22) * Math.min(1.6, W / 220));
+      for (let i = 0; i < bubbleCount; i++) {
+        bubbles.push({
+          x: rand(0, W),
+          y: rand(SURF, H),
+          speed: rand(5, 14),
+          r: Math.random() < 0.25 ? 2 : 1,
+          phase: rand(0, 6.28),
+        });
+      }
+
+      // Kelp: clusters at both edges plus a few along the floor.
+      kelps = [];
+      const spots = [3, 8, 13, W - 4, W - 9, W - 14, Math.round(W * 0.38), Math.round(W * 0.62), Math.round(W * 0.85)];
+      spots.forEach((x) => {
+        kelps.push({ x, h: rand(H * 0.1, H * 0.2), phase: rand(0, 6.28), seg: 2 });
+      });
+
+      // Surface glints (caustic sparkles).
+      glints = [];
+      const glintCount = Math.round(W * 0.35);
+      for (let i = 0; i < glintCount; i++) {
+        glints.push({
+          x: rand(0, W),
+          y: SURF + rand(2, Math.max(8, H * 0.12)),
+          phase: rand(0, 6.28),
+          speed: rand(0.8, 2.2),
+        });
+      }
+
+      // God rays.
+      rays = [];
+      const rayCount = dim ? 3 : W > 260 ? 7 : 5;
+      for (let i = 0; i < rayCount; i++) {
+        rays.push({
+          x0: (W / rayCount) * i + rand(-6, 14),
+          slope: rand(0.28, 0.4),
+          width: rand(7, 15),
+          phase: rand(0, 6.28),
+          speed: rand(0.25, 0.55),
+          alpha: rand(0.07, 0.13),
+        });
+      }
+    }
+
+    function resize() {
+      const vw = host!.clientWidth || window.innerWidth;
+      const vh = host!.clientHeight || window.innerHeight;
+      scale = Math.max(2, Math.round(vw / 300));
+      const nw = Math.ceil(vw / scale);
+      const nh = Math.ceil(vh / scale);
+      // Ignore tiny height wobble (mobile address bar) when width is unchanged.
+      if (nw === W && H > 0) {
+        // Same width: only grow the backdrop (keeps creatures swimming).
+        if (nh <= H) return;
+        H = nh;
+        canvas!.height = H;
+        canvas!.style.height = `${H * scale}px`;
+        ctx!.imageSmoothingEnabled = false;
+        buildBackground();
+        initScene();
+        drawFrame(lastT);
+        return;
+      }
+      W = nw;
+      H = nh;
+      canvas!.width = W;
+      canvas!.height = H;
+      canvas!.style.width = `${W * scale}px`;
+      canvas!.style.height = `${H * scale}px`;
+      ctx!.imageSmoothingEnabled = false;
+      buildBackground();
+      initScene();
+      drawFrame(lastT);
+    }
+
+    /* ---------- drawing ---------- */
+    function surfaceY(x: number, t: number): number {
+      return SURF + Math.round(Math.sin(x * 0.16 + t * 1.3) * 1.4 + Math.sin(x * 0.065 - t * 0.8) * 1.6);
+    }
+
+    function drawSurface(t: number) {
+      const c = ctx!;
+      for (let x = 0; x < W; x++) {
+        const wy = surfaceY(x, t);
+        c.fillStyle = FOAM;
+        c.fillRect(x, 0, 1, Math.max(1, wy - 1));
+        c.fillStyle = FOAM;
+        c.fillRect(x, wy - 1, 1, 1);
+        c.fillStyle = SURFACE;
+        c.fillRect(x, wy, 1, 1);
+        if ((x + Math.floor(t * 2)) % 5 === 0) {
+          c.fillStyle = '#8fe0ff';
+          c.fillRect(x, wy + 1, 1, 1);
+        }
+      }
+    }
+
+    function drawRays(t: number) {
+      const c = ctx!;
+      const maxY = Math.round(H * 0.82);
+      const k = dim ? 0.5 : 1;
+      for (const r of rays) {
+        const sway = Math.sin(t * r.speed + r.phase) * 6;
+        const flick = 0.75 + 0.25 * Math.round((Math.sin(t * 1.3 + r.phase * 2) * 0.5 + 0.5) * 2) / 2;
+        for (let y = SURF + 2; y < maxY; y++) {
+          const d = (y - SURF) / (maxY - SURF);
+          // Quantised fade so the beam falls off in visible steps.
+          const step = Math.max(0, Math.floor((1 - d) * 5) / 5);
+          const a = r.alpha * k * flick * (0.25 + step);
+          const cx = r.x0 + (y - SURF) * r.slope + sway * (0.4 + d);
+          const w = r.width * (0.7 + d * 0.9);
+          const x1 = Math.round(cx - w / 2);
+          const x2 = Math.round(cx + w / 2);
+          c.fillStyle = `rgba(216,246,255,${a.toFixed(3)})`;
+          c.fillRect(x1 + 1, y, x2 - x1 - 1, 1);
+          // Dithered edges.
+          if ((y & 1) === 0) c.fillRect(x1, y, 1, 1);
+          else c.fillRect(x2, y, 1, 1);
+          // Bright core.
+          if (step > 0.35) {
+            c.fillStyle = `rgba(255,255,255,${(a * 0.55).toFixed(3)})`;
+            const m = Math.round((x1 + x2) / 2);
+            c.fillRect(m - 1, y, 2, 1);
+          }
+        }
+      }
+    }
+
+    function drawGlints(t: number) {
+      const c = ctx!;
+      c.fillStyle = FOAM;
+      for (const g of glints) {
+        const v = Math.sin(t * g.speed + g.phase);
+        if (v > 0.82) c.fillRect(Math.round(g.x), Math.round(g.y), 1, 1);
+        else if (v > 0.7) {
+          c.fillStyle = '#8fe0ff';
+          c.fillRect(Math.round(g.x), Math.round(g.y), 1, 1);
+          c.fillStyle = FOAM;
+        }
+      }
+    }
+
+    function drawKelp(t: number) {
+      const c = ctx!;
+      const floorH = Math.max(9, Math.round(H * 0.04));
+      const base = H - floorH + 3;
+      for (const k of kelps) {
+        const h = Math.round(k.h);
+        for (let i = 0; i < h; i++) {
+          const f = i / h;
+          const off = Math.round(Math.sin(t * 0.9 + k.phase + i * 0.12) * (1 + f * 3.2));
+          c.fillStyle = (i >> 2) % 2 === 0 ? KELP : KELP_DARK;
+          c.fillRect(k.x + off, base - i, k.seg, 1);
+          // Little leaves.
+          if (i % 9 === 5) {
+            c.fillStyle = KELP;
+            c.fillRect(k.x + off + (i % 2 ? -2 : k.seg), base - i, 2, 1);
+          }
+        }
+      }
+    }
+
+    function drawBubbles(t: number, dt: number) {
+      const c = ctx!;
+      for (const b of bubbles) {
+        b.y -= b.speed * dt;
+        if (b.y < SURF + 2) {
+          b.y = H - 4;
+          b.x = rand(0, W);
+        }
+        const x = Math.round(b.x + Math.sin(t * 1.6 + b.phase) * 1.5);
+        const y = Math.round(b.y);
+        if (b.r === 2) {
+          c.fillStyle = 'rgba(216,246,255,0.75)';
+          c.fillRect(x, y - 1, 2, 1);
+          c.fillRect(x - 1, y, 1, 2);
+          c.fillRect(x + 2, y, 1, 2);
+          c.fillRect(x, y + 2, 2, 1);
+        } else {
+          c.fillStyle = 'rgba(216,246,255,0.8)';
+          c.fillRect(x, y, 1, 1);
+        }
+      }
+    }
+
+    function drawCreatures(t: number, dt: number) {
+      const c = ctx!;
+      const floorH = Math.max(9, Math.round(H * 0.04));
+      // Schools.
+      for (const s of schools) {
+        s.x += s.dir * s.speed * dt;
+        if (s.dir > 0 && s.x > W + 10) {
+          s.x = -s.width - 10;
+          s.y = rand(SURF + 24, (H - floorH) * 0.75);
+        } else if (s.dir < 0 && s.x < -s.width - 10) {
+          s.x = W + 10;
+          s.y = rand(SURF + 24, (H - floorH) * 0.75);
+        }
+        for (const f of s.fish) {
+          const x = s.x + (s.dir > 0 ? f.dx : s.width - f.dx);
+          const y = s.y + f.dy + Math.sin(t * 2 + f.phase) * 1.6;
+          const img = s.dir > 0 ? f.sprite.right : f.sprite.left;
+          c.globalAlpha = dim ? 0.7 : 1;
+          c.drawImage(img, Math.round(x), Math.round(y));
+        }
+      }
+      c.globalAlpha = 1;
+      // Sharks.
+      for (const sh of sharks) {
+        sh.x += sh.dir * sh.speed * dt;
+        const w = sh.sprite.w;
+        if ((sh.dir > 0 && sh.x > W + 6) || (sh.dir < 0 && sh.x < -w - 6)) {
+          sh.dir = -sh.dir;
+          sh.y = rand(SURF + 14, Math.max(SURF + 30, (H - floorH) * 0.6));
+          sh.speed = rand(5, 9);
+        }
+        const y = sh.y + Math.sin(t * 0.8 + sh.phase) * 2;
+        c.drawImage(sh.dir > 0 ? sh.sprite.right : sh.sprite.left, Math.round(sh.x), Math.round(y));
+      }
+    }
+
+    let lastT = 3.2;
+
+    function drawFrame(t: number, dt = 0) {
+      const c = ctx!;
+      if (!bg) return;
+      c.drawImage(bg, 0, 0);
+      drawRays(t);
+      drawGlints(t);
+      drawSurface(t);
+      drawCreatures(t, dt);
+      drawBubbles(t, dt);
+      drawKelp(t);
+      if (dim) {
+        c.fillStyle = 'rgba(2, 7, 26, 0.5)';
+        c.fillRect(0, 0, W, H);
+      }
+    }
+
+    /* ---------- loop ---------- */
+    const FRAME_MS = 1000 / 26;
+    let raf = 0;
+    let running = false;
+    let prev = 0;
+    let clock = 3.2;
+
+    function tick(now: number) {
+      if (!running) return;
+      raf = requestAnimationFrame(tick);
+      const elapsed = now - prev;
+      if (elapsed < FRAME_MS) return;
+      const dt = Math.min(0.1, elapsed / 1000);
+      prev = now - (elapsed % FRAME_MS);
+      clock += dt;
+      lastT = clock;
+      drawFrame(clock, dt);
+    }
+
+    function start() {
+      if (running || motionQuery.matches || document.hidden) return;
+      running = true;
+      prev = performance.now();
+      raf = requestAnimationFrame(tick);
+    }
+    function stop() {
+      running = false;
+      cancelAnimationFrame(raf);
+    }
+    function syncMotion() {
+      stop();
+      if (motionQuery.matches) drawFrame(3.2, 0);
+      else start();
+    }
+
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        resize();
+        if (motionQuery.matches) drawFrame(3.2, 0);
+      }, 120);
+    });
+    if ('ResizeObserver' in window) new ResizeObserver(() => resize()).observe(host);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stop();
+      else if (!motionQuery.matches) start();
+    });
+    motionQuery.addEventListener('change', syncMotion);
+
+    resize();
+    syncMotion();
+  }
+</script>
