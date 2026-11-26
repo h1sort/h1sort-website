@@ -1,0 +1,975 @@
+---
+import Base from '../../layouts/Base.astro';
+import TankOcean from '../../components/TankOcean.astro';
+import '../../styles/tank.css';
+
+// Pixel shark fin glyph for the logo, built from a char map into SVG rects.
+const FIN = [
+  '.........##.....',
+  '........###.....',
+  '.......####.....',
+  '......#####.....',
+  '.....######.....',
+  '....#######.....',
+  '...########.....',
+  '..#########.....',
+  '.##########.##..',
+  '###########.###.',
+  '################',
+  '.##############.',
+];
+const finRects = FIN.flatMap((row, y) =>
+  [...row].map((ch, x) => (ch === '#' ? { x, y } : null)).filter((r): r is { x: number; y: number } => r !== null),
+);
+const finW = FIN[0].length;
+const finH = FIN.length;
+---
+
+<Base
+  title="AI Tank"
+  description="Panel de juicio de AI Tank: puntúa los proyectos de IA frente a los tiburones."
+  path="/ai-tank"
+  assistant={false}
+  lang="es"
+  noindex
+>
+  <main class="tank judge" id="judge">
+    <TankOcean />
+
+    <div class="judge-stage">
+      <!-- 0. Cargando -->
+      <section class="screen" id="screenBoot" hidden>
+        <p class="px-label px-blink">CARGANDO...</p>
+      </section>
+
+      <!-- 1. Título -->
+      <section class="screen screen--title" id="screenTitle" aria-labelledby="logoText">
+        <div class="logo" role="img" aria-label="AI Tank">
+          <svg class="logo__fin" viewBox={`0 0 ${finW} ${finH}`} shape-rendering="crispEdges" aria-hidden="true">
+            {finRects.map((r) => <rect x={r.x} y={r.y + 1} width="1" height="1" fill="#02071a" />)}
+            {finRects.map((r) => <rect x={r.x} y={r.y} width="1" height="1" fill={r.y < 3 ? '#d8f6ff' : r.y < 8 ? '#6c7f99' : '#3f4d63'} />)}
+          </svg>
+          <h1 class="logo__text px-title" id="logoText" aria-hidden="true">
+            <span class="logo__ai">AI</span><span class="logo__tank">TANK</span>
+          </h1>
+        </div>
+        <p class="tagline">Las ideas de IA frente a los tiburones</p>
+        <button class="px-btn start-btn" id="startBtn" type="button">START</button>
+        <p class="px-label px-blink press">PRESIONA START</p>
+        <p class="notice notice--error" id="titleError" role="alert" hidden></p>
+      </section>
+
+      <!-- 2. Sin acceso -->
+      <section class="screen screen--narrow" id="screenNoAccess" hidden>
+        <div class="px-panel panel-pad">
+          <p class="px-label">ACCESO</p>
+          <h2 class="px-title h2" id="noAccessTitle">Sin acceso</h2>
+          <p id="noAccessText">Necesitas tu enlace personal de juez. Pídelo al organizador.</p>
+        </div>
+      </section>
+
+      <!-- 3. Sesión no iniciada -->
+      <section class="screen screen--narrow" id="screenWait" hidden>
+        <div class="px-panel panel-pad">
+          <p class="px-label" id="waitEvent"></p>
+          <h2 class="px-title h2">La sesión aún no empieza</h2>
+          <p>Los tiburones se están alistando. Vuelve a intentarlo en unos minutos.</p>
+          <button class="px-btn" id="retryBtn" type="button">REINTENTAR</button>
+          <p class="notice notice--error" id="waitError" role="alert" hidden></p>
+        </div>
+      </section>
+
+      <!-- 4. Selección de proyecto -->
+      <section class="screen" id="screenSelect" hidden>
+        <header class="select-head">
+          <div>
+            <p class="px-label" id="selEvent"></p>
+            <h2 class="px-title h2" id="selTitle">ELIGE UN PROYECTO</h2>
+            <p class="px-dim" id="selGreeting"></p>
+          </div>
+          <div class="select-progress">
+            <span class="px-chip px-chip--gold" id="selCount"></span>
+            <div class="px-progress" aria-hidden="true"><span id="selBar" style="width:0%"></span></div>
+          </div>
+        </header>
+        <p class="notice notice--closed" id="closedBanner" hidden>Sesión cerrada. ¡Gracias, tiburón!</p>
+        <ul class="cards" id="cards"></ul>
+        <p class="px-dim empty" id="noProjects" hidden>Aún no hay proyectos en esta sesión.</p>
+      </section>
+
+      <!-- 5. Scorecard -->
+      <section class="screen" id="screenCard" hidden>
+        <header class="card-head px-panel">
+          <button class="px-btn px-btn--ghost px-btn--small" id="backBtn" type="button">&#9664; PROYECTOS</button>
+          <div class="card-head__main">
+            <h2 class="px-title h3" id="cardName"></h2>
+            <p class="px-dim" id="cardTeam"></p>
+            <p class="card-summary" id="cardSummary"></p>
+          </div>
+          <div class="card-head__meta">
+            <span class="save-ind" id="saveInd" role="status" aria-live="polite"></span>
+            <span class="px-label" id="cardPoints"></span>
+          </div>
+        </header>
+
+        <p class="notice notice--closed" id="cardClosed" hidden>Sesión cerrada: solo lectura.</p>
+        <p class="notice notice--ok" id="cardSubmitted" hidden>Ya enviaste este proyecto. Puedes ajustar tus respuestas mientras la sesión siga abierta; los cambios se guardan solos.</p>
+
+        <nav class="dots" id="dots" aria-label="Etapas"></nav>
+        <div class="stage" id="stage"></div>
+        <div class="stage-nav">
+          <button class="px-btn px-btn--ghost" id="prevBtn" type="button">&#9664; ANTERIOR</button>
+          <button class="px-btn" id="nextBtn" type="button">SIGUIENTE &#9654;</button>
+        </div>
+        <p class="notice notice--error" id="cardError" role="alert" hidden></p>
+      </section>
+
+      <!-- 6. Celebración -->
+      <section class="screen screen--narrow screen--done" id="screenDone" hidden>
+        <div class="px-panel panel-pad done">
+          <div class="burst" id="burst" aria-hidden="true"></div>
+          <div class="swim" aria-hidden="true">
+            <svg viewBox={`0 0 ${finW} ${finH}`} shape-rendering="crispEdges">
+              {finRects.map((r) => <rect x={r.x} y={r.y} width="1" height="1" fill={r.y < 3 ? '#d8f6ff' : '#6c7f99'} />)}
+            </svg>
+          </div>
+          <h2 class="px-title h2 done__title">¡PUNTUACIÓN REGISTRADA!</h2>
+          <p id="doneText"></p>
+          <div class="done__actions">
+            <button class="px-btn px-btn--ok" id="nextProjectBtn" type="button">SIGUIENTE PROYECTO</button>
+            <button class="px-btn px-btn--ghost" id="backProjectsBtn" type="button">VOLVER A PROYECTOS</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</Base>
+
+<style is:global>
+  .judge { position: relative; min-height: 100vh; min-height: 100dvh; overflow-x: hidden; }
+  .judge [hidden] { display: none !important; }
+  .judge-stage {
+    position: relative; z-index: 1; width: 100%; max-width: 1000px; margin: 0 auto;
+    padding: 20px 14px 56px; min-height: 100vh; min-height: 100dvh;
+    display: flex; flex-direction: column; justify-content: flex-start;
+  }
+  .judge .screen { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+  .judge .screen--title { align-items: center; text-align: center; justify-content: center; flex: 1; gap: 18px; padding-top: 6vh; }
+  .judge .screen--narrow { max-width: 560px; margin: 8vh auto 0; }
+  .judge .panel-pad { padding: 22px 20px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+  .judge .h2 { font-size: 15px; margin: 0; line-height: 1.4; }
+  .judge .h3 { font-size: 13px; margin: 0; line-height: 1.4; }
+  .judge p { margin: 0; }
+
+  /* Logo */
+  .judge .logo { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .judge .logo__fin { width: 96px; height: auto; image-rendering: pixelated; animation: judge-bob 2.4s steps(4) infinite; }
+  .judge .logo__text { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 52px; line-height: 1; letter-spacing: 0.04em; }
+  .judge .logo__ai { color: var(--tank-foam); text-shadow: 4px 4px 0 var(--tank-ink), 8px 8px 0 var(--tank-mid); }
+  .judge .logo__tank { color: var(--tank-gold); text-shadow: 4px 4px 0 #b8860b, 8px 8px 0 var(--tank-ink); }
+  .judge .tagline { font-size: 26px; color: var(--tank-foam); text-shadow: 2px 2px 0 var(--tank-ink); max-width: 20em; }
+  .judge .start-btn { font-size: 18px; padding: 18px 40px; min-width: 220px; }
+  .judge .press { margin-top: 4px; color: var(--tank-foam); }
+
+  @keyframes judge-bob { 0% { transform: translateY(0); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0); } }
+
+  /* Notices */
+  .judge .notice { padding: 10px 14px; background: var(--tank-panel); box-shadow: inset 0 0 0 var(--px) var(--tank-line); }
+  .judge .notice--error { box-shadow: inset 0 0 0 var(--px) var(--tank-coral); color: var(--tank-coral); }
+  .judge .notice--closed { box-shadow: inset 0 0 0 var(--px) var(--tank-gold); color: var(--tank-gold); font-size: 24px; text-align: center; }
+  .judge .notice--ok { box-shadow: inset 0 0 0 var(--px) var(--tank-mint); color: var(--tank-mint); }
+
+  /* Select */
+  .judge .select-head { display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between; align-items: flex-end; padding: 14px 16px; background: var(--tank-panel); box-shadow: inset 0 0 0 var(--px) var(--tank-line); }
+  .judge .select-progress { display: flex; flex-direction: column; gap: 8px; min-width: 180px; }
+  .judge .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .judge .proj { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; width: 100%; height: 100%; min-height: 150px; padding: 14px; cursor: pointer;
+    background: var(--tank-panel); box-shadow: inset 0 0 0 var(--px) var(--tank-line), 0 var(--px) 0 0 var(--tank-ink); color: var(--tank-text); }
+  .judge .proj:hover, .judge .proj:focus-visible { box-shadow: inset 0 0 0 var(--px) var(--tank-gold), 0 var(--px) 0 0 var(--tank-ink); transform: translateY(-2px); }
+  .judge .proj:focus-visible { outline: var(--px) dashed var(--tank-foam); outline-offset: 2px; }
+  .judge .proj__top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+  .judge .proj__num { font-family: var(--tank-font-pixel); font-size: 9px; color: var(--tank-text-dim); }
+  .judge .proj__name { font-family: var(--tank-font-pixel); font-size: 12px; line-height: 1.4; text-transform: uppercase; color: var(--tank-foam); overflow-wrap: anywhere; }
+  .judge .proj__team { color: var(--tank-text-dim); }
+  .judge .proj__sum { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; flex: 1; }
+  .judge .proj__foot { display: flex; align-items: center; gap: 10px; }
+  .judge .proj__foot .px-progress { flex: 1; }
+  .judge .proj__n { font-family: var(--tank-font-pixel); font-size: 9px; white-space: nowrap; }
+  .judge .px-chip--prog { background: var(--tank-surface); }
+  .judge .proj--done { box-shadow: inset 0 0 0 var(--px) var(--tank-mint), 0 var(--px) 0 0 var(--tank-ink); }
+
+  /* Scorecard */
+  .judge .card-head { display: grid; gap: 10px; padding: 14px; align-items: start; background: var(--tank-panel); }
+  .judge #backBtn { justify-self: start; }
+  .judge .q__ticks--5 .tick__l { font-size: 15px; }
+  .judge .card-head__meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .judge .card-summary { margin-top: 6px; color: var(--tank-text); }
+  .judge .save-ind { font-family: var(--tank-font-pixel); font-size: 9px; min-height: 12px; color: var(--tank-text-dim); }
+  .judge .save-ind--ok { color: var(--tank-mint); }
+  .judge .save-ind--err { color: var(--tank-coral); }
+  .judge .save-ind button { all: unset; cursor: pointer; text-decoration: underline; }
+  .judge .dots { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .judge .dot { all: unset; box-sizing: border-box; width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer;
+    font-family: var(--tank-font-pixel); font-size: 10px; background: var(--tank-panel); color: var(--tank-text-dim); box-shadow: inset 0 0 0 var(--px) var(--tank-line); }
+  .judge .dot--done { color: var(--tank-ink); background: var(--tank-mint); box-shadow: inset 0 0 0 var(--px) var(--tank-ink); }
+  .judge .dot--cur { color: var(--tank-ink); background: var(--tank-gold); box-shadow: inset 0 0 0 var(--px) var(--tank-ink); }
+  .judge .dot:focus-visible { outline: var(--px) dashed var(--tank-foam); outline-offset: 2px; }
+  .judge .stage { display: flex; flex-direction: column; gap: 16px; }
+  .judge .stage__head { padding: 8px 12px; background: var(--tank-panel); box-shadow: inset 0 0 0 var(--px) var(--tank-line); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .judge .stage__title { font-size: 13px; margin: 0; color: var(--tank-gold); }
+  .judge .q { padding: 16px 14px 12px; background: var(--tank-panel); box-shadow: inset 0 0 0 var(--px) var(--tank-line); display: flex; flex-direction: column; gap: 12px; }
+  .judge .q--answered { box-shadow: inset 0 0 0 var(--px) var(--tank-mint); }
+  .judge .q__prompt { font-size: 26px; line-height: 1.1; }
+  .judge .q__readout { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-height: 30px; flex-wrap: wrap; }
+  .judge .q__pts { font-family: var(--tank-font-pixel); font-size: 18px; color: var(--tank-gold); text-shadow: 3px 3px 0 var(--tank-ink); }
+  .judge .q__pts small { font-size: 10px; color: var(--tank-text-dim); text-shadow: none; }
+  .judge .q__lbl { font-size: 24px; color: var(--tank-foam); }
+  .judge .q__empty { font-family: var(--tank-font-pixel); font-size: 10px; color: var(--tank-coral); }
+  .judge .q__slider { --thumb: 32px; position: relative; margin-inline: calc(100% / (2 * var(--n)) - var(--thumb) / 2); padding: 8px 0; }
+  .judge .q__range { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 44px; margin: 0; background: transparent; cursor: pointer; touch-action: pan-y; }
+  .judge .q__range:focus { outline: none; }
+  .judge .q__range::-webkit-slider-runnable-track { height: 14px; background: linear-gradient(90deg, var(--tank-mint) var(--fill, 0%), var(--tank-ink) var(--fill, 0%)); box-shadow: 0 0 0 var(--px) var(--tank-line); }
+  .judge .q__range::-moz-range-track { height: 14px; background: linear-gradient(90deg, var(--tank-mint) var(--fill, 0%), var(--tank-ink) var(--fill, 0%)); box-shadow: 0 0 0 var(--px) var(--tank-line); }
+  .judge .q__range::-webkit-slider-thumb { -webkit-appearance: none; width: var(--thumb); height: var(--thumb); margin-top: -9px; border: 0; border-radius: 0; background: var(--tank-gold);
+    box-shadow: 0 0 0 var(--px) var(--tank-ink), inset 0 calc(var(--px) * -1) 0 #b8860b, inset 0 var(--px) 0 #fff2a8; }
+  .judge .q__range::-moz-range-thumb { width: var(--thumb); height: var(--thumb); border: 0; border-radius: 0; background: var(--tank-gold);
+    box-shadow: 0 0 0 var(--px) var(--tank-ink), inset 0 calc(var(--px) * -1) 0 #b8860b, inset 0 var(--px) 0 #fff2a8; }
+  .judge .q__range:focus-visible::-webkit-slider-thumb { outline: var(--px) dashed var(--tank-foam); outline-offset: 3px; }
+  .judge .q__range:focus-visible::-moz-range-thumb { outline: var(--px) dashed var(--tank-foam); outline-offset: 3px; }
+  .judge .q--empty .q__range::-webkit-slider-thumb { opacity: 0.4; background: var(--tank-text-dim); }
+  .judge .q--empty .q__range::-moz-range-thumb { opacity: 0.4; background: var(--tank-text-dim); }
+  .judge .q--empty .q__range::-webkit-slider-runnable-track { background: var(--tank-ink); }
+  .judge .q--empty .q__range::-moz-range-track { background: var(--tank-ink); }
+  .judge .q__range:disabled { cursor: default; opacity: 0.8; }
+  .judge .q__ticks { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 4px; margin-inline: calc(var(--thumb) / -2); }
+  .judge .tick { all: unset; box-sizing: border-box; cursor: pointer; text-align: center; padding: 6px 2px; min-height: 52px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--tank-text-dim); }
+  .judge .tick::before { content: ''; width: var(--px); height: calc(var(--px) * 2); background: var(--tank-line); }
+  .judge .tick__l { font-size: 20px; line-height: 1; overflow-wrap: anywhere; }
+  .judge .tick__p { font-family: var(--tank-font-pixel); font-size: 9px; }
+  .judge .tick--sel { color: var(--tank-gold); }
+  .judge .tick--sel::before { background: var(--tank-gold); }
+  .judge .tick:focus-visible { outline: var(--px) dashed var(--tank-foam); }
+  .judge .tick[disabled], .judge .tick[aria-disabled='true'] { cursor: default; }
+  .judge .stage-nav { display: flex; justify-content: space-between; gap: 10px; }
+  .judge .stage-nav .px-btn { flex: 1; max-width: 260px; min-height: 52px; }
+  .judge .stage-nav .px-btn[hidden] { display: none; }
+
+  /* Final step */
+  .judge .final { display: flex; flex-direction: column; gap: 14px; padding: 16px 14px; background: var(--tank-panel); box-shadow: inset 0 0 0 var(--px) var(--tank-gold); }
+  .judge .final__total { font-family: var(--tank-font-pixel); font-size: 16px; color: var(--tank-gold); }
+  .judge .final__cats { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .judge .final__cats li { display: flex; justify-content: space-between; gap: 8px; }
+  .judge .missing { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .judge .missing button { all: unset; cursor: pointer; color: var(--tank-coral); text-decoration: underline; }
+  .judge .final .px-textarea { min-height: 6em; }
+  .judge .final__count { text-align: right; font-size: 18px; color: var(--tank-text-dim); }
+  .judge .final .px-btn { min-height: 56px; font-size: 13px; }
+
+  /* Done */
+  .judge .done { position: relative; align-items: center; text-align: center; overflow: hidden; padding-top: 80px; }
+  .judge .done__title { color: var(--tank-mint); font-size: 16px; }
+  .judge .done__actions { display: flex; flex-direction: column; gap: 8px; width: 100%; align-items: stretch; }
+  .judge .swim { position: absolute; top: 14px; left: 0; width: 56px; animation: judge-swim 3.2s steps(16) 1 forwards; }
+  .judge .swim svg { width: 100%; height: auto; }
+  @keyframes judge-swim { from { transform: translateX(-70px); } to { transform: translateX(calc(560px)); } }
+  .judge .burst { position: absolute; left: 50%; top: 56px; width: 0; height: 0; }
+  .judge .burst i { position: absolute; width: 8px; height: 8px; background: var(--tank-foam); box-shadow: 0 0 0 2px var(--tank-surface); animation: judge-burst 1.1s steps(7) 1 forwards; opacity: 0; }
+  .judge .burst i:nth-child(3n) { background: var(--tank-gold); box-shadow: none; }
+  .judge .burst i:nth-child(3n+1) { width: 6px; height: 6px; }
+  @keyframes judge-burst { 0% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(var(--bx), var(--by)); opacity: 0; } }
+
+  @media (min-width: 760px) {
+    .judge .logo__text { font-size: 84px; flex-direction: row; gap: 22px; }
+    .judge .logo__fin { width: 140px; }
+    .judge .tagline { font-size: 32px; }
+    .judge .card-head { grid-template-columns: auto 1fr auto; }
+    .judge .card-head__meta { flex-direction: column; align-items: flex-end; }
+    .judge .q__prompt { font-size: 30px; }
+    .judge .h2 { font-size: 18px; }
+    .judge .done__actions { flex-direction: row; justify-content: center; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .judge .logo__fin, .judge .swim { animation: none; }
+    .judge .swim { display: none; }
+    .judge .burst i { animation: none; opacity: 1; transform: translate(var(--bx), var(--by)); }
+    .judge .proj:hover, .judge .proj:focus-visible { transform: none; }
+  }
+</style>
+
+<script>
+  import {
+    tankFetch,
+    TankApiError,
+    type TankJudgeSession,
+    type TankScorecard,
+    type TankProjectProgress,
+    type TankCategory,
+    type TankQuestion,
+  } from '../../lib/tank';
+
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  const screens = {
+    boot: $('screenBoot'),
+    title: $('screenTitle'),
+    noaccess: $('screenNoAccess'),
+    wait: $('screenWait'),
+    select: $('screenSelect'),
+    card: $('screenCard'),
+    done: $('screenDone'),
+  };
+  type ScreenName = keyof typeof screens;
+
+  function show(name: ScreenName) {
+    (Object.keys(screens) as ScreenName[]).forEach((k) => {
+      screens[k].hidden = k !== name;
+    });
+    window.scrollTo(0, 0);
+  }
+
+  /** Small DOM builder: text is always set through textContent (safe). */
+  function el<K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    props: Record<string, string | boolean | number> = {},
+    children: Array<Node | string> = [],
+  ): HTMLElementTagNameMap[K] {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(props)) {
+      if (key === 'class') node.className = String(value);
+      else if (key === 'text') node.textContent = String(value);
+      else if (typeof value === 'boolean') {
+        if (value) node.setAttribute(key, '');
+      } else node.setAttribute(key, String(value));
+    }
+    for (const child of children) node.append(child);
+    return node;
+  }
+
+  const pts = (n: number) => `${n} pts`;
+
+  /* ---------- state ---------- */
+  let session: TankJudgeSession | null = null;
+  let sessionPromise: Promise<void> | null = null;
+  let sessionStatus: 'pending' | 'ok' | 'unauth' | 'error' = 'pending';
+  let sessionError = '';
+  let invalidLink = new URLSearchParams(location.search).get('invalid') === '1';
+
+  let project: TankProjectProgress | null = null;
+  let questions: TankQuestion[] = [];
+  let cats: TankCategory[] = [];
+  let answers: Record<string, number> = {};
+  let notes = '';
+  let submittedAt: string | null = null;
+  let stageIdx = 0;
+  let readOnly = false;
+
+  /* ---------- session ---------- */
+  function loadSession(): Promise<void> {
+    sessionStatus = 'pending';
+    sessionPromise = tankFetch<TankJudgeSession>('/api/tank/judge/me')
+      .then((data) => {
+        session = data;
+        sessionStatus = 'ok';
+      })
+      .catch((err) => {
+        if (err instanceof TankApiError && err.status === 401) sessionStatus = 'unauth';
+        else {
+          sessionStatus = 'error';
+          sessionError = err instanceof Error ? err.message : 'Error de conexión';
+        }
+      });
+    return sessionPromise;
+  }
+
+  function showNoAccess(invalid: boolean) {
+    $('noAccessTitle').textContent = invalid ? 'Enlace no válido' : 'Sin acceso';
+    $('noAccessText').textContent = invalid
+      ? 'Ese enlace no es válido. Revisa que lo copiaste completo o pide uno nuevo al organizador.'
+      : 'Necesitas tu enlace personal de juez. Pídelo al organizador.';
+    show('noaccess');
+  }
+
+  /** Route to the right screen from the current session state. */
+  function route(fromTitle = false) {
+    const err = fromTitle ? $('titleError') : $('waitError');
+    err.hidden = true;
+    if (sessionStatus === 'unauth') return showNoAccess(false);
+    if (sessionStatus === 'error' || !session) {
+      err.textContent = `No pudimos conectar con el servidor. ${sessionError}`.trim();
+      err.hidden = false;
+      if (!fromTitle) show('wait');
+      return;
+    }
+    if (session.event.status === 'draft') {
+      $('waitEvent').textContent = session.event.title;
+      return show('wait');
+    }
+    renderSelect();
+    show('select');
+  }
+
+  async function start() {
+    const btn = $<HTMLButtonElement>('startBtn');
+    btn.disabled = true;
+    if (sessionStatus === 'pending' || sessionStatus === 'error') await loadSession();
+    btn.disabled = false;
+    route(true);
+  }
+
+  $('startBtn').addEventListener('click', start);
+  document.addEventListener('keydown', (e) => {
+    if (screens.title.hidden) return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    if ((e.target as HTMLElement)?.closest('button')) return;
+    e.preventDefault();
+    start();
+  });
+
+  $('retryBtn').addEventListener('click', async () => {
+    await loadSession();
+    route(false);
+  });
+
+  /* ---------- project select ---------- */
+  function statusOf(p: TankProjectProgress): 'new' | 'progress' | 'sent' {
+    if (p.submitted) return 'sent';
+    return p.answered > 0 ? 'progress' : 'new';
+  }
+
+  function renderSelect() {
+    if (!session) return;
+    const { event, judge, projects } = session;
+    $('selEvent').textContent = event.title;
+    $('selGreeting').textContent = `Hola, ${judge.name}. Elige el proyecto que quieres puntuar.`;
+    const sent = projects.filter((p) => p.submitted).length;
+    $('selCount').textContent = `${sent}/${projects.length} ENVIADOS`;
+    $('selBar').style.width = projects.length ? `${Math.round((sent / projects.length) * 100)}%` : '0%';
+    $('closedBanner').hidden = event.status !== 'closed';
+    $('noProjects').hidden = projects.length > 0;
+
+    const list = $('cards');
+    list.replaceChildren();
+    projects.forEach((p, i) => {
+      const st = statusOf(p);
+      const chip =
+        st === 'sent'
+          ? el('span', { class: 'px-chip px-chip--open', text: 'ENVIADO' })
+          : st === 'progress'
+            ? el('span', { class: 'px-chip px-chip--prog', text: 'EN CURSO' })
+            : el('span', { class: 'px-chip px-chip--gold', text: 'NUEVO' });
+      const pct = p.total ? Math.round((p.answered / p.total) * 100) : 0;
+      const bar = el('div', { class: 'px-progress', 'aria-hidden': 'true' }, [
+        el('span', { style: `width:${pct}%` }),
+      ]);
+      const btn = el(
+        'button',
+        {
+          class: `proj${st === 'sent' ? ' proj--done' : ''}`,
+          type: 'button',
+          'aria-label': `${p.name}, ${p.team}. ${p.answered} de ${p.total} respondidas. ${st === 'sent' ? 'Enviado' : st === 'progress' ? 'En curso' : 'Nuevo'}`,
+        },
+        [
+          el('span', { class: 'proj__top' }, [
+            el('span', { class: 'proj__num', text: `NIVEL ${String(i + 1).padStart(2, '0')}` }),
+            chip,
+          ]),
+          el('span', { class: 'proj__name', text: p.name }),
+          el('span', { class: 'proj__team', text: p.team }),
+          el('span', { class: 'proj__sum', text: p.summary }),
+          el('span', { class: 'proj__foot' }, [bar, el('span', { class: 'proj__n', text: `${p.answered}/${p.total}` })]),
+        ],
+      );
+      btn.addEventListener('click', () => openProject(p));
+      list.append(el('li', {}, [btn]));
+    });
+  }
+
+  async function refreshSession() {
+    try {
+      session = await tankFetch<TankJudgeSession>('/api/tank/judge/me');
+      sessionStatus = 'ok';
+    } catch {
+      /* keep the stale copy; progress is still locally patched */
+    }
+  }
+
+  async function goSelect() {
+    show('select');
+    await refreshSession();
+    if (session && session.event.status === 'draft') return route(false);
+    renderSelect();
+  }
+
+  /* ---------- scorecard ---------- */
+  const saver = {
+    dirty: {} as Record<string, number>,
+    notesDirty: false,
+    timer: 0,
+    inflight: false,
+    again: false,
+    resetTimer: 0,
+  };
+
+  function setSaveState(kind: 'idle' | 'saving' | 'ok' | 'err', msg = '') {
+    const ind = $('saveInd');
+    ind.className = 'save-ind';
+    ind.replaceChildren();
+    window.clearTimeout(saver.resetTimer);
+    if (kind === 'saving') ind.textContent = 'GUARDANDO...';
+    else if (kind === 'ok') {
+      ind.textContent = 'GUARDADO';
+      ind.classList.add('save-ind--ok');
+      saver.resetTimer = window.setTimeout(() => setSaveState('idle'), 2500);
+    } else if (kind === 'err') {
+      ind.classList.add('save-ind--err');
+      const retry = el('button', { type: 'button', text: 'REINTENTAR' });
+      retry.addEventListener('click', () => flush());
+      ind.append(`NO SE GUARDÓ${msg ? ` (${msg})` : ''} · `, retry);
+    }
+  }
+
+  function handleClosed() {
+    if (session) session.event.status = 'closed';
+    readOnly = true;
+    window.clearTimeout(saver.timer);
+    saver.dirty = {};
+    saver.notesDirty = false;
+    setSaveState('idle');
+    applyReadOnlyUi();
+    renderStage();
+    const e = $('cardError');
+    e.textContent = 'La sesión se cerró. Tus cambios recientes pueden no haberse guardado.';
+    e.hidden = false;
+  }
+
+  function scheduleSave() {
+    if (readOnly) return;
+    window.clearTimeout(saver.timer);
+    setSaveState('saving');
+    saver.timer = window.setTimeout(flush, 400);
+  }
+
+  async function flush(): Promise<boolean> {
+    window.clearTimeout(saver.timer);
+    if (!project || readOnly) return true;
+    if (saver.inflight) {
+      saver.again = true;
+      return true;
+    }
+    const scores = saver.dirty;
+    const sendNotes = saver.notesDirty;
+    if (!Object.keys(scores).length && !sendNotes) return true;
+    saver.dirty = {};
+    saver.notesDirty = false;
+    saver.inflight = true;
+    setSaveState('saving');
+    const body: { scores: Record<string, number>; notes?: string } = { scores };
+    if (sendNotes) body.notes = notes;
+    const pid = project.id;
+    try {
+      await tankFetch<{ scorecard: TankScorecard }>(`/api/tank/judge/projects/${encodeURIComponent(pid)}/scores`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
+      saver.inflight = false;
+      if (saver.again || Object.keys(saver.dirty).length || saver.notesDirty) {
+        saver.again = false;
+        return flush();
+      }
+      setSaveState('ok');
+      $('cardError').hidden = true;
+      return true;
+    } catch (err) {
+      saver.inflight = false;
+      // Put the unsent values back (newer edits win).
+      for (const [k, v] of Object.entries(scores)) if (!(k in saver.dirty)) saver.dirty[k] = v;
+      if (sendNotes) saver.notesDirty = true;
+      if (err instanceof TankApiError && err.status === 403) {
+        handleClosed();
+        return false;
+      }
+      if (err instanceof TankApiError && err.status === 401) {
+        setSaveState('err', 'sesión expirada');
+        return false;
+      }
+      setSaveState('err', err instanceof Error ? err.message : '');
+      window.clearTimeout(saver.timer);
+      saver.timer = window.setTimeout(flush, 5000);
+      return false;
+    }
+  }
+
+  function syncProgressLocal() {
+    if (!project) return;
+    project.answered = answered();
+    project.submitted = !!submittedAt;
+  }
+
+  const answered = () => questions.filter((q) => answers[q.id] !== undefined).length;
+  const subtotal = () =>
+    questions.reduce((sum, q) => {
+      const i = answers[q.id];
+      return i === undefined ? sum : sum + (q.levels[i]?.points ?? 0);
+    }, 0);
+  const maxTotal = () => questions.reduce((sum, q) => sum + Math.max(0, ...q.levels.map((l) => l.points)), 0);
+
+  async function openProject(p: TankProjectProgress) {
+    if (!session) return;
+    project = p;
+    readOnly = session.event.status !== 'open';
+    cats = session.categories.filter((c) => c.questions.length);
+    questions = cats.flatMap((c) => c.questions);
+    answers = {};
+    notes = '';
+    submittedAt = null;
+    stageIdx = 0;
+    saver.dirty = {};
+    saver.notesDirty = false;
+    setSaveState('idle');
+    $('cardError').hidden = true;
+
+    $('cardName').textContent = p.name;
+    $('cardTeam').textContent = p.team;
+    $('cardSummary').textContent = p.summary;
+    $('stage').replaceChildren(el('p', { class: 'px-label px-blink', text: 'CARGANDO...' }));
+    $('dots').replaceChildren();
+    show('card');
+    applyReadOnlyUi();
+
+    try {
+      const data = await tankFetch<{ scorecard: TankScorecard }>(
+        `/api/tank/judge/projects/${encodeURIComponent(p.id)}`,
+      );
+      const sc = data.scorecard;
+      for (const q of questions) {
+        const v = sc.scores?.[q.id];
+        if (typeof v === 'number' && v >= 0 && v < q.levels.length) answers[q.id] = v;
+      }
+      notes = sc.notes ?? '';
+      submittedAt = sc.submittedAt;
+      // Resume at the first stage with unanswered questions.
+      const first = cats.findIndex((c) => c.questions.some((q) => answers[q.id] === undefined));
+      stageIdx = first === -1 ? cats.length : first;
+      applyReadOnlyUi();
+      renderStage();
+    } catch (err) {
+      if (err instanceof TankApiError && err.status === 401) return showNoAccess(false);
+      $('stage').replaceChildren();
+      const e = $('cardError');
+      e.textContent = `No pudimos cargar el proyecto. ${err instanceof Error ? err.message : ''}`;
+      e.hidden = false;
+    }
+  }
+
+  function applyReadOnlyUi() {
+    $('cardClosed').hidden = !readOnly;
+    $('cardSubmitted').hidden = readOnly || !submittedAt;
+  }
+
+  function updateHeaderPoints() {
+    $('cardPoints').textContent = `TUS PUNTOS ${subtotal()}/${maxTotal()}`;
+  }
+
+  function renderDots() {
+    const dots = $('dots');
+    dots.replaceChildren();
+    const total = cats.length + 1;
+    for (let i = 0; i < total; i++) {
+      const isFinal = i === cats.length;
+      const done = !isFinal && cats[i].questions.every((q) => answers[q.id] !== undefined);
+      const label = isFinal ? 'Enviar' : cats[i].name;
+      const b = el('button', {
+        class: `dot${i === stageIdx ? ' dot--cur' : done ? ' dot--done' : ''}`,
+        type: 'button',
+        'aria-label': `Etapa ${i + 1} de ${total}: ${label}`,
+        ...(i === stageIdx ? { 'aria-current': 'step' } : {}),
+        text: isFinal ? '★' : String(i + 1),
+      });
+      b.addEventListener('click', () => {
+        stageIdx = i;
+        renderStage();
+      });
+      dots.append(b);
+    }
+  }
+
+  function renderStage() {
+    updateHeaderPoints();
+    applyReadOnlyUi();
+    renderDots();
+    const stage = $('stage');
+    stage.replaceChildren();
+    const total = cats.length + 1;
+    const prev = $<HTMLButtonElement>('prevBtn');
+    const next = $<HTMLButtonElement>('nextBtn');
+    prev.disabled = stageIdx === 0;
+    next.hidden = stageIdx >= cats.length;
+
+    if (stageIdx < cats.length) {
+      const cat = cats[stageIdx];
+      stage.append(
+        el('div', { class: 'stage__head' }, [
+          el('h3', { class: 'px-title stage__title', text: `ETAPA ${stageIdx + 1}/${total - 1} · ${cat.name}` }),
+          el('span', {
+            class: 'px-label',
+            text: `${cat.questions.filter((q) => answers[q.id] !== undefined).length}/${cat.questions.length} RESPONDIDAS`,
+          }),
+        ]),
+      );
+      cat.questions.forEach((q, i) => stage.append(renderQuestion(q, i)));
+    } else {
+      stage.append(renderFinal());
+    }
+    syncProgressLocal();
+  }
+
+  function renderQuestion(q: TankQuestion, index: number): HTMLElement {
+    const n = q.levels.length;
+    const box = el('div', { class: 'q' });
+    const readout = el('div', { class: 'q__readout', 'aria-hidden': 'true' });
+    const slider = el('div', { class: 'q__slider', style: `--n:${n}` });
+    const range = el('input', {
+      class: 'q__range',
+      type: 'range',
+      min: 0,
+      max: n - 1,
+      step: 1,
+      value: answers[q.id] ?? 0,
+      'aria-labelledby': `q-${q.id}`,
+    });
+    if (readOnly) range.disabled = true;
+    const ticks = el('div', { class: `q__ticks${n >= 5 ? ' q__ticks--5' : ''}` });
+    const tickEls: HTMLButtonElement[] = [];
+
+    q.levels.forEach((lv, i) => {
+      const t = el('button', { class: 'tick', type: 'button', 'aria-label': `${lv.label ? `${lv.label}, ` : ''}${pts(lv.points)}` }, [
+        ...(lv.label ? [el('span', { class: 'tick__l', text: lv.label })] : []),
+        el('span', { class: 'tick__p', text: pts(lv.points) }),
+      ]);
+      if (readOnly) t.setAttribute('aria-disabled', 'true');
+      t.addEventListener('click', () => {
+        if (readOnly) return;
+        choose(i);
+        range.focus({ preventScroll: true });
+      });
+      tickEls.push(t);
+      ticks.append(t);
+    });
+
+    function paint() {
+      const a = answers[q.id];
+      const has = a !== undefined;
+      box.classList.toggle('q--empty', !has);
+      box.classList.toggle('q--answered', has);
+      range.value = String(has ? a : 0);
+      range.style.setProperty('--fill', has ? `${n > 1 ? (a / (n - 1)) * 100 : 0}%` : '0%');
+      range.setAttribute('aria-valuetext', has ? `${q.levels[a].label ? `${q.levels[a].label}, ` : ''}${pts(q.levels[a].points)}` : 'Sin responder');
+      tickEls.forEach((t, i) => t.classList.toggle('tick--sel', has && i === a));
+      readout.replaceChildren();
+      if (has) {
+        const lv = q.levels[a];
+        readout.append(
+          el('span', { class: 'q__pts' }, [String(lv.points), el('small', { text: ' PTS' })]),
+          el('span', { class: 'q__lbl', text: lv.label }),
+        );
+      } else {
+        readout.append(el('span', { class: 'q__empty', text: 'SIN RESPONDER' }));
+      }
+    }
+
+    function choose(i: number) {
+      if (readOnly) return;
+      if (answers[q.id] === i) return;
+      answers[q.id] = i;
+      saver.dirty[q.id] = i;
+      paint();
+      updateHeaderPoints();
+      syncProgressLocal();
+      refreshStageMeta();
+      scheduleSave();
+    }
+
+    // Commit on input (moves) and on release/click (so choosing the first stop works too).
+    range.addEventListener('input', () => choose(Number(range.value)));
+    const commitCurrent = () => choose(Number(range.value));
+    range.addEventListener('pointerup', commitCurrent);
+    range.addEventListener('change', commitCurrent);
+
+    box.append(
+      el('p', { class: 'q__prompt', id: `q-${q.id}`, text: `${index + 1}. ${q.prompt}` }),
+      readout,
+      slider,
+    );
+    slider.append(range, ticks);
+    paint();
+    return box;
+  }
+
+  /** Cheap refresh of the stage counter and dots after an answer. */
+  function refreshStageMeta() {
+    if (stageIdx >= cats.length) return;
+    const cat = cats[stageIdx];
+    const label = $('stage').querySelector('.stage__head .px-label');
+    if (label) label.textContent = `${cat.questions.filter((q) => answers[q.id] !== undefined).length}/${cat.questions.length} RESPONDIDAS`;
+    renderDots();
+  }
+
+  function renderFinal(): HTMLElement {
+    const box = el('div', { class: 'final' });
+    box.append(el('h3', { class: 'px-title stage__title', text: `ETAPA ${cats.length + 1}/${cats.length + 1} · ENVÍO` }));
+    box.append(el('p', { class: 'final__total', text: `TUS PUNTOS ${subtotal()}/${maxTotal()}` }));
+
+    const list = el('ul', { class: 'final__cats' });
+    cats.forEach((c) => {
+      const got = c.questions.reduce((s, q) => s + (answers[q.id] === undefined ? 0 : q.levels[answers[q.id]].points), 0);
+      const max = c.questions.reduce((s, q) => s + Math.max(...q.levels.map((l) => l.points)), 0);
+      list.append(el('li', {}, [el('span', { text: c.name }), el('span', { class: 'px-dim', text: `${got}/${max}` })]));
+    });
+    box.append(list);
+
+    const missing: Array<{ q: TankQuestion; stage: number }> = [];
+    cats.forEach((c, si) => c.questions.forEach((q) => answers[q.id] === undefined && missing.push({ q, stage: si })));
+    if (missing.length) {
+      box.append(el('p', { class: 'notice notice--error', text: `Faltan ${missing.length} respuestas:` }));
+      const ml = el('ul', { class: 'missing' });
+      missing.forEach(({ q, stage }) => {
+        const b = el('button', { type: 'button', text: `${cats[stage].name}: ${q.prompt}` });
+        b.addEventListener('click', () => {
+          stageIdx = stage;
+          renderStage();
+        });
+        ml.append(el('li', {}, [b]));
+      });
+      box.append(ml);
+    }
+
+    const label = el('label', { class: 'px-label', for: 'notesInput', text: 'NOTAS (OPCIONAL)' });
+    const ta = el('textarea', { class: 'px-textarea', id: 'notesInput', maxlength: 1000, rows: 4, placeholder: 'Comentarios para el equipo o el organizador' });
+    ta.value = notes;
+    if (readOnly) ta.disabled = true;
+    const count = el('p', { class: 'final__count', text: `${notes.length}/1000` });
+    ta.addEventListener('input', () => {
+      notes = ta.value.slice(0, 1000);
+      count.textContent = `${notes.length}/1000`;
+      saver.notesDirty = true;
+      scheduleSave();
+    });
+    box.append(label, ta, count);
+
+    const submit = el('button', {
+      class: 'px-btn px-btn--ok',
+      type: 'button',
+      text: submittedAt ? 'REENVIAR PUNTUACIÓN' : 'ENVIAR PUNTUACIÓN',
+    });
+    submit.disabled = readOnly || missing.length > 0;
+    submit.addEventListener('click', () => submitScores(submit));
+    box.append(submit);
+    return box;
+  }
+
+  async function submitScores(btn: HTMLButtonElement) {
+    if (!project || readOnly) return;
+    btn.disabled = true;
+    btn.textContent = 'ENVIANDO...';
+    $('cardError').hidden = true;
+    const saved = await flush();
+    // flush may be mid-flight; wait for it to settle.
+    while (saver.inflight) await new Promise((r) => setTimeout(r, 60));
+    if (!saved && (Object.keys(saver.dirty).length || saver.notesDirty)) {
+      btn.disabled = false;
+      btn.textContent = 'ENVIAR PUNTUACIÓN';
+      return;
+    }
+    try {
+      const res = await tankFetch<{ scorecard: TankScorecard }>(
+        `/api/tank/judge/projects/${encodeURIComponent(project.id)}/submit`,
+        { method: 'POST', body: JSON.stringify({ notes }) },
+      );
+      submittedAt = res.scorecard.submittedAt ?? new Date().toISOString();
+      project.submitted = true;
+      project.answered = project.total;
+      celebrate();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'ENVIAR PUNTUACIÓN';
+      if (err instanceof TankApiError && err.status === 403) return handleClosed();
+      const e = $('cardError');
+      e.textContent = err instanceof TankApiError && err.status === 409
+        ? 'Aún faltan respuestas por contestar.'
+        : `No se pudo enviar. ${err instanceof Error ? err.message : ''}`;
+      e.hidden = false;
+    }
+  }
+
+  $('prevBtn').addEventListener('click', () => {
+    if (stageIdx > 0) {
+      stageIdx--;
+      renderStage();
+      window.scrollTo(0, 0);
+    }
+  });
+  $('nextBtn').addEventListener('click', () => {
+    if (stageIdx < cats.length) {
+      stageIdx++;
+      renderStage();
+      window.scrollTo(0, 0);
+    }
+  });
+  $('backBtn').addEventListener('click', async () => {
+    await flush();
+    goSelect();
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (Object.keys(saver.dirty).length) flush();
+  });
+
+  /* ---------- celebration ---------- */
+  function nextPending(): TankProjectProgress | null {
+    if (!session || !project) return null;
+    const list = session.projects;
+    const start = list.findIndex((p) => p.id === project!.id);
+    for (let k = 1; k < list.length; k++) {
+      const p = list[(start + k) % list.length];
+      if (!p.submitted) return p;
+    }
+    return null;
+  }
+
+  function celebrate() {
+    const burst = $('burst');
+    burst.replaceChildren();
+    for (let i = 0; i < 18; i++) {
+      const a = (i / 18) * Math.PI * 2;
+      const r = 70 + (i % 3) * 28;
+      const bit = el('i');
+      bit.style.setProperty('--bx', `${Math.round(Math.cos(a) * r)}px`);
+      bit.style.setProperty('--by', `${Math.round(Math.sin(a) * r * 0.7)}px`);
+      burst.append(bit);
+    }
+    const sent = session ? session.projects.filter((p) => p.submitted).length : 0;
+    const total = session ? session.projects.length : 0;
+    $('doneText').textContent = `${project?.name ?? 'Proyecto'}: ${subtotal()} de ${maxTotal()} puntos. Llevas ${sent}/${total} proyectos enviados.`;
+    const nxt = nextPending();
+    const nb = $<HTMLButtonElement>('nextProjectBtn');
+    nb.hidden = !nxt;
+    show('done');
+  }
+
+  $('nextProjectBtn').addEventListener('click', () => {
+    const nxt = nextPending();
+    if (nxt) openProject(nxt);
+    else goSelect();
+  });
+  $('backProjectsBtn').addEventListener('click', goSelect);
+
+  /* ---------- boot ---------- */
+  if (invalidLink) {
+    showNoAccess(true);
+  } else {
+    show('title');
+    loadSession();
+  }
+</script>
