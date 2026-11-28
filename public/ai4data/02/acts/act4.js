@@ -92,8 +92,8 @@
         <h2 class="t-title" style="margin-bottom:30px">Fuentes</h2>
         <ol>
           <li><b>Ollama</b>: docs.ollama.com, FAQ (ventana de contexto por defecto de 4,096 tokens, <span class="mono">OLLAMA_CONTEXT_LENGTH</span>) y "OpenAI compatibility" (la API compatible no permite fijar la ventana por llamada).</li>
+          <li><b>Temperatura cero no es repetible</b>: Horace He y Thinking Machines Lab, "Defeating Nondeterminism in LLM Inference", 10 sep 2025, thinkingmachines.ai/blog (Qwen3-235B, 1,000 corridas a temperatura 0: 80 respuestas distintas; causa: kernels que no son invariantes al tamaño del lote).</li>
           <li><b>bonsai 2</b> (Prism ML): ollama.com/library/bonsai-2 (pesos ternarios; 9b, 3.2 GB; 4b, 1.6 GB; 256K de contexto; arquitectura qwen3.5 según <span class="mono">ollama show</span>; Ollama ≥ 0.40.6).</li>
-          <li><b>Snowflake Cortex</b>: docs.snowflake.com, AI_COMPLETE (cadena única) y "Cross-region inference" (CORTEX_ENABLED_CROSS_REGION; ANY_REGION por defecto en organizaciones nuevas desde el 9 de marzo de 2026).</li>
           <li><b>Databricks</b>: docs.databricks.com, ai_query; foros de la comunidad: en Free Edition, ai_query funciona con modelos hospedados por Databricks.</li>
           <li><b>Modelos de decisión</b>: Jev, TypeSafe.</li>
           <li><b>Caso y set dorado</b>: caso/transacciones.csv y caso/set_dorado.jsonl de este repo.</li>

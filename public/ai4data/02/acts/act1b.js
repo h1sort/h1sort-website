@@ -18,7 +18,9 @@
     #s-temperatura .tp h3 { font-size: 44px; font-weight: 500; margin: 12px 0 12px; }
     #s-temperatura .tp p { font-size: 28px; color: var(--dim); line-height: 1.35; margin: 0 0 12px; }
     #s-temperatura .tp .r { font-family: var(--mono); font-size: 26px; color: var(--fg); }
-    #s-temperatura .tp-foot { margin-top: 52px; font-size: 38px; max-width: 1640px; line-height: 1.3; }
+    #s-temperatura .tp-foot { margin-top: 44px; font-size: 36px; max-width: 1640px; line-height: 1.3; }
+    #s-temperatura .tp-foot + .tp-foot { margin-top: 22px; }
+    #s-temperatura .cite { margin-top: 10px; }
 
     #s-prefill .pf { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; margin-top: 6px; }
     #s-prefill .pf > div { border-top: 3px solid var(--fg); padding-top: 20px; }
@@ -96,11 +98,12 @@
         <div class="t-label">Elegir uno · los logits se dividen entre la temperatura antes del softmax</div>
         <h2 class="t-title" style="margin-bottom:28px">Temperatura</h2>
         <div class="tp">
-          <div><div class="t-label accent">0 · greedy</div><h3>Siempre el más probable</h3><p>Repetible en teoría. En un servicio con lotes, ya vimos que no.</p><p class="r">23+45= → 68 ×10</p></div>
+          <div><div class="t-label accent">0 · greedy</div><h3>Siempre el más probable</h3><p>Repetible solo en tu laptop. En un servidor: 1,000 corridas en 0, <span class="fg">80 respuestas distintas</span>.</p><p class="r">23+45= → 68 ×10</p><div class="cite">Thinking Machines, sep 2025</div></div>
           <div data-step="1"><div class="t-label accent">0.7</div><h3>Afila</h3><p>Lo probable se vuelve más probable.</p><p class="r">23+45= → 68 ×10</p></div>
           <div data-step="2"><div class="t-label accent">1.5</div><h3>Aplana</h3><p>Lo improbable empieza a salir.</p><p class="r">23+45= → 68 ×7 · 67 ×2 · 63 ×1</p></div>
         </div>
-        <p class="tp-foot" data-step="3">La temperatura no hace al modelo más listo ni más tonto: solo decide cuánto se arriesga al elegir.</p>`,
+        <p class="tp-foot" data-step="3">La temperatura no hace al modelo más listo ni más tonto: solo decide cuánto se arriesga al elegir.</p>
+        <p class="tp-foot" data-step="4"><span class="accent">Para datos, lo repetible no sale de la temperatura:</span> sale del método (esquema, SQL, herramientas) y de medir el consenso.</p>`,
     },
     {
       id: 'prefill',
@@ -133,7 +136,7 @@
       html: `
         <div class="t-label">Lab · 12 minutos · sesiones/02/lab-inference</div>
         <h2 class="t-title" style="margin-bottom:28px">Mira a tu modelo elegir</h2>
-        ${Timer.html(12)}
+        ${Timer.html()}
         <div class="ls">
           <div>
 <pre class="code">uv run sesiones/02/lab-inference/next_token.py
@@ -197,7 +200,7 @@ uv run sesiones/02/lab-inference/next_token.py --prompt "99+99="</pre>
       html: `
         <div class="t-label">Lab · 12 minutos · sesiones/02/lab-inference</div>
         <h2 class="t-title" style="margin-bottom:28px">Restringe a tu modelo de transacciones</h2>
-        ${Timer.html(12)}
+        ${Timer.html()}
         <div class="lr">
           <div>
 <pre class="code">uv run sesiones/02/lab-inference/constrained_decoding.py</pre>

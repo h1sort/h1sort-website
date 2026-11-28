@@ -1,4 +1,4 @@
-// Act 1 · Apertura: portada, lo que medimos el sábado (números de la sala), dos correcciones, agenda.
+// Act 1 · Apertura: portada, lo que medimos el sábado (números de la sala, con la fe de erratas), agenda.
 (() => {
   Deck.css(`
     #s-portada .pt-l { position: absolute; left: var(--pad-x); top: 250px; width: 1000px; }
@@ -15,11 +15,6 @@
     #s-repaso .rp .big { font-size: 84px; margin: 12px 0 10px; }
     #s-repaso .rp p { font-size: 28px; color: var(--dim); line-height: 1.3; margin: 0; }
 
-    #s-correcciones .co { display: grid; grid-template-columns: repeat(3, 1fr); gap: 52px; margin-top: 10px; }
-    #s-correcciones .co > div { border-top: 3px solid var(--accent); padding-top: 22px; }
-    #s-correcciones .co h3 { font-size: 38px; font-weight: 500; margin: 12px 0 18px; letter-spacing: -0.01em; }
-    #s-correcciones .co p { font-size: 28px; color: var(--dim); line-height: 1.38; margin: 0 0 16px; }
-    #s-correcciones .co .eq { font-family: var(--mono); font-size: 26px; color: var(--fg); line-height: 1.5; }
 
     #s-hoy .hy { list-style: none; padding: 0; margin: 0; max-width: 1560px; }
     #s-hoy .hy li { display: grid; grid-template-columns: 90px 1fr 200px; padding: 20px 0; border-top: 2px solid var(--hair); font-size: 40px; align-items: baseline; }
@@ -59,39 +54,10 @@
         <div class="rp">
           <div><div class="t-label">Sumas que vio</div><div class="big">84–96%</div><p>Mismo código, mismos datos: cada quien un número distinto.</p></div>
           <div data-step="1"><div class="t-label">Sumas de 3 cifras</div><div class="big accent">0%</div><p>A todos. Siempre contestó con un número, y nunca bien.</p></div>
-          <div data-step="2"><div class="t-label">Transacciones válidas</div><div class="big">74–77%<span class="accent">*</span></div><p><span class="accent">*</span>Lo medimos mal. En un momento, la corrección.</p></div>
+          <div data-step="2"><div class="t-label">Transacciones válidas</div><div class="big">97.7%<span class="accent">*</span></div><p><span class="accent">*</span>No 74–77%: mi evaluador cortaba las filas. Ya está corregido: <span class="mono">git pull</span>.</p></div>
           <div data-step="3"><div class="t-label">Tokens por fila</div><div class="big">37</div><p>Nuestro caso. Diamonds: 31.8 por fila, 6,290 filas en 200 mil tokens.</p></div>
           <div data-step="4"><div class="t-label">Haiku 5.5 · 20 veces</div><div class="big">18 / 20</div><p>Iguales. Las otras dos, distintas: una dio 1,539.31.</p></div>
           <div data-step="5"><div class="t-label">Marcador v0</div><div class="big faint">pendiente</div><p>Hoy lo sacamos, para cada modelo y cada forma de responder.</p></div>
-        </div>`,
-    },
-    {
-      id: 'correcciones',
-      title: 'Tres correcciones',
-      time: 240,
-      particles: { shape: 'two', opacity: 0.14 },
-      html: `
-        <div class="t-label">Fe de erratas · sesión 01</div>
-        <h2 class="t-title">Tres correcciones</h2>
-        <div class="co">
-          <div>
-            <div class="t-label accent">La pérdida</div>
-            <h3>Más baja es mejor. Y no llega a cero.</h3>
-            <p>En <span class="mono">23+45=68</span>, los dígitos de a y b son aleatorios: nadie puede predecirlos. Solo la suma se puede aprender.</p>
-            <p>Piso ≈ 1.0 por carácter. Nuestro modelo terminó en <span class="mono fg">1.07</span>: casi en el piso.</p>
-          </div>
-          <div data-step="1">
-            <div class="t-label accent">El costo · gracias, Leo</div>
-            <h3>Pasarle 100 mil filas al modelo</h3>
-            <p class="eq">100,000 filas × 37 tokens<br>= 3.7 M tokens<br>× $8 por millón de entrada<br>≈ <span class="accent">$30</span> cada vez que se la pasas</p>
-            <p>Solo la entrada, solo una pregunta. Y no la ve completa: no cabe.</p>
-          </div>
-          <div data-step="2">
-            <div class="t-label accent">La evaluación · error mío</div>
-            <h3>74% era 97.7%</h3>
-            <p>El script de evaluación cortaba el contexto cada 200 caracteres: la fila que cruzaba el corte salía cosida de dos mitades.</p>
-            <p>Corregido: el modelo acierta forma y catálogo; lo que falla es la aritmética, <span class="mono fg">total ≠ cantidad × precio</span>.</p>
-          </div>
         </div>`,
     },
     {

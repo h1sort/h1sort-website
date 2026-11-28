@@ -20,9 +20,6 @@
     #s-donde .dn td:first-child { font-size: 34px; font-weight: 500; width: 380px; }
     #s-donde .dn .m { font-family: var(--mono); font-size: 24px; color: var(--accent); display: block; margin-top: 6px; font-weight: 400; }
 
-    #s-residencia .rs { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; }
-    #s-residencia .rs p { font-size: 32px; color: var(--dim); line-height: 1.38; margin: 0 0 22px; }
-    #s-residencia .rs pre.code { font-size: 25px; }
 
     #s-lab-formas .lf { display: grid; grid-template-columns: 1.25fr 1fr; gap: 52px; }
     #s-lab-formas .lf pre.code { font-size: 22px; line-height: 1.5; }
@@ -161,15 +158,16 @@ Eres un analista de datos…
       html: `
         <div class="t-label">Lab · 35 minutos · sesiones/02/lab-answer-strategies</div>
         <h2 class="t-title" style="margin-bottom:28px">Tres estrategias, en tu modelo</h2>
-        ${Timer.html(35)}
+        ${Timer.html()}
         <div class="lf">
           <div>
             <div class="t-label accent">Tu modelo (lo que diga tu .env)</div>
 <pre class="code">uv run sesiones/02/lab-answer-strategies/score.py --strategy compute
 uv run sesiones/02/lab-answer-strategies/score.py --strategy sql
 uv run sesiones/02/lab-answer-strategies/score.py --strategy tool</pre>
-            <div class="t-label accent" style="margin-top:30px">Con tu llave (o la mía, en pantalla)</div>
-<pre class="code">uv run sesiones/02/lab-answer-strategies/score.py --strategy tool --claude</pre>
+            <div class="t-label accent" style="margin-top:30px">Con tu API key</div>
+<pre class="code">uv run sesiones/02/lab-answer-strategies/score.py --strategy tool --claude
+uv run sesiones/02/lab-answer-strategies/score.py --strategy tool --openai</pre>
             <div class="t-label accent" style="margin-top:30px">La tabla para tu memo</div>
 <pre class="code">uv run sesiones/02/lab-answer-strategies/compare.py</pre>
           </div>
@@ -179,7 +177,7 @@ uv run sesiones/02/lab-answer-strategies/score.py --strategy tool</pre>
             <li><b>sql:</b> solo el esquema; DuckDB corre la consulta sobre las 500 filas.</li>
             <li><b>tool:</b> te imprime la primera traza completa; <span class="mono">--trace</span> para todas.</li>
             <li><b>¿Va lento?</b> <span class="mono">--no-thinking</span> o <span class="mono">--runs 1</span>.</li>
-            <li><b>¿OpenAI?</b> <span class="mono">--openai</span> en lugar de <span class="mono">--claude</span>.</li>
+            <li><b>API key</b> en tu <span class="mono">.env</span>: <span class="mono">ANTHROPIC_API_KEY</span> u <span class="mono">OPENAI_API_KEY</span>.</li>
           </ul>
         </div>`,
     },
@@ -211,30 +209,8 @@ uv run sesiones/02/lab-answer-strategies/score.py --strategy tool</pre>
           <tr><th></th><th>¿Tus datos salen?</th><th>Costo</th><th>Quién lo opera</th></tr>
           <tr><td>Tu máquina<span class="m">Ollama · bonsai</span></td><td>No</td><td>$0 por token; pagas en hardware y tiempo</td><td>Tú</td></tr>
           <tr data-step="1"><td>API pública<span class="m">OpenAI · Anthropic</span></td><td>Sí, al proveedor</td><td>Por token</td><td>El proveedor</td></tr>
-          <tr data-step="2"><td>Dentro del warehouse<span class="m">AI_COMPLETE · ai_query</span></td><td>No salen de tu cuenta; la inferencia puede correr en otra región</td><td>Créditos del warehouse</td><td>El warehouse</td></tr>
+          <tr data-step="2"><td>Dentro del warehouse<span class="m">Databricks · ai_query</span></td><td>No salen de tu cuenta</td><td>Créditos del warehouse</td><td>El warehouse</td></tr>
         </table>`,
-    },
-    {
-      id: 'residencia',
-      title: 'Residencia de datos',
-      time: 180,
-      particles: { shape: 'split', opacity: 0.14 },
-      html: `
-        <div class="t-label">Industrias reguladas · Snowflake</div>
-        <h2 class="t-title" style="margin-bottom:30px">¿En qué región piensa tu modelo?</h2>
-        <div class="rs">
-          <div>
-            <p>Snowflake guarda tus datos en la región de tu cuenta, pero puede mandar la <em>inferencia</em> a otra región si ahí hay capacidad.</p>
-            <p data-step="1">En cuentas nuevas desde marzo de 2026, eso viene encendido: <span class="mono fg">ANY_REGION</span>.</p>
-          </div>
-          <div data-step="2">
-            <div class="t-label accent" style="margin-bottom:16px">Revísalo en tu cuenta</div>
-<pre class="code">SHOW PARAMETERS LIKE
-  'CORTEX_ENABLED_CROSS_REGION' IN ACCOUNT;</pre>
-            <p style="margin-top:26px">Si tu regulador pide que todo se procese en una región, esto se decide con tu área de cumplimiento, no en el lab.</p>
-          </div>
-        </div>
-        <div class="cite foot">docs.snowflake.com · Cortex AI, "Cross-region inference"</div>`,
     },
     {
       id: 'lab-warehouse',
@@ -245,7 +221,7 @@ uv run sesiones/02/lab-answer-strategies/score.py --strategy tool</pre>
       html: `
         <div class="t-label">Lab · 20 minutos · sesiones/02/lab-warehouse</div>
         <h2 class="t-title" style="margin-bottom:28px">El modelo dentro del warehouse</h2>
-        ${Timer.html(20)}
+        ${Timer.html()}
         <div class="lw">
           <div><div class="n">0</div><h3>Carga</h3><p><span class="mono">caso/transacciones.csv</span> como tabla <span class="mono">transacciones</span>.</p></div>
           <div><div class="n">1 · 2</div><h3>Verdad y modelo</h3><p>La verdad con SQL; el modelo calcula sobre 50 filas, en la misma consulta.</p></div>
