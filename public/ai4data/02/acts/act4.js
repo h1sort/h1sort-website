@@ -26,7 +26,7 @@
     #s-fuentes li b { color: var(--fg); font-weight: 500; }
   `);
 
-  Deck.act(4, 'Cierre', [
+  Deck.act(5, 'Cierre', [
     {
       id: 'memo',
       title: 'Entregable · memo de selección',

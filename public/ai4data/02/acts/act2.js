@@ -31,7 +31,7 @@
     #s-benchmark .bm-foot { margin-top: 56px; font-size: 40px; max-width: 1600px; line-height: 1.3; }
   `);
 
-  Deck.act(2, 'Elegir modelo', [
+  Deck.act(3, 'Elegir modelo', [
     {
       id: 'familias',
       title: 'Tres familias de modelos',
