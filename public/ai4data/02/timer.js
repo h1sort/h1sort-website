@@ -1,15 +1,15 @@
-// Countdown for lab and pause slides. Use Timer.html(minutes) in a slide.
-// Click the digits (or ▶) to start/pause; +1 min, +30 s and ↺ (back to the start value).
+// Countdown for lab and pause slides. Use Timer.html() in a slide (5 min), or Timer.html(minutes).
+// Click the digits to start/pause; −30 s / +30 s adjust it (never below 0:00) and ↺ goes back to the start value.
 // The engine ignores clicks on buttons, so using the timer never changes slide.
 (() => {
   const fmt = (s) => `${s < 0 ? '−' : ''}${Math.floor(Math.abs(s) / 60)}:${String(Math.abs(s) % 60).padStart(2, '0')}`;
 
   window.Timer = {
-    html: (min) => `
+    html: (min = 5) => `
       <div class="tmr" data-min="${min}" data-left="${min * 60}" data-run="0">
         <button class="tmr-t" title="Iniciar / pausar">${fmt(min * 60)}</button>
         <div class="tmr-b">
-          <button data-add="60">+1 min</button><button data-add="30">+30 s</button><button data-reset title="Reiniciar">↺</button>
+          <button data-add="-30" title="Quitar 30 segundos">−30 s</button><button data-add="30" title="Agregar 30 segundos">+30 s</button><button data-reset title="Reiniciar">↺</button>
         </div>
       </div>`,
   };
@@ -39,7 +39,10 @@
     if (!b) return;
     const t = b.closest('.tmr');
     if (b.classList.contains('tmr-t')) t.dataset.run = t.dataset.run === '1' ? '0' : '1';
-    else if (b.dataset.add) t.dataset.left = +t.dataset.left + +b.dataset.add;
+    else if (b.dataset.add) {
+      const left = +t.dataset.left, add = +b.dataset.add;
+      t.dataset.left = add < 0 && left > 0 ? Math.max(0, left + add) : add < 0 ? left : left + add;
+    }
     else if ('reset' in b.dataset) { t.dataset.left = +t.dataset.min * 60; t.dataset.run = '0'; }
     paint(t);
   });

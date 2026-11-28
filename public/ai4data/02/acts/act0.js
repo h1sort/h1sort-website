@@ -65,7 +65,7 @@
       html: `
         <div class="t-label">Sesión 02 · hora de instalación · opcional</div>
         <h2 class="t-title">Antes de empezar: tu modelo local</h2>
-        ${Timer.html(15)}
+        ${Timer.html()}
         <div class="in">
           <div><div class="n">01</div><h3>Actualiza el repo</h3><p><span class="mono">git pull</span> dentro de <span class="mono">AI4DATA/ai4data</span>. Hoy hay labs nuevos.</p></div>
           <div><div class="n">02</div><h3>Ollama + bonsai</h3><p>Instala Ollama y descarga <span class="mono">bonsai-2:9b</span>: 3.2 GB.</p></div>
@@ -152,8 +152,9 @@ git pull</pre>
 <pre class="code">uv run sesiones/02/lab-local-model/ask.py</pre>
             <div class="t-label accent" style="margin-top:34px">Sin razonar antes de contestar</div>
 <pre class="code">uv run sesiones/02/lab-local-model/ask.py --no-thinking</pre>
-            <div class="t-label accent" style="margin-top:34px">Con tu llave, para comparar</div>
-<pre class="code">uv run sesiones/02/lab-local-model/ask.py --claude</pre>
+            <div class="t-label accent" style="margin-top:34px">Con tu API key, para comparar</div>
+<pre class="code">uv run sesiones/02/lab-local-model/ask.py --claude
+uv run sesiones/02/lab-local-model/ask.py --openai</pre>
           </div>
           <div>
             <div class="t-label">Te imprime</div>
@@ -245,7 +246,11 @@ costo     $0: corre en tu máquina</pre>
           <ol>
             <li>Busca <b>Access tokens</b><small>Settings → Developer → Access tokens.</small></li>
             <li><b>Generate new token</b><small>Ponle nombre y vencimiento corto.</small></li>
-            <li>Cópialo en ese momento<small>No se vuelve a mostrar. Guárdalo en tu <span class="mono">.env</span>: nunca en el chat, nunca en git.</small></li>
+            <li>Cópialo en ese momento<small>No se vuelve a mostrar. Nunca en el chat, nunca en git.</small></li>
+            <li>Pégalo en tu <span class="mono">.env</span>:
+<pre class="code">DATABRICKS_HOST=https://dbc-…
+DATABRICKS_TOKEN=dapi…</pre>
+              <small>HOST: la dirección de tu workspace, completa, como la ves en el navegador. Vienen comentadas en <span class="mono">.env.example</span>.</small></li>
           </ol>
           <div><div class="shot"><img src="assets/wh-databricks-3-token.jpg" alt="Pantalla de Access tokens en Databricks"></div>
             <div class="cap">Hoy no lo necesitas: el lab corre en el SQL Editor</div></div>
