@@ -204,7 +204,7 @@ costo     $0: corre en tu máquina</pre>
         <h2 class="t-title" style="margin-bottom:36px">Abre tu cuenta</h2>
         <div class="ws">
           <ol>
-            <li>Entra a<small class="mono" style="font-size:26px;white-space:nowrap;color:var(--accent)">databricks.com/learn/free-edition</small></li>
+            <li>Entra a<small class="mono" style="font-size:26px;white-space:nowrap"><a href="https://www.databricks.com/learn/free-edition" target="_blank" rel="noopener" style="color:var(--accent)">databricks.com/learn/free-edition</a></small></li>
             <li><b>Sign up for Free Edition</b><small>Continúa con Google: tu Gmail personal.</small></li>
             <li>Te deja en tu <b>workspace</b><small>Es tu espacio: catálogo, editor de SQL y modelos.</small></li>
           </ol>
@@ -225,6 +225,7 @@ costo     $0: corre en tu máquina</pre>
             <li><b>+ New</b> → <b>Add or upload data</b><small>O desde <b>Catalog</b> en el menú de la izquierda.</small></li>
             <li>Sube <span class="mono accent">caso/transacciones.csv</span><small>Del repo. Destino: <span class="mono">workspace.default</span>.</small></li>
             <li>Nombre de la tabla: <span class="mono accent">transacciones</span><small>Antes de crearla, revisa que <span class="mono">fecha</span> quede como DATE.</small></li>
+            <li>O con un comando, si ya tienes tu token: <span class="mono">upload_to_databricks.py</span><small>Siguiente lámina; el comando está en la de la pausa.</small></li>
             <li>Abre <b>SQL Editor</b> y prueba:
 <pre class="code">SELECT COUNT(*) FROM transacciones;</pre>
               <small>Debe dar 500.</small></li>
@@ -253,7 +254,7 @@ DATABRICKS_TOKEN=dapi…</pre>
               <small>HOST: la dirección de tu workspace, completa, como la ves en el navegador. Vienen comentadas en <span class="mono">.env.example</span>.</small></li>
           </ol>
           <div><div class="shot"><img src="assets/wh-databricks-3-token.jpg" alt="Pantalla de Access tokens en Databricks"></div>
-            <div class="cap">Hoy no lo necesitas: el lab corre en el SQL Editor</div></div>
+            <div class="cap">Con él, upload_to_databricks.py sube el caso por ti</div></div>
         </div>`,
     },
     {

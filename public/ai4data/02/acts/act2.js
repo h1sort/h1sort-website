@@ -1,6 +1,22 @@
 // Act 2 · Elegir modelo: tres familias, regla práctica, tabla de precios, benchmark vs set dorado.
 (() => {
   Deck.css(`
+    #s-cuantizacion .qz { display: grid; grid-template-columns: 1.15fr 1fr; gap: 64px; margin-top: 4px; }
+    #s-cuantizacion .qb { list-style: none; padding: 0; margin: 0; }
+    #s-cuantizacion .qb li { display: grid; grid-template-columns: 240px 1fr 120px; gap: 18px; align-items: center; padding: 12px 0; border-top: 2px solid var(--hair); }
+    #s-cuantizacion .qb li:last-child { border-bottom: 2px solid var(--hair); }
+    #s-cuantizacion .qb .n { font-size: 28px; }
+    #s-cuantizacion .qb .n small { display: block; font-family: var(--mono); font-size: 19px; color: var(--dim); letter-spacing: .04em; margin-top: 4px; }
+    #s-cuantizacion .qb .b { height: 26px; background: var(--fg); border-radius: 4px; }
+    #s-cuantizacion .qb .acc .b { background: var(--accent); }
+    #s-cuantizacion .qb .acc .n, #s-cuantizacion .qb .acc .v { color: var(--accent); }
+    #s-cuantizacion .qb .v { font-family: var(--mono); font-size: 27px; text-align: right; }
+    #s-cuantizacion .qz ol { list-style: none; padding: 0; margin: 0; counter-reset: q; }
+    #s-cuantizacion .qz ol li { counter-increment: q; position: relative; padding: 0 0 24px 56px; font-size: 29px; line-height: 1.35; color: var(--dim); }
+    #s-cuantizacion .qz ol li::before { content: counter(q, decimal-leading-zero); position: absolute; left: 0; top: 3px; font-family: var(--mono); font-size: 22px; color: var(--accent); }
+    #s-cuantizacion .qz ol li b { color: var(--fg); font-weight: 500; }
+    #s-cuantizacion .qnote { font-family: var(--mono); font-size: 21px; color: var(--dim); margin-top: 16px; line-height: 1.5; }
+
     #s-familias .fa { display: grid; grid-template-columns: repeat(3, 1fr); gap: 44px; margin-top: 10px; }
     #s-familias .fa > div { border-top: 3px solid var(--fg); padding-top: 22px; }
     #s-familias .fa h3 { font-size: 46px; font-weight: 500; margin: 12px 0 16px; letter-spacing: -0.01em; }
@@ -59,6 +75,31 @@
             <p>Contestan preguntas tipadas: una etiqueta de una lista, un puntaje o una probabilidad. No generan texto.</p>
             <p class="ej">Jev · TypeSafe</p>
           </div>
+        </div>`,
+    },
+    {
+      id: 'cuantizacion',
+      title: 'Cuantización',
+      time: 300,
+      particles: { shape: 'grid', opacity: 0.12 },
+      html: `
+        <div class="t-label">Cuantización · menos bits por peso</div>
+        <h2 class="t-title" style="margin-bottom:30px">Cuánto pesa un modelo de 9 mil millones</h2>
+        <div class="qz">
+          <div>
+            <ul class="qb">
+              <li><span class="n">16 bits<small>como se entrena</small></span><span><div class="b" style="width:100%"></div></span><span class="v">18 GB</span></li>
+              <li data-step="1"><span class="n">8 bits</span><span><div class="b" style="width:50%"></div></span><span class="v">9 GB</span></li>
+              <li data-step="1"><span class="n">4 bits<small>lo común en Ollama</small></span><span><div class="b" style="width:25%"></div></span><span class="v">4.5 GB</span></li>
+              <li data-step="2" class="acc"><span class="n">2 bits · ternario<small>−1, 0, +1 · bonsai</small></span><span><div class="b" style="width:12.5%"></div></span><span class="v">2.25 GB</span></li>
+            </ul>
+            <p class="qnote" data-step="2">9 mil millones de pesos × bits ÷ 8 = bytes. bonsai-2:9b en mi laptop: 2.5 GB en memoria (<span class="fg">ollama ps</span>).</p>
+          </div>
+          <ol>
+            <li data-step="3"><b>Tiene que caber.</b> El modelo vive en tu memoria: con 16 bits, este modelo no cabe en una laptop de 16 GB.</li>
+            <li data-step="4"><b>Escribir es leer todos los pesos.</b> Cada token del decode recorre el modelo entero: menos bits que leer, más rápido escribe.</li>
+            <li data-step="5"><b>El precio es calidad.</b> Redondear los pesos pierde algo, y más en modelos chicos. bonsai se entrena desde el principio con tres valores, en lugar de redondear después.</li>
+          </ol>
         </div>`,
     },
     {
