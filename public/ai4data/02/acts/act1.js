@@ -15,11 +15,11 @@
     #s-repaso .rp .big { font-size: 84px; margin: 12px 0 10px; }
     #s-repaso .rp p { font-size: 28px; color: var(--dim); line-height: 1.3; margin: 0; }
 
-    #s-correcciones .co { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; margin-top: 10px; }
+    #s-correcciones .co { display: grid; grid-template-columns: repeat(3, 1fr); gap: 52px; margin-top: 10px; }
     #s-correcciones .co > div { border-top: 3px solid var(--accent); padding-top: 22px; }
-    #s-correcciones .co h3 { font-size: 44px; font-weight: 500; margin: 12px 0 18px; letter-spacing: -0.01em; }
-    #s-correcciones .co p { font-size: 30px; color: var(--dim); line-height: 1.38; margin: 0 0 16px; }
-    #s-correcciones .co .eq { font-family: var(--mono); font-size: 30px; color: var(--fg); line-height: 1.5; }
+    #s-correcciones .co h3 { font-size: 38px; font-weight: 500; margin: 12px 0 18px; letter-spacing: -0.01em; }
+    #s-correcciones .co p { font-size: 28px; color: var(--dim); line-height: 1.38; margin: 0 0 16px; }
+    #s-correcciones .co .eq { font-family: var(--mono); font-size: 26px; color: var(--fg); line-height: 1.5; }
 
     #s-hoy .hy { list-style: none; padding: 0; margin: 0; max-width: 1560px; }
     #s-hoy .hy li { display: grid; grid-template-columns: 90px 1fr 200px; padding: 20px 0; border-top: 2px solid var(--hair); font-size: 40px; align-items: baseline; }
@@ -59,7 +59,7 @@
         <div class="rp">
           <div><div class="t-label">Sumas que vio</div><div class="big">84–96%</div><p>Mismo código, mismos datos: cada quien un número distinto.</p></div>
           <div data-step="1"><div class="t-label">Sumas de 3 cifras</div><div class="big accent">0%</div><p>A todos. Siempre contestó con un número, y nunca bien.</p></div>
-          <div data-step="2"><div class="t-label">Transacciones válidas</div><div class="big">74–77%</div><p>El resto inventó clientes, comercios o fechas.</p></div>
+          <div data-step="2"><div class="t-label">Transacciones válidas</div><div class="big">74–77%<span class="accent">*</span></div><p><span class="accent">*</span>Lo medimos mal. En un momento, la corrección.</p></div>
           <div data-step="3"><div class="t-label">Tokens por fila</div><div class="big">37</div><p>Nuestro caso. Diamonds: 31.8 por fila, 6,290 filas en 200 mil tokens.</p></div>
           <div data-step="4"><div class="t-label">Haiku 5.5 · 20 veces</div><div class="big">18 / 20</div><p>Iguales. Las otras dos, distintas: una dio 1,539.31.</p></div>
           <div data-step="5"><div class="t-label">Marcador v0</div><div class="big faint">pendiente</div><p>Hoy lo sacamos, para cada modelo y cada forma de responder.</p></div>
@@ -67,12 +67,12 @@
     },
     {
       id: 'correcciones',
-      title: 'Dos correcciones',
+      title: 'Tres correcciones',
       time: 240,
       particles: { shape: 'two', opacity: 0.14 },
       html: `
         <div class="t-label">Fe de erratas · sesión 01</div>
-        <h2 class="t-title">Dos correcciones</h2>
+        <h2 class="t-title">Tres correcciones</h2>
         <div class="co">
           <div>
             <div class="t-label accent">La pérdida</div>
@@ -85,6 +85,12 @@
             <h3>Pasarle 100 mil filas al modelo</h3>
             <p class="eq">100,000 filas × 37 tokens<br>= 3.7 M tokens<br>× $8 por millón de entrada<br>≈ <span class="accent">$30</span> cada vez que se la pasas</p>
             <p>Solo la entrada, solo una pregunta. Y no la ve completa: no cabe.</p>
+          </div>
+          <div data-step="2">
+            <div class="t-label accent">La evaluación · error mío</div>
+            <h3>74% era 97.7%</h3>
+            <p>El script de evaluación cortaba el contexto cada 200 caracteres: la fila que cruzaba el corte salía cosida de dos mitades.</p>
+            <p>Corregido: el modelo acierta forma y catálogo; lo que falla es la aritmética, <span class="mono fg">total ≠ cantidad × precio</span>.</p>
           </div>
         </div>`,
     },
@@ -107,11 +113,11 @@
         <div class="t-label">Sesión 02</div>
         <h2 class="t-title">Hoy</h2>
         <ul class="hy">
-          <li><span class="n">01</span><span>Tres familias de modelos y una regla práctica</span><span class="m">teoría</span></li>
-          <li><span class="n">02</span><span>Leer una tabla de precios</span><span class="m">teoría</span></li>
-          <li><span class="n">03</span><span>Tres formas de responder · dónde corre el modelo</span><span class="m">teoría</span></li>
-          <li><span class="n">04</span><span>Lab: calcula vs SQL, local vs API</span><span class="m">35 min</span></li>
-          <li><span class="n">05</span><span>Lab: el modelo dentro del warehouse</span><span class="m">25 min</span></li>
+          <li><span class="n">01</span><span>Inferencia por dentro: cómo nace un token</span><span class="m">lab 12 min</span></li>
+          <li><span class="n">02</span><span>Decodificación restringida: forma, no verdad</span><span class="m">lab 12 min</span></li>
+          <li><span class="n">03</span><span>Elegir modelo: familias, precios, benchmarks</span><span class="m">teoría</span></li>
+          <li><span class="n">04</span><span>Tool calling por dentro · tres formas de responder</span><span class="m">lab 35 min</span></li>
+          <li><span class="n">05</span><span>Dónde corre el modelo · el warehouse</span><span class="m">lab 20 min</span></li>
           <li><span class="n">06</span><span>Tu memo de selección de modelo</span><span class="m">entregable</span></li>
         </ul>`,
     },

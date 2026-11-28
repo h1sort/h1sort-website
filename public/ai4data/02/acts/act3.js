@@ -46,9 +46,22 @@
     #s-lab-warehouse .lw h3 { font-size: 38px; font-weight: 500; margin: 12px 0 12px; }
     #s-lab-warehouse .lw p { font-size: 27px; color: var(--dim); line-height: 1.35; margin: 0; }
     #s-lab-warehouse .lw-files { margin-top: 52px; font-size: 32px; line-height: 1.5; }
+
+    #s-una-cadena .uc { display: grid; grid-template-columns: 0.62fr 1.38fr; gap: 48px; }
+    #s-una-cadena .uc p { font-size: 28px; color: var(--dim); line-height: 1.38; margin: 0 0 18px; }
+    #s-una-cadena .uc pre.raw { font-family: var(--mono); font-size: 23px; line-height: 1.45; margin: 0; white-space: pre; border: var(--stroke) solid var(--hair); border-radius: 14px; padding: 20px 24px; }
+    #s-una-cadena .uc pre.raw .s { color: var(--faint); }
+    #s-una-cadena .uc pre.raw .t { color: var(--accent); }
+
+    #s-tool-loop .tl { list-style: none; padding: 0; margin: 0; max-width: 1680px; }
+    #s-tool-loop .tl li { display: grid; grid-template-columns: 90px 260px 1fr; gap: 24px; padding: 20px 0; border-top: 2px solid var(--hair); font-size: 32px; line-height: 1.3; align-items: baseline; }
+    #s-tool-loop .tl li:last-child { border-bottom: 2px solid var(--hair); }
+    #s-tool-loop .tl .n { font-family: var(--mono); font-size: 26px; color: var(--accent); }
+    #s-tool-loop .tl .who { font-family: var(--mono); font-size: 24px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+    #s-tool-loop .tl-foot { margin-top: 40px; font-size: 36px; max-width: 1640px; line-height: 1.3; }
   `);
 
-  Deck.act(3, 'Formas y lugares', [
+  Deck.act(4, 'Formas y lugares', [
     {
       id: 'tres-formas',
       title: 'Tres formas de responder',
@@ -71,12 +84,58 @@
             <p class="flow">esquema + pregunta → modelo → SQL → base → número</p>
           </div>
           <div data-step="2">
-            <div class="n">03 · sesión 6</div>
+            <div class="n">03 · hoy</div>
             <h3>El modelo usa herramientas</h3>
-            <p>Decide qué consultar, lo corre, lee el resultado y sigue: un agente.</p>
+            <p>Decide qué consultar, tu código lo corre, el modelo lee el resultado y sigue: un agente.</p>
             <p class="flow">pregunta → modelo ⇄ herramientas → número</p>
           </div>
         </div>`,
+    },
+    {
+      id: 'una-cadena',
+      title: 'Para el modelo, todo es una cadena',
+      time: 300,
+      particles: { shape: 'grid', opacity: 0.12 },
+      html: `
+        <div class="t-label">Tool calling por dentro · plantilla de chat de qwen (simplificada)</div>
+        <h2 class="t-title" style="margin-bottom:26px">Para el modelo, todo es una cadena</h2>
+        <div class="uc">
+          <div>
+            <p>Tus mensajes (system, user, assistant) se pegan en un solo texto con tokens especiales.</p>
+            <p data-step="1">Las herramientas también: su descripción en JSON va dentro del texto.</p>
+            <p data-step="2">Y el modelo "llama" a una herramienta escribiendo texto: un JSON entre etiquetas. Predice el siguiente token, como siempre.</p>
+          </div>
+<pre class="raw"><span class="s">&lt;|im_start|&gt;</span>system
+Eres un analista de datos…
+<span class="t">&lt;tools&gt;</span>{"name": "consultar_sql", "parameters": …}<span class="t">&lt;/tools&gt;</span><span class="s">&lt;|im_end|&gt;</span>
+<span class="s">&lt;|im_start|&gt;</span>user
+¿Cuántas transacciones hay?<span class="s">&lt;|im_end|&gt;</span>
+<span class="s">&lt;|im_start|&gt;</span>assistant
+<span class="t">&lt;tool_call&gt;</span>
+{"name": "consultar_sql",
+ "arguments": {"sql": "SELECT COUNT(*) FROM t"}}
+<span class="t">&lt;/tool_call&gt;</span><span class="s">&lt;|im_end|&gt;</span>
+<span class="s">&lt;|im_start|&gt;</span>user
+<span class="t">&lt;tool_response&gt;</span>[[500]]<span class="t">&lt;/tool_response&gt;</span><span class="s">&lt;|im_end|&gt;</span>
+<span class="s">&lt;|im_start|&gt;</span>assistant
+500<span class="s">&lt;|im_end|&gt;</span></pre>
+        </div>`,
+    },
+    {
+      id: 'tool-loop',
+      title: 'El ciclo',
+      time: 240,
+      particles: { shape: 'ring', opacity: 0.12 },
+      html: `
+        <div class="t-label">Tool calling · quién hace qué</div>
+        <h2 class="t-title" style="margin-bottom:26px">El modelo pide. Tu código ejecuta.</h2>
+        <ul class="tl">
+          <li><span class="n">01</span><span class="who">Tu código</span><span>Manda la pregunta y la lista de herramientas.</span></li>
+          <li data-step="1"><span class="n">02</span><span class="who">Modelo</span><span>Escribe una llamada: <span class="mono">consultar_sql({"sql": "…"})</span>. No ejecuta nada.</span></li>
+          <li data-step="2"><span class="n">03</span><span class="who">Tu código</span><span>Corre el SQL en DuckDB y agrega el resultado a la conversación.</span></li>
+          <li data-step="3"><span class="n">04</span><span class="who">Tu código</span><span>Reenvía <em>toda</em> la conversación. El modelo pide otra cosa, o contesta.</span></li>
+        </ul>
+        <p class="tl-foot" data-step="4">Repetir hasta que conteste: eso es un agente. Lo que el modelo puede tocar lo decides tú, en el paso 3.</p>`,
     },
     {
       id: 'contexto-local',
@@ -92,6 +151,53 @@
         </div>
         <p class="cl-foot" data-step="2">Por eso, en el modo <span class="mono accent">calcula</span> le damos 50 filas. Y la verdad se calcula sobre esas mismas 50.</p>
         <div class="cite foot">docs.ollama.com · FAQ y "OpenAI compatibility"</div>`,
+    },
+    {
+      id: 'lab-formas',
+      title: 'Lab · calcula vs SQL',
+      time: 2100,
+      label: 'Lab · 35 min',
+      particles: { shape: 'swarm', opacity: 0.12 },
+      html: `
+        <div class="t-label">Lab · 35 minutos · sesiones/02/lab-formas</div>
+        <h2 class="t-title" style="margin-bottom:28px">Tres formas, en tu modelo</h2>
+        ${Timer.html(35)}
+        <div class="lf">
+          <div>
+            <div class="t-label accent">Tu modelo (lo que diga tu .env)</div>
+<pre class="code">uv run sesiones/02/lab-formas/formas.py --modo calcula
+uv run sesiones/02/lab-formas/formas.py --modo sql
+uv run sesiones/02/lab-formas/formas.py --modo herramienta</pre>
+            <div class="t-label accent" style="margin-top:30px">Con tu llave (o la mía, en pantalla)</div>
+<pre class="code">uv run sesiones/02/lab-formas/formas.py --modo herramienta --claude</pre>
+            <div class="t-label accent" style="margin-top:30px">La tabla para tu memo</div>
+<pre class="code">uv run sesiones/02/lab-formas/tabla.py</pre>
+          </div>
+          <ul>
+            <li><b>10 preguntas × 2 corridas</b> del set dorado, en cada modo.</li>
+            <li><b>calcula:</b> 50 filas en el prompt.</li>
+            <li><b>sql:</b> solo el esquema; DuckDB corre la consulta sobre las 500 filas.</li>
+            <li><b>herramienta:</b> te imprime la primera traza completa; <span class="mono">--traza</span> para todas.</li>
+            <li><b>¿Va lento?</b> <span class="mono">--sin-pensar</span> o <span class="mono">--k 1</span>.</li>
+            <li><b>¿OpenAI?</b> <span class="mono">--openai</span> en lugar de <span class="mono">--claude</span>.</li>
+          </ul>
+        </div>`,
+    },
+    {
+      id: 'que-ver',
+      title: 'Qué mirar en tu tabla',
+      time: 420,
+      particles: { shape: 'grid', opacity: 0.14 },
+      html: `
+        <div class="t-label">Resultados · pega tu tabla en el chat</div>
+        <h2 class="t-title" style="margin-bottom:28px">Qué mirar en tu tabla</h2>
+        <ul class="qv">
+          <li><span class="n">01</span><span>Exactitud: calcula vs sql vs herramienta, en el mismo modelo<small>¿El modelo chico mejora cuando no tiene que sumar?</small></span></li>
+          <li data-step="1"><span class="n">02</span><span>Tokens por respuesta<small>Leer filas cuesta miles; escribir una consulta, cientos.</small></span></li>
+          <li data-step="2"><span class="n">03</span><span>Costo × 1,000 preguntas<small>Lo que pagarías si esto lo usara todo tu equipo un mes.</small></span></li>
+          <li data-step="3"><span class="n">04</span><span>Latencia: tu laptop vs la API<small>¿Cuánto esperarías tú, y cuánto esperaría tu usuario?</small></span></li>
+          <li data-step="4"><span class="n">05</span><span>Errores de SQL y vueltas<small>Con herramienta, el modelo ve el error y puede corregirse; cada vuelta reenvía toda la conversación.</small></span></li>
+        </ul>`,
     },
     {
       id: 'donde',
@@ -131,72 +237,15 @@
         <div class="cite foot">docs.snowflake.com · Cortex AI, "Cross-region inference"</div>`,
     },
     {
-      id: 'lab-formas',
-      title: 'Lab · calcula vs SQL',
-      time: 2100,
-      label: 'Lab · 35 min',
-      particles: { shape: 'swarm', opacity: 0.12 },
-      html: `
-        <div class="t-label">Lab · 35 minutos · sesiones/02/lab-formas</div>
-        <h2 class="t-title" style="margin-bottom:28px">Calcula vs SQL, en tu modelo</h2>
-        ${Timer.html(35)}
-        <div class="lf">
-          <div>
-            <div class="t-label accent">Tu modelo (lo que diga tu .env)</div>
-<pre class="code">uv run sesiones/02/lab-formas/formas.py --modo calcula
-uv run sesiones/02/lab-formas/formas.py --modo sql</pre>
-            <div class="t-label accent" style="margin-top:30px">Con tu llave (o la mía, en pantalla)</div>
-<pre class="code">uv run sesiones/02/lab-formas/formas.py --modo calcula --claude
-uv run sesiones/02/lab-formas/formas.py --modo sql --claude</pre>
-            <div class="t-label accent" style="margin-top:30px">La tabla para tu memo</div>
-<pre class="code">uv run sesiones/02/lab-formas/tabla.py</pre>
-          </div>
-          <ul>
-            <li><b>10 preguntas × 2 corridas</b> del set dorado, en cada modo.</li>
-            <li><b>calcula:</b> 50 filas en el prompt.</li>
-            <li><b>sql:</b> solo el esquema; DuckDB corre la consulta sobre las 500 filas.</li>
-            <li><b>¿Va lento?</b> <span class="mono">--sin-pensar</span> o <span class="mono">--k 1</span>.</li>
-            <li><b>¿OpenAI?</b> <span class="mono">--openai</span> en lugar de <span class="mono">--claude</span>.</li>
-          </ul>
-        </div>`,
-    },
-    {
-      id: 'que-ver',
-      title: 'Qué mirar en tu tabla',
-      time: 420,
-      particles: { shape: 'grid', opacity: 0.14 },
-      html: `
-        <div class="t-label">Resultados · pega tu tabla en el chat</div>
-        <h2 class="t-title" style="margin-bottom:28px">Qué mirar en tu tabla</h2>
-        <ul class="qv">
-          <li><span class="n">01</span><span>Exactitud: calcula vs sql, en el mismo modelo<small>¿El modelo chico mejora cuando solo escribe la consulta?</small></span></li>
-          <li data-step="1"><span class="n">02</span><span>Tokens por respuesta<small>Leer filas cuesta miles; escribir una consulta, cientos.</small></span></li>
-          <li data-step="2"><span class="n">03</span><span>Costo × 1,000 preguntas<small>Lo que pagarías si esto lo usara todo tu equipo un mes.</small></span></li>
-          <li data-step="3"><span class="n">04</span><span>Latencia: tu laptop vs la API<small>¿Cuánto esperarías tú, y cuánto esperaría tu usuario?</small></span></li>
-          <li data-step="4"><span class="n">05</span><span>Errores de SQL<small>Una consulta que no corre también es una respuesta incorrecta.</small></span></li>
-        </ul>`,
-    },
-    {
-      id: 'pausa',
-      title: 'Pausa',
-      time: 600,
-      class: 'middle',
-      particles: { shape: 'ring', opacity: 0.2 },
-      html: `
-        ${Timer.html(10)}
-        <p class="pa">Pausa</p>
-        <p class="t-small dim" style="margin-top:30px">Mientras tanto: carga <span class="mono">caso/transacciones.csv</span> como tabla en tu Snowflake o Databricks.</p>`,
-    },
-    {
       id: 'lab-warehouse',
       title: 'Lab · el modelo dentro del warehouse',
-      time: 1500,
-      label: 'Lab · 25 min',
+      time: 1200,
+      label: 'Lab · 20 min',
       particles: { shape: 'swarm', opacity: 0.12 },
       html: `
-        <div class="t-label">Lab · 25 minutos · sesiones/02/lab-warehouse</div>
+        <div class="t-label">Lab · 20 minutos · sesiones/02/lab-warehouse</div>
         <h2 class="t-title" style="margin-bottom:28px">El modelo dentro del warehouse</h2>
-        ${Timer.html(25)}
+        ${Timer.html(20)}
         <div class="lw">
           <div><div class="n">0</div><h3>Carga</h3><p><span class="mono">caso/transacciones.csv</span> como tabla <span class="mono">transacciones</span>.</p></div>
           <div><div class="n">1 · 2</div><h3>Verdad y modelo</h3><p>La verdad con SQL; el modelo calcula sobre 50 filas, en la misma consulta.</p></div>

@@ -9,18 +9,18 @@
   const py = (l) => Y0 + ((LMAX - l) / (LMAX - LMIN)) * (Y1 - Y0);
   const path = LOSS.map(([s, l], i) => `${i ? 'L' : 'M'}${px(s).toFixed(1)} ${py(l).toFixed(1)}`).join(' ');
 
-  // Transactions: lab-nanogpt/evaluar_transacciones.py, 300 rows, seed 1337 (run of 21 Nov 2026).
-  // Rates are over all 300 rows: a malformed row fails every check.
+  // Transactions: lab-nanogpt/evaluar_transacciones.py, 300 rows (run of 28 Nov 2026, after fixing the eval).
+  // Erratum: the 21 Nov run (74.0%) cut the context every 200 characters, stitching ~1 row in 4 from two halves.
   const TX = {
     n: 300,
-    reglas: [['Forma: 7 columnas', '87.7%'], ['El cliente existe', '87.7%'], ['El método existe', '87.0%'],
-      ['La fecha existe', '85.7%'], ['total = cantidad × precio', '85.0%'], ['El comercio existe', '79.0%']],
-    todas: '74.0%',
+    reglas: [['Forma: 7 columnas', '99.7%'], ['El cliente existe', '99.3%'], ['El método existe', '99.7%'],
+      ['La fecha existe', '99.7%'], ['El comercio existe', '99.7%'], ['total = cantidad × precio', '98.0%']],
+    todas: '97.7%',
     malas: [
-      ['2026-02-30,CLI-0100,Farmacia del Centro,SPEI,1,224.50,224.50', 'el 30 de febrero no existe'],
-      ['2026-03-07,CLI-0236,Café Tres Volco Ruiz,TDC,4,1790.50,6162.00', '4 × 1,790.50 = 7,162.00 · y el comercio no existe'],
-      ['2026-05-04,CLI-0190,Ferretería Lupita,SPEI,3,47.50,142.50', 'comercio inventado: mezcla de dos reales'],
-      ['2026-06-16,CLI-0013,Tortillería Lupita,TDDD,5,141.50,707.50', 'el método TDDD no existe'],
+      ['2026-06-11,CLI-0060,Panadería La Espiga,TDC,4,63.00,292.00', '4 × 63.00 = 252.00'],
+      ['2026-02-16,CLI-0270,Abarrotes La Esperanza,SPEI,4,120.50,582.00', '4 × 120.50 = 482.00'],
+      ['2026-02-25,CLI-0237,Óptica Visión Clara,SPEI,4,3225.00,13090.00', '4 × 3,225.00 = 12,900.00'],
+      ['2026-01-23,CLI-0000,Taller Mecánico Ruiz,EFECTIVO,3,2277.50,6832.50', 'el cliente CLI-0000 no existe'],
     ],
   };
 
