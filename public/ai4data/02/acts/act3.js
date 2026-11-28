@@ -1,4 +1,4 @@
-// Act 3 · Formas de responder, dónde corre el modelo y los dos labs (formas.py y el warehouse).
+// Act 3 · Formas de responder, dónde corre el modelo y los dos labs (score.py y el warehouse).
 (() => {
   Deck.css(`
     #s-tres-formas .tf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 44px; margin-top: 10px; }
@@ -97,7 +97,7 @@
       time: 300,
       particles: { shape: 'grid', opacity: 0.12 },
       html: `
-        <div class="t-label">Tool calling por dentro · plantilla de chat de qwen (simplificada)</div>
+        <div class="t-label">Tool calling por dentro · plantilla de chat de qwen, la de bonsai (simplificada)</div>
         <h2 class="t-title" style="margin-bottom:26px">Para el modelo, todo es una cadena</h2>
         <div class="uc">
           <div>
@@ -107,12 +107,12 @@
           </div>
 <pre class="raw"><span class="s">&lt;|im_start|&gt;</span>system
 Eres un analista de datos…
-<span class="t">&lt;tools&gt;</span>{"name": "consultar_sql", "parameters": …}<span class="t">&lt;/tools&gt;</span><span class="s">&lt;|im_end|&gt;</span>
+<span class="t">&lt;tools&gt;</span>{"name": "run_sql", "parameters": …}<span class="t">&lt;/tools&gt;</span><span class="s">&lt;|im_end|&gt;</span>
 <span class="s">&lt;|im_start|&gt;</span>user
 ¿Cuántas transacciones hay?<span class="s">&lt;|im_end|&gt;</span>
 <span class="s">&lt;|im_start|&gt;</span>assistant
 <span class="t">&lt;tool_call&gt;</span>
-{"name": "consultar_sql",
+{"name": "run_sql",
  "arguments": {"sql": "SELECT COUNT(*) FROM t"}}
 <span class="t">&lt;/tool_call&gt;</span><span class="s">&lt;|im_end|&gt;</span>
 <span class="s">&lt;|im_start|&gt;</span>user
@@ -131,7 +131,7 @@ Eres un analista de datos…
         <h2 class="t-title" style="margin-bottom:26px">El modelo pide. Tu código ejecuta.</h2>
         <ul class="tl">
           <li><span class="n">01</span><span class="who">Tu código</span><span>Manda la pregunta y la lista de herramientas.</span></li>
-          <li data-step="1"><span class="n">02</span><span class="who">Modelo</span><span>Escribe una llamada: <span class="mono">consultar_sql({"sql": "…"})</span>. No ejecuta nada.</span></li>
+          <li data-step="1"><span class="n">02</span><span class="who">Modelo</span><span>Escribe una llamada: <span class="mono">run_sql({"sql": "…"})</span>. No ejecuta nada.</span></li>
           <li data-step="2"><span class="n">03</span><span class="who">Tu código</span><span>Corre el SQL en DuckDB y agrega el resultado a la conversación.</span></li>
           <li data-step="3"><span class="n">04</span><span class="who">Tu código</span><span>Reenvía <em>toda</em> la conversación. El modelo pide otra cosa, o contesta.</span></li>
         </ul>
@@ -149,36 +149,36 @@ Eres un analista de datos…
           <div><div class="t-label">Ventana de Ollama por defecto</div><div class="big accent">4,096</div><p>tokens. Por la API compatible con OpenAI no se puede cambiar por llamada.</p></div>
           <div data-step="1"><div class="t-label">Nuestra tabla completa</div><div class="big">~18,000</div><p>tokens. No le cabe: Ollama la corta y el modelo contesta igual, sin avisar.</p></div>
         </div>
-        <p class="cl-foot" data-step="2">Por eso, en el modo <span class="mono accent">calcula</span> le damos 50 filas. Y la verdad se calcula sobre esas mismas 50.</p>
+        <p class="cl-foot" data-step="2">Por eso, en la estrategia <span class="mono accent">compute</span> le damos 50 filas. Y la verdad se calcula sobre esas mismas 50.</p>
         <div class="cite foot">docs.ollama.com · FAQ y "OpenAI compatibility"</div>`,
     },
     {
       id: 'lab-formas',
-      title: 'Lab · calcula vs SQL',
+      title: 'Lab · tres estrategias',
       time: 2100,
       label: 'Lab · 35 min',
       particles: { shape: 'swarm', opacity: 0.12 },
       html: `
-        <div class="t-label">Lab · 35 minutos · sesiones/02/lab-formas</div>
-        <h2 class="t-title" style="margin-bottom:28px">Tres formas, en tu modelo</h2>
+        <div class="t-label">Lab · 35 minutos · sesiones/02/lab-answer-strategies</div>
+        <h2 class="t-title" style="margin-bottom:28px">Tres estrategias, en tu modelo</h2>
         ${Timer.html(35)}
         <div class="lf">
           <div>
             <div class="t-label accent">Tu modelo (lo que diga tu .env)</div>
-<pre class="code">uv run sesiones/02/lab-formas/formas.py --modo calcula
-uv run sesiones/02/lab-formas/formas.py --modo sql
-uv run sesiones/02/lab-formas/formas.py --modo herramienta</pre>
+<pre class="code">uv run sesiones/02/lab-answer-strategies/score.py --strategy compute
+uv run sesiones/02/lab-answer-strategies/score.py --strategy sql
+uv run sesiones/02/lab-answer-strategies/score.py --strategy tool</pre>
             <div class="t-label accent" style="margin-top:30px">Con tu llave (o la mía, en pantalla)</div>
-<pre class="code">uv run sesiones/02/lab-formas/formas.py --modo herramienta --claude</pre>
+<pre class="code">uv run sesiones/02/lab-answer-strategies/score.py --strategy tool --claude</pre>
             <div class="t-label accent" style="margin-top:30px">La tabla para tu memo</div>
-<pre class="code">uv run sesiones/02/lab-formas/tabla.py</pre>
+<pre class="code">uv run sesiones/02/lab-answer-strategies/compare.py</pre>
           </div>
           <ul>
-            <li><b>10 preguntas × 2 corridas</b> del set dorado, en cada modo.</li>
-            <li><b>calcula:</b> 50 filas en el prompt.</li>
+            <li><b>10 preguntas × 2 corridas</b> del set dorado, con cada estrategia.</li>
+            <li><b>compute:</b> 50 filas en el prompt.</li>
             <li><b>sql:</b> solo el esquema; DuckDB corre la consulta sobre las 500 filas.</li>
-            <li><b>herramienta:</b> te imprime la primera traza completa; <span class="mono">--traza</span> para todas.</li>
-            <li><b>¿Va lento?</b> <span class="mono">--sin-pensar</span> o <span class="mono">--k 1</span>.</li>
+            <li><b>tool:</b> te imprime la primera traza completa; <span class="mono">--trace</span> para todas.</li>
+            <li><b>¿Va lento?</b> <span class="mono">--no-thinking</span> o <span class="mono">--runs 1</span>.</li>
             <li><b>¿OpenAI?</b> <span class="mono">--openai</span> en lugar de <span class="mono">--claude</span>.</li>
           </ul>
         </div>`,
@@ -192,11 +192,11 @@ uv run sesiones/02/lab-formas/formas.py --modo herramienta</pre>
         <div class="t-label">Resultados · pega tu tabla en el chat</div>
         <h2 class="t-title" style="margin-bottom:28px">Qué mirar en tu tabla</h2>
         <ul class="qv">
-          <li><span class="n">01</span><span>Exactitud: calcula vs sql vs herramienta, en el mismo modelo<small>¿El modelo chico mejora cuando no tiene que sumar?</small></span></li>
+          <li><span class="n">01</span><span>Exactitud: compute vs sql vs tool, en el mismo modelo<small>¿El modelo chico mejora cuando no tiene que sumar?</small></span></li>
           <li data-step="1"><span class="n">02</span><span>Tokens por respuesta<small>Leer filas cuesta miles; escribir una consulta, cientos.</small></span></li>
           <li data-step="2"><span class="n">03</span><span>Costo × 1,000 preguntas<small>Lo que pagarías si esto lo usara todo tu equipo un mes.</small></span></li>
           <li data-step="3"><span class="n">04</span><span>Latencia: tu laptop vs la API<small>¿Cuánto esperarías tú, y cuánto esperaría tu usuario?</small></span></li>
-          <li data-step="4"><span class="n">05</span><span>Errores de SQL y vueltas<small>Con herramienta, el modelo ve el error y puede corregirse; cada vuelta reenvía toda la conversación.</small></span></li>
+          <li data-step="4"><span class="n">05</span><span>Errores de SQL y vueltas<small>Con tool, el modelo ve el error y puede corregirse; cada vuelta reenvía toda la conversación.</small></span></li>
         </ul>`,
     },
     {
@@ -209,7 +209,7 @@ uv run sesiones/02/lab-formas/formas.py --modo herramienta</pre>
         <h2 class="t-title" style="margin-bottom:24px">Tres lugares, tres contratos</h2>
         <table class="dn">
           <tr><th></th><th>¿Tus datos salen?</th><th>Costo</th><th>Quién lo opera</th></tr>
-          <tr><td>Tu máquina<span class="m">Ollama · qwen3</span></td><td>No</td><td>$0 por token; pagas en hardware y tiempo</td><td>Tú</td></tr>
+          <tr><td>Tu máquina<span class="m">Ollama · bonsai</span></td><td>No</td><td>$0 por token; pagas en hardware y tiempo</td><td>Tú</td></tr>
           <tr data-step="1"><td>API pública<span class="m">OpenAI · Anthropic</span></td><td>Sí, al proveedor</td><td>Por token</td><td>El proveedor</td></tr>
           <tr data-step="2"><td>Dentro del warehouse<span class="m">AI_COMPLETE · ai_query</span></td><td>No salen de tu cuenta; la inferencia puede correr en otra región</td><td>Créditos del warehouse</td><td>El warehouse</td></tr>
         </table>`,
@@ -252,7 +252,7 @@ uv run sesiones/02/lab-formas/formas.py --modo herramienta</pre>
           <div><div class="n">3</div><h3>Cinco veces</h3><p>La misma pregunta cinco veces. ¿Cuántas respuestas distintas?</p></div>
           <div><div class="n">4</div><h3>Escribe SQL</h3><p>El modelo escribe la consulta; tú la corres y comparas.</p></div>
         </div>
-        <p class="lw-files">Abre <span class="mono accent">snowflake.sql</span> o <span class="mono accent">databricks.sql</span> y corre bloque por bloque.</p>`,
+        <p class="lw-files">Abre <span class="mono accent">databricks_ai_query.sql</span> y corre bloque por bloque.</p>`,
     },
   ]);
 })();

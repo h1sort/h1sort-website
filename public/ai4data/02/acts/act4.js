@@ -38,14 +38,14 @@
         <div class="mm">
           <ol>
             <li>La pregunta y quién la hace<small>¿Conteo, monto, juicio, explicación?</small></li>
-            <li>Tu tabla de <span class="mono">tabla.py</span><small>Modelos × formas, con los cuatro números.</small></li>
-            <li>Tu elección: modelo, forma y lugar<small>Local, API o warehouse, y por qué.</small></li>
+            <li>Tu tabla de <span class="mono">compare.py</span><small>Modelos × estrategias, con los cuatro números.</small></li>
+            <li>Tu elección: modelo, estrategia y lugar<small>Local, API o warehouse, y por qué.</small></li>
             <li>Costo por 1,000 preguntas<small>Y la latencia que vas a aceptar.</small></li>
             <li>Qué te haría cambiar de opinión<small>Datos sensibles, volumen, una pregunta nueva.</small></li>
           </ol>
           <div>
             <div class="t-label accent" style="margin-bottom:16px">Empieza aquí</div>
-<pre class="code">uv run sesiones/02/lab-formas/tabla.py</pre>
+<pre class="code">uv run sesiones/02/lab-answer-strategies/compare.py</pre>
             <p class="t-small">Una página basta. Súbelo a tu fork del repo; lo retomamos cuando lleguemos a evals.</p>
           </div>
         </div>`,
@@ -92,7 +92,7 @@
         <h2 class="t-title" style="margin-bottom:30px">Fuentes</h2>
         <ol>
           <li><b>Ollama</b>: docs.ollama.com, FAQ (ventana de contexto por defecto de 4,096 tokens, <span class="mono">OLLAMA_CONTEXT_LENGTH</span>) y "OpenAI compatibility" (la API compatible no permite fijar la ventana por llamada).</li>
-          <li><b>qwen3</b>: ollama.com/library/qwen3 (qwen3:1.7b, 1.4 GB; qwen3:0.6b, 523 MB).</li>
+          <li><b>bonsai 2</b> (Prism ML): ollama.com/library/bonsai-2 (pesos ternarios; 9b, 3.2 GB; 4b, 1.6 GB; 256K de contexto; arquitectura qwen3.5 según <span class="mono">ollama show</span>; Ollama ≥ 0.40.6).</li>
           <li><b>Snowflake Cortex</b>: docs.snowflake.com, AI_COMPLETE (cadena única) y "Cross-region inference" (CORTEX_ENABLED_CROSS_REGION; ANY_REGION por defecto en organizaciones nuevas desde el 9 de marzo de 2026).</li>
           <li><b>Databricks</b>: docs.databricks.com, ai_query; foros de la comunidad: en Free Edition, ai_query funciona con modelos hospedados por Databricks.</li>
           <li><b>Modelos de decisión</b>: Jev, TypeSafe.</li>

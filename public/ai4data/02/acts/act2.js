@@ -51,7 +51,7 @@
             <div class="t-label accent">Pequeños · pesos abiertos</div>
             <h3>Los que descargas</h3>
             <p>Corren en tu laptop, tu servidor o tu warehouse. Cuantizados caben en poca memoria. Más torpes.</p>
-            <p class="ej">qwen3:1.7b<br>llama · gemma · gpt-oss</p>
+            <p class="ej">bonsai-2:9b<br>qwen · llama · gemma · gpt-oss</p>
           </div>
           <div data-step="2">
             <div class="t-label accent">Modelos de decisión · System One</div>

@@ -1,5 +1,5 @@
 // Act 2 · Inferencia por dentro, con el nanoGPT de la sesión 01: cómo nace un token, temperatura,
-// prefill/decode, y decodificación restringida. Números: sesiones/02/lab-inferencia (respaldo, 28 nov 2026).
+// prefill/decode, y decodificación restringida. Números: sesiones/02/lab-inference (respaldo, 28 nov 2026).
 (() => {
   Deck.css(`
     #s-nace-token .nt-flow { display: flex; align-items: center; gap: 18px; margin: 8px 0 44px; flex-wrap: wrap; }
@@ -131,14 +131,14 @@
       label: 'Lab · 12 min',
       particles: { shape: 'swarm', opacity: 0.12 },
       html: `
-        <div class="t-label">Lab · 12 minutos · sesiones/02/lab-inferencia</div>
+        <div class="t-label">Lab · 12 minutos · sesiones/02/lab-inference</div>
         <h2 class="t-title" style="margin-bottom:28px">Mira a tu modelo elegir</h2>
         ${Timer.html(12)}
         <div class="ls">
           <div>
-<pre class="code">uv run sesiones/02/lab-inferencia/siguiente.py
-uv run sesiones/02/lab-inferencia/siguiente.py --prompt "359+481="
-uv run sesiones/02/lab-inferencia/siguiente.py --prompt "99+99="</pre>
+<pre class="code">uv run sesiones/02/lab-inference/next_token.py
+uv run sesiones/02/lab-inference/next_token.py --prompt "359+481="
+uv run sesiones/02/lab-inference/next_token.py --prompt "99+99="</pre>
             <p class="t-small dim" style="margin-top:22px">Usa tu modelo de la sesión 01; si no lo tienes, el respaldo del repo.</p>
           </div>
           <ul>
@@ -195,12 +195,12 @@ uv run sesiones/02/lab-inferencia/siguiente.py --prompt "99+99="</pre>
       label: 'Lab · 12 min',
       particles: { shape: 'swarm', opacity: 0.12 },
       html: `
-        <div class="t-label">Lab · 12 minutos · sesiones/02/lab-inferencia</div>
+        <div class="t-label">Lab · 12 minutos · sesiones/02/lab-inference</div>
         <h2 class="t-title" style="margin-bottom:28px">Restringe a tu modelo de transacciones</h2>
         ${Timer.html(12)}
         <div class="lr">
           <div>
-<pre class="code">uv run sesiones/02/lab-inferencia/restringido.py</pre>
+<pre class="code">uv run sesiones/02/lab-inference/constrained_decoding.py</pre>
             <p class="t-small dim" style="margin-top:22px">Genera 200 filas libres y 200 restringidas a fechas reales y al catálogo de clientes, comercios y métodos. Tarda un par de minutos.</p>
           </div>
           <ul>
@@ -234,7 +234,7 @@ uv run sesiones/02/lab-inferencia/siguiente.py --prompt "99+99="</pre>
       html: `
         ${Timer.html(10)}
         <p class="pa" style="font-size:120px;font-weight:500;letter-spacing:-0.03em;margin:0">Pausa</p>
-        <p class="t-small dim" style="margin-top:30px">Si te da tiempo: carga <span class="mono">caso/transacciones.csv</span> como tabla en tu Snowflake o Databricks.</p>`,
+        <p class="t-small dim" style="margin-top:30px">Si te da tiempo: carga <span class="mono">caso/transacciones.csv</span> como tabla <span class="mono">transacciones</span> en tu Databricks.</p>`,
     },
   ]);
 })();
