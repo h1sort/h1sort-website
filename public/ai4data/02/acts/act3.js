@@ -223,7 +223,7 @@ uv run sesiones/02/lab-answer-strategies/score.py --strategy tool --openai</pre>
         <h2 class="t-title" style="margin-bottom:28px">El modelo dentro del warehouse</h2>
         ${Timer.html()}
         <div class="lw">
-          <div><div class="n">0</div><h3>Carga</h3><p><span class="mono">caso/transacciones.csv</span> como tabla <span class="mono">transacciones</span>.</p></div>
+          <div><div class="n">0</div><h3>Carga</h3><p><span class="mono">caso/transacciones.csv</span> como tabla <span class="mono">transacciones</span>, a mano o con <span class="mono">upload_to_databricks.py</span>.</p></div>
           <div><div class="n">1 · 2</div><h3>Verdad y modelo</h3><p>La verdad con SQL; el modelo calcula sobre 50 filas, en la misma consulta.</p></div>
           <div><div class="n">3</div><h3>Cinco veces</h3><p>La misma pregunta cinco veces. ¿Cuántas respuestas distintas?</p></div>
           <div><div class="n">4</div><h3>Escribe SQL</h3><p>El modelo escribe la consulta; tú la corres y comparas.</p></div>

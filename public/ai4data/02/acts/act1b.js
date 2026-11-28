@@ -92,6 +92,37 @@
     #s-mascara-bonsai .forced .p s { color: var(--faint); }
     #s-mascara-bonsai .mb-foot { margin-top: 36px; font-size: 32px; max-width: 1640px; line-height: 1.3; }
 
+    #s-pausa .pz { display: grid; grid-template-columns: 1.35fr 1fr; gap: 64px; }
+    #s-pausa .pz > div { border-top: 3px solid var(--fg); padding-top: 20px; }
+    #s-pausa .pz ol { list-style: none; padding: 0; margin: 14px 0 0; counter-reset: z; }
+    #s-pausa .pz ol li { counter-increment: z; position: relative; padding: 0 0 22px 56px; font-size: 29px; line-height: 1.35; }
+    #s-pausa .pz ol li::before { content: counter(z, decimal-leading-zero); position: absolute; left: 0; top: 3px; font-family: var(--mono); font-size: 22px; color: var(--accent); }
+    #s-pausa .pz small { font-size: 23px; color: var(--dim); margin-left: 6px; }
+    #s-pausa .pz pre.code { font-size: 22px; margin-top: 12px; }
+    #s-pausa .pz p { font-size: 29px; line-height: 1.38; margin: 14px 0 0; color: var(--dim); }
+    #s-pausa a { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
+
+    #s-mascara-paso .mp { display: grid; grid-template-columns: 1.2fr 1fr; gap: 64px; margin-top: 4px; }
+    #s-mascara-paso .ctx { font-family: var(--mono); font-size: 26px; color: var(--dim); margin-bottom: 16px; }
+    #s-mascara-paso .ctx b { color: var(--fg); font-weight: 400; }
+    #s-mascara-paso .bars { list-style: none; padding: 0; margin: 0; }
+    #s-mascara-paso .bars li { display: grid; grid-template-columns: 130px 120px 1fr 150px; gap: 14px; align-items: center; font-family: var(--mono); font-size: 25px; padding: 7px 0; }
+    #s-mascara-paso .bars .m { font-size: 20px; letter-spacing: .08em; }
+    #s-mascara-paso .bars .x { color: var(--faint); }
+    #s-mascara-paso .bars .x .t { text-decoration: line-through; }
+    #s-mascara-paso .bars .b { height: 18px; background: var(--faint); border-radius: 3px; }
+    #s-mascara-paso .bars .ok { color: var(--accent); }
+    #s-mascara-paso .bars .v { text-align: right; }
+    #s-mascara-paso .note { font-size: 27px; color: var(--dim); line-height: 1.38; margin-top: 22px; }
+    #s-mascara-paso table { width: 100%; border-collapse: collapse; }
+    #s-mascara-paso td, #s-mascara-paso th { padding: 9px 12px; border-top: 2px solid var(--hair); font-size: 26px; text-align: right; }
+    #s-mascara-paso td:first-child, #s-mascara-paso th:first-child { text-align: left; }
+    #s-mascara-paso th { font-family: var(--mono); font-size: 19px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); font-weight: 400; }
+    #s-mascara-paso tr:last-child td { border-bottom: 2px solid var(--hair); }
+    #s-mascara-paso .hl td { color: var(--accent); }
+    #s-mascara-paso .z td { color: var(--faint); }
+    #s-mascara-paso .mp-foot { margin-top: 30px; font-size: 31px; max-width: 1640px; line-height: 1.3; }
+
     #s-forma-verdad .fv { width: 100%; border-collapse: collapse; }
     #s-forma-verdad .fv td, #s-forma-verdad .fv th { padding: 12px 18px; border-top: 2px solid var(--hair); font-size: 30px; text-align: right; }
     #s-forma-verdad .fv td:first-child, #s-forma-verdad .fv th:first-child { text-align: left; }
@@ -354,15 +385,64 @@ uv run sesiones/02/lab-inference/next_token.py --prompt "99+99="</pre>
         <p class="mb-foot" data-step="2">El schema no convence al modelo: le quita las opciones. Y sigue sin saber si <span class="mono">total = cantidad × precio</span>.</p>`,
     },
     {
+      id: 'mascara-paso',
+      title: 'La máscara, paso a paso',
+      time: 300,
+      particles: { shape: 'grid', opacity: 0.10 },
+      html: `
+        <div class="t-label">schema_decoding.py · parte 3 · una fila a temperatura 0</div>
+        <h2 class="t-title" style="margin-bottom:30px">Un paso, de cerca</h2>
+        <div class="mp">
+          <div>
+            <div class="ctx">paso 56 · ya escrito: "comercio": "<b>Taller Mecánico R</b>…</div>
+            <ul class="bars">
+              <li class="x"><span class="m">✗ FUERA</span><span class="t">'áp'</span><span><div class="b" style="width:99.5%"></div></span><span class="v">99.5%</span></li>
+              <li class="x"><span class="m">✗ FUERA</span><span class="t">'á'</span><span><div class="b" style="width:1px"></div></span><span class="v">0.05%</span></li>
+              <li class="x"><span class="m">✗ FUERA</span><span class="t">'aps'</span><span><div class="b" style="width:1px"></div></span><span class="v">0.02%</span></li>
+              <li class="ok"><span class="m">✓ ESCRITO</span><span>'u'</span><span></span><span class="v">0.0000019%</span></li>
+            </ul>
+            <p class="note" data-step="1">Iba a escribir "Taller Mecánico <b>Ráp</b>ido", que no existe. En el catálogo, después de "Taller Mecánico R" solo cabe "<span class="accent">Ruiz</span>". A temperatura 0 escribe el token permitido más probable: todo lo que estaba arriba, la máscara lo quitó.</p>
+          </div>
+          <div data-step="2">
+            <table>
+              <tr><th>Parte del JSON</th><th>Pasos</th><th>Intervino</th></tr>
+              <tr><td>estructura · llaves y nombres</td><td>57</td><td>4</td></tr>
+              <tr class="hl"><td>comercio</td><td>9</td><td>3</td></tr>
+              <tr><td>cliente</td><td>8</td><td>1</td></tr>
+              <tr class="z"><td>fecha · método · cantidad</td><td>20</td><td>0</td></tr>
+              <tr class="z"><td>precio · total</td><td>18</td><td>0</td></tr>
+            </table>
+          </div>
+        </div>
+        <p class="mp-foot" data-step="3">La máscara trabaja en la forma y en el catálogo. En los números <span class="accent">nunca intervino</span>: un dígito siempre tiene forma de dígito.</p>`,
+    },
+    {
       id: 'pausa',
       title: 'Pausa',
       time: 600,
-      class: 'middle',
       particles: { shape: 'ring', opacity: 0.2 },
       html: `
         ${Timer.html(10)}
-        <p class="pa" style="font-size:120px;font-weight:500;letter-spacing:-0.03em;margin:0">Pausa</p>
-        <p class="t-small dim" style="margin-top:30px">Si te da tiempo: carga <span class="mono">caso/transacciones.csv</span> como tabla <span class="mono">transacciones</span> en tu Databricks.</p>`,
+        <div class="t-label">Pausa · 10 minutos</div>
+        <h2 class="t-title" style="margin-bottom:34px">Pausa. Y sube el caso a Databricks</h2>
+        <div class="pz">
+          <div>
+            <div class="t-label accent">Con un comando</div>
+            <ol>
+              <li>Tu cuenta: <a href="https://www.databricks.com/learn/free-edition" target="_blank" rel="noopener">databricks.com/learn/free-edition</a> <small><a href="#/@databricks-cuenta">paso a paso ↗</a></small></li>
+              <li>Tu token y tu workspace en el <span class="mono">.env</span> <small><a href="#/@databricks-token">cómo ↗</a></small>
+<pre class="code">DATABRICKS_HOST=https://dbc-…
+DATABRICKS_TOKEN=dapi…</pre></li>
+              <li>Súbelo:
+<pre class="code">uv run sesiones/02/lab-warehouse/upload_to_databricks.py</pre>
+                <small>Te debe decir 500 filas y 1291.67.</small></li>
+            </ol>
+          </div>
+          <div>
+            <div class="t-label accent">O a mano</div>
+            <p>Catalog → Add data → sube <span class="mono">caso/transacciones.csv</span> como tabla <span class="mono">transacciones</span>. <a href="#/@databricks-tabla">paso a paso ↗</a></p>
+          </div>
+        </div>`,
     },
   ]);
 })();
